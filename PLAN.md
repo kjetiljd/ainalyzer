@@ -16,17 +16,17 @@ This plan follows a focused approach where we work on exactly one thing at a tim
 
 ## Next
 
-1. **Code visibility** - Teams can't see code distribution across repositories without manual exploration
+1. **Repository provisioning** - Manual cloning and updating of repositories from definitions
+
+   → [docs/opportunities/001a-repository-provisioning.md](./docs/opportunities/001a-repository-provisioning.md)
+
+2. **Configuration reading** - Analysis tools can't discover which repositories exist programmatically
+
+   → [docs/opportunities/001b-configuration-reading.md](./docs/opportunities/001b-configuration-reading.md)
+
+3. **Code visibility** - Teams can't see code distribution across repositories without manual exploration
 
    → [docs/opportunities/002-code-visibility.md](./docs/opportunities/002-code-visibility.md)
-
-2. **Repository provisioning** - Manual cloning and updating of repositories from definitions
-
-   → [docs/opportunities/003-repository-provisioning.md](./docs/opportunities/003-repository-provisioning.md)
-
-3. **Configuration reading** - Analysis tools can't discover which repositories exist programmatically
-
-   → [docs/opportunities/004-configuration-reading.md](./docs/opportunities/004-configuration-reading.md)
 
 4. **Change pattern awareness** - Hidden hotspots and change frequency buried in Git history
 

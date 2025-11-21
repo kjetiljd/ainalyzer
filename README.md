@@ -18,6 +18,14 @@ Architecture Decision Records (ADRs) using Michael Nygard format. Documents sign
 ### [docs/opportunities/](./docs/opportunities/)
 Opportunity documentation following Opportunity Solution Tree methodology. Each opportunity describes a problem/need (opportunity space), desired outcomes, potential solutions, and assumption tests.
 
+**Numbering system:** Uses Zettelkasten-style branching (Luhmann's Folgezettel) to show relationships. Child opportunities branch from parents using alternating numbers and letters:
+- `001` = top-level opportunity
+- `001a` = builds on/depends on 001
+- `001b` = another branch from 001
+- `001a1` = deeper branch from 001a
+
+This shows dependency relationships directly in the numbering without requiring renumbering when adding new opportunities.
+
 ## Quick Start
 
 *Coming soon*

@@ -98,4 +98,4 @@ Scope: Format selection and documentation only. Does not include cloning automat
 - `.gitignore` rules for cloned repos (exclude `projects/*/` except `.meta` files)
 
 **Dependencies:** None
-**Blocks:** Repository provisioning (003), Configuration reading (004)
+**Blocks:** Repository provisioning (001a), Configuration reading (001b)

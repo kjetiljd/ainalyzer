@@ -84,4 +84,4 @@ Scope: Documentation and workflow only. No custom tooling.
 - Troubleshooting guide for common authentication issues
 
 **Dependencies:** Repository definition (001)
-**Blocks:** All analysis workflows
+**Blocks:** Code visibility (002), all analysis workflows
