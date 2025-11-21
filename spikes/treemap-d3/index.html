@@ -234,19 +234,16 @@
                 .attr("height", d => d.y1 - d.y0)
                 .attr("fill", d => color(d.depth))
                 .on("click", (event, d) => {
-                    // If clicked node has children, drill down
-                    if (d.data.children) {
-                        currentPath.push(d.data.name);
+                    // Find the actual data node in the original tree
+                    let targetNode = findNodeByPath(data, d.data.name, currentNode);
+
+                    // Only drill down if node has children
+                    if (targetNode && targetNode.children) {
+                        currentPath.push(targetNode.name);
                         updateBreadcrumb();
-                        render(d.data);
-                    } else {
-                        // If parent has siblings, drill to parent level
-                        if (d.parent && d.parent.data.children && d.parent.data.children.length > 1) {
-                            currentPath.push(d.parent.data.name);
-                            updateBreadcrumb();
-                            render(d.parent.data);
-                        }
+                        render(targetNode);
                     }
+                    // If it's a leaf (file), do nothing for now
                 });
 
             // Add labels (only if rectangle is big enough)
@@ -323,6 +320,36 @@
                 node = node.children.find(c => c.name === currentPath[i]);
             }
             render(node);
+        }
+
+        function findNodeByPath(root, nodeName, currentRoot) {
+            // Search for node in current view's children
+            if (currentRoot.children) {
+                for (let child of currentRoot.children) {
+                    if (child.name === nodeName) {
+                        return child;
+                    }
+                    // Recursively search in grandchildren
+                    if (child.children) {
+                        let found = findNodeInTree(child, nodeName);
+                        if (found) return found;
+                    }
+                }
+            }
+            return null;
+        }
+
+        function findNodeInTree(node, targetName) {
+            if (node.name === targetName) {
+                return node;
+            }
+            if (node.children) {
+                for (let child of node.children) {
+                    let found = findNodeInTree(child, targetName);
+                    if (found) return found;
+                }
+            }
+            return null;
         }
 
         // Initial render

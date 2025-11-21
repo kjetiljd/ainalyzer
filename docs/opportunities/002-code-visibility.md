@@ -215,14 +215,29 @@ my-analysis-set (1.2M lines)
 | Accessibility | High | Medium | Medium |
 | Maintenance burden | Low | Low | High |
 
-## Assumption Tests
-
-- [ ] Line counting accuracy within 5% of cloc
-- [ ] Treemap renders 1M+ LOC codebase
-- [ ] Drill-down interaction feels intuitive
-- [ ] New user generates first visualization in <5 minutes
-
 ## Implementation Notes
 
 **Dependencies:** Repository management (001)
 **Blocks:** Git history overlay, metric visualization
+
+**Tool Choices:**
+- **Line counting:** `cloc` (external tool, JSON output)
+  - Rationale: Battle-tested, language-aware, handles exclusions automatically
+  - Integration: Parse `cloc --json` output, aggregate to analysis JSON
+  - Requirement: User must have cloc installed (`brew install cloc`)
+
+**Backend workflow:**
+```bash
+aina analyze <analysis-set>
+  → discover_repos() from aina_lib
+  → for each repo: cloc --json <repo-path>
+  → aggregate to ~/.aina/analysis/<analysis-set>.json
+  → Vue frontend loads JSON
+```
+
+## Assumption Tests
+
+- [ ] Treemap renders 1M+ LOC codebase smoothly
+- [ ] Drill-down interaction feels intuitive
+- [ ] New user generates first visualization in <5 minutes
+- [ ] cloc performance acceptable for multi-repo analysis
