@@ -32,15 +32,18 @@ This shows dependency relationships directly in the numbering without requiring 
 
 ## Architecture Overview
 
-Ainalyzer uses `.meta` format for repository configuration (compatible with [harmony-labs/meta](https://github.com/harmony-labs/meta)).
+Ainalyzer operates on folders containing Git repositories. Users manage repository cloning and organization using their preferred tools (git, meta CLI, etc.).
 
 **Components:**
-- Backend: CLI-based analysis engine
-- Frontend: Vue.js web application
-- Storage: File-based with optional SQLite caching
+- CLI tool ("Aina"): Analysis engine and project management
+- Storage: SQLite database tracks analysis sets (folder paths)
+- Frontend: Vue.js web application (planned)
 - External tools: Code Maat, Git CLI
 
-Sub-repositories are checked out under the project root and analyzed to produce interactive treemap visualizations with overlays for code volume, change frequency, and activity metrics.
+Analysis workflow:
+1. Register a folder containing repos: `aina add <name> <path>`
+2. Run analysis: `aina analyze <name>`
+3. View interactive treemap visualizations with overlays for code volume, change frequency, and activity metrics
 
 ## Project Status
 
