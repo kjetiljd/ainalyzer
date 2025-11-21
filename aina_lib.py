@@ -64,3 +64,20 @@ def list_analysis_sets(conn):
     rows = cursor.fetchall()
 
     return [{'name': row[0], 'path': row[1]} for row in rows]
+
+
+def remove_analysis_set(conn, name):
+    """Remove an analysis set from the database.
+
+    Args:
+        conn: sqlite3.Connection
+        name: Name of the analysis set to remove
+
+    Returns:
+        bool: True if set was removed, False if not found
+    """
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM analysis_sets WHERE name = ?", (name,))
+    conn.commit()
+
+    return cursor.rowcount > 0

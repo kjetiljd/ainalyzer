@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from aina_lib import init_database, add_analysis_set, list_analysis_sets
+from aina_lib import init_database, add_analysis_set, list_analysis_sets, remove_analysis_set
 
 
 class TestDatabaseInit(unittest.TestCase):
@@ -116,6 +116,44 @@ class TestListAnalysisSets(unittest.TestCase):
         results = list_analysis_sets(self.conn)
 
         self.assertEqual(results, [])
+
+
+class TestRemoveAnalysisSet(unittest.TestCase):
+    """Test removing analysis sets."""
+
+    def setUp(self):
+        """Create temporary database for testing."""
+        self.db_fd, self.db_path = tempfile.mkstemp()
+        self.conn = init_database(self.db_path)
+
+    def tearDown(self):
+        """Clean up temporary database."""
+        self.conn.close()
+        os.close(self.db_fd)
+        os.unlink(self.db_path)
+
+    def test_remove_analysis_set(self):
+        """Test removing an existing analysis set."""
+        add_analysis_set(self.conn, 'test-set', '/path/to/repos')
+
+        remove_analysis_set(self.conn, 'test-set')
+
+        results = list_analysis_sets(self.conn)
+        self.assertEqual(len(results), 0)
+
+    def test_remove_nonexistent_set(self):
+        """Test removing non-existent set returns False."""
+        result = remove_analysis_set(self.conn, 'nonexistent')
+
+        self.assertFalse(result)
+
+    def test_remove_returns_true_on_success(self):
+        """Test removing existing set returns True."""
+        add_analysis_set(self.conn, 'test-set', '/path/to/repos')
+
+        result = remove_analysis_set(self.conn, 'test-set')
+
+        self.assertTrue(result)
 
 
 if __name__ == '__main__':
