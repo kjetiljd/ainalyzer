@@ -6,7 +6,15 @@
 
 ## Active Opportunity
 
-*No active task.*
+**Code Visibility** - Started 2025-11-21
+
+→ [docs/opportunities/002-code-visibility.md](./docs/opportunities/002-code-visibility.md)
+
+**Goal:** Teams can see where code lives across repositories at a glance.
+
+**Approach:** Vue.js single-page app with static deployment (see [ADR 0002](./docs/adr/0002-vue-static-deployment-for-visualization.md))
+
+**Status:** Planning implementation, identifying spikes needed.
 
 ## Recently Completed
 

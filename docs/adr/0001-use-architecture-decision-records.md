@@ -23,7 +23,7 @@ We will use Architecture Decision Records (ADRs) following the Michael Nygard fo
 Each ADR will:
 - Be numbered sequentially (0001, 0002, etc.)
 - Use markdown format
-- Live in the `decisions/` directory
+- Live in the `docs/adr/` directory
 - Follow the structure: Title, Status, Context, Decision, Consequences
 - Be written as full sentences in active voice
 - Remain immutable once accepted (new ADRs supersede old ones)

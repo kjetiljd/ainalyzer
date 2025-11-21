@@ -8,19 +8,17 @@ This plan follows a focused approach where we work on exactly one thing at a tim
 
 ## Now
 
-*No active task. Pull from Next when ready.*
+**Code visibility** - Teams can't see code distribution across repositories without manual exploration
+
+→ [docs/opportunities/002-code-visibility.md](./docs/opportunities/002-code-visibility.md)
 
 ---
 
 ## Next
 
-1. **Code visibility** - Teams can't see code distribution across repositories without manual exploration
+1. **Change pattern awareness** - Hidden hotspots and change frequency buried in Git history
 
-   → [docs/opportunities/002-code-visibility.md](./docs/opportunities/002-code-visibility.md)
-
-2. **Change pattern awareness** - Hidden hotspots and change frequency buried in Git history
-
-3. **Codebase comprehension** - Teams need AI assistance to understand unfamiliar code areas
+2. **Codebase comprehension** - Teams need AI assistance to understand unfamiliar code areas
 
 ---
 
