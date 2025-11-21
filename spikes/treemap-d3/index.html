@@ -36,7 +36,7 @@
 
         #chart {
             width: 100%;
-            height: calc(100vh - 120px);
+            height: calc(100vh - 150px);
             background: #252526;
             border-radius: 4px;
         }
@@ -54,13 +54,19 @@
 
         text {
             pointer-events: none;
-            fill: white;
+            fill: #1a1a1a;
             font-size: 12px;
+            font-weight: 600;
             text-anchor: middle;
         }
 
         .label-small {
             font-size: 10px;
+        }
+
+        .label-secondary {
+            fill: #333;
+            font-weight: 400;
         }
 
         #stats {
@@ -74,6 +80,25 @@
         #stats span {
             margin-right: 20px;
         }
+
+        #statusline {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px 20px;
+            background: #1e1e1e;
+            border-top: 1px solid #3e3e3e;
+            font-size: 13px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            color: #888;
+            height: 30px;
+            line-height: 30px;
+        }
+
+        #statusline.active {
+            color: #d4d4d4;
+        }
     </style>
 </head>
 <body>
@@ -83,6 +108,7 @@
     </div>
     <div id="stats"></div>
     <div id="chart"></div>
+    <div id="statusline">Hover over a file or directory to see its path</div>
 
     <script>
         // Sample hierarchical data structure
@@ -187,10 +213,17 @@
         const width = document.getElementById('chart').clientWidth;
         const height = document.getElementById('chart').clientHeight;
 
-        // Color scale (based on depth in hierarchy)
-        const color = d3.scaleOrdinal()
-            .domain([0, 1, 2, 3, 4])
-            .range(["#264653", "#2a9d8f", "#e9c46a", "#f4a261", "#e76f51"]);
+        // Color function: directories neutral, files colored by depth
+        function getNodeColor(d) {
+            // If node has children, it's a directory - use neutral gray
+            if (d.data.children) {
+                return "#4a4a4a";
+            }
+
+            // It's a file - color by depth using ColorBrewer Set2
+            const fileColors = ["#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3", "#a6d854", "#ffd92f"];
+            return fileColors[d.depth % fileColors.length];
+        }
 
         // Create SVG
         const svg = d3.select("#chart")
@@ -222,9 +255,9 @@
 
             treemap(root);
 
-            // Render rectangles
+            // Render rectangles (all descendants, not just leaves)
             const nodes = svg.selectAll("g")
-                .data(root.leaves())
+                .data(root.descendants().filter(d => d.depth > 0))
                 .join("g")
                 .attr("transform", d => `translate(${d.x0},${d.y0})`);
 
@@ -232,7 +265,7 @@
                 .attr("class", "node")
                 .attr("width", d => d.x1 - d.x0)
                 .attr("height", d => d.y1 - d.y0)
-                .attr("fill", d => color(d.depth))
+                .attr("fill", d => getNodeColor(d))
                 .on("click", (event, d) => {
                     // Find the actual data node in the original tree
                     let targetNode = findNodeByPath(data, d.data.name, currentNode);
@@ -244,6 +277,26 @@
                         render(targetNode);
                     }
                     // If it's a leaf (file), do nothing for now
+                })
+                .on("mouseenter", (event, d) => {
+                    // Build full path from root to this node
+                    const pathParts = [];
+                    let node = d;
+                    while (node) {
+                        pathParts.unshift(node.data.name);
+                        node = node.parent;
+                    }
+                    const fullPath = pathParts.join(' / ');
+                    const lines = d.value ? ` (${d.value.toLocaleString()} lines)` : '';
+
+                    const statusline = document.getElementById('statusline');
+                    statusline.textContent = fullPath + lines;
+                    statusline.classList.add('active');
+                })
+                .on("mouseleave", (event, d) => {
+                    const statusline = document.getElementById('statusline');
+                    statusline.textContent = 'Hover over a file or directory to see its path';
+                    statusline.classList.remove('active');
                 });
 
             // Add labels (only if rectangle is big enough)
@@ -276,8 +329,7 @@
                     }
                     return "";
                 })
-                .attr("class", "label-small")
-                .style("fill", "#ccc");
+                .attr("class", "label-small label-secondary");
 
             // Update stats
             updateStats(root);
