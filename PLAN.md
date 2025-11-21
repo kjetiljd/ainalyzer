@@ -8,7 +8,9 @@ This plan follows a focused approach where we work on exactly one thing at a tim
 
 ## Now
 
-**Scope pivot in progress** - Redefining Ainalyzer to operate on folders containing repos without managing repository definitions or provisioning.
+**Analysis set registration** - Users need to register folders containing repos for analysis
+
+→ [docs/opportunities/001-analysis-set-registration.md](./docs/opportunities/001-analysis-set-registration.md)
 
 ---
 
