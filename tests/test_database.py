@@ -11,8 +11,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from aina_lib import init_database, add_analysis_set, list_analysis_sets, remove_analysis_set
 
 
-class TestDatabaseInit(unittest.TestCase):
-    """Test database initialization."""
+class DatabaseTestCase(unittest.TestCase):
+    """Base class for database tests with common setup/teardown."""
 
     def setUp(self):
         """Create temporary database for testing."""
@@ -20,8 +20,14 @@ class TestDatabaseInit(unittest.TestCase):
 
     def tearDown(self):
         """Clean up temporary database."""
+        if hasattr(self, 'conn') and self.conn:
+            self.conn.close()
         os.close(self.db_fd)
         os.unlink(self.db_path)
+
+
+class TestDatabaseInit(DatabaseTestCase):
+    """Test database initialization."""
 
     def test_init_database_creates_table(self):
         """Test that init_database creates analysis_sets table."""
@@ -50,19 +56,13 @@ class TestDatabaseInit(unittest.TestCase):
         conn.close()
 
 
-class TestAddAnalysisSet(unittest.TestCase):
+class TestAddAnalysisSet(DatabaseTestCase):
     """Test adding analysis sets."""
 
     def setUp(self):
         """Create temporary database for testing."""
-        self.db_fd, self.db_path = tempfile.mkstemp()
+        super().setUp()
         self.conn = init_database(self.db_path)
-
-    def tearDown(self):
-        """Clean up temporary database."""
-        self.conn.close()
-        os.close(self.db_fd)
-        os.unlink(self.db_path)
 
     def test_add_analysis_set(self):
         """Test adding a new analysis set."""
@@ -84,19 +84,13 @@ class TestAddAnalysisSet(unittest.TestCase):
             add_analysis_set(self.conn, 'test-set', '/different/path')
 
 
-class TestListAnalysisSets(unittest.TestCase):
+class TestListAnalysisSets(DatabaseTestCase):
     """Test listing analysis sets."""
 
     def setUp(self):
         """Create temporary database for testing."""
-        self.db_fd, self.db_path = tempfile.mkstemp()
+        super().setUp()
         self.conn = init_database(self.db_path)
-
-    def tearDown(self):
-        """Clean up temporary database."""
-        self.conn.close()
-        os.close(self.db_fd)
-        os.unlink(self.db_path)
 
     def test_list_analysis_sets(self):
         """Test listing analysis sets returns all sets."""
@@ -118,19 +112,13 @@ class TestListAnalysisSets(unittest.TestCase):
         self.assertEqual(results, [])
 
 
-class TestRemoveAnalysisSet(unittest.TestCase):
+class TestRemoveAnalysisSet(DatabaseTestCase):
     """Test removing analysis sets."""
 
     def setUp(self):
         """Create temporary database for testing."""
-        self.db_fd, self.db_path = tempfile.mkstemp()
+        super().setUp()
         self.conn = init_database(self.db_path)
-
-    def tearDown(self):
-        """Clean up temporary database."""
-        self.conn.close()
-        os.close(self.db_fd)
-        os.unlink(self.db_path)
 
     def test_remove_analysis_set(self):
         """Test removing an existing analysis set."""
