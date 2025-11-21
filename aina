@@ -1,5 +1,72 @@
 #!/usr/bin/env python3
 """Aina - CLI tool for managing code analysis sets."""
+import argparse
+import sys
+from pathlib import Path
+
+from aina_lib import cmd_add, cmd_list, cmd_remove
+
+
+def get_default_db_path():
+    """Get default database path: ~/.aina/db.sqlite"""
+    return str(Path.home() / '.aina' / 'db.sqlite')
+
+
+def main():
+    """Main entry point for aina CLI."""
+    parser = argparse.ArgumentParser(
+        description='Aina - Manage code analysis sets',
+        epilog='Use "aina <command> --help" for more information about a command.'
+    )
+
+    # Global options
+    parser.add_argument(
+        '--db',
+        default=get_default_db_path(),
+        help='Path to database file (default: ~/.aina/db.sqlite)'
+    )
+
+    # Subcommands
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+
+    # Add command
+    add_parser = subparsers.add_parser(
+        'add',
+        help='Register a folder as an analysis set'
+    )
+    add_parser.add_argument('name', help='Name for the analysis set')
+    add_parser.add_argument('path', help='Path to folder containing repositories')
+
+    # List command
+    list_parser = subparsers.add_parser(
+        'list',
+        help='List all registered analysis sets'
+    )
+
+    # Remove command
+    remove_parser = subparsers.add_parser(
+        'remove',
+        help='Remove an analysis set'
+    )
+    remove_parser.add_argument('name', help='Name of the analysis set to remove')
+
+    # Parse arguments
+    args = parser.parse_args()
+
+    # Handle commands
+    if args.command == 'add':
+        success = cmd_add(args.name, args.path, args.db)
+        sys.exit(0 if success else 1)
+    elif args.command == 'list':
+        success = cmd_list(args.db)
+        sys.exit(0 if success else 1)
+    elif args.command == 'remove':
+        success = cmd_remove(args.name, args.db)
+        sys.exit(0 if success else 1)
+    else:
+        parser.print_help()
+        sys.exit(1)
+
 
 if __name__ == '__main__':
-    pass
+    main()
