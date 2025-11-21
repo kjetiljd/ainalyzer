@@ -65,9 +65,10 @@ A local-first analysis tool with two components:
 ### MVP Features (Priority Order)
 
 1. **Repository Configuration System**
-   - Define repositories via GitHub `org/repo` format
-   - Support automated checkout and manual directory pointers
-   - YAML/JSON manifest for tracked repositories
+   - `.meta` file format (compatible with harmony-labs/meta CLI)
+   - Define repositories via Git URLs (git@github.com:org/repo.git)
+   - Sub-repositories checked out under project root
+   - Optional: leverage `meta` CLI for repository operations
 
 2. **Code Volume Treemap**
    - Language-agnostic line counting
@@ -166,14 +167,21 @@ A local-first analysis tool with two components:
 - **Frontend:** Vue.js web application
 - **Backend:** CLI-based analysis scripts (language TBD)
 - **Storage:** File-based output with optional SQLite caching
+- **Repository Management:** `.meta` format, optional harmony-labs/meta CLI
 - **External Tools:** Code Maat, Git CLI
 - **Deployment:** Local execution (macOS), future server option
 
 ### Architecture Pattern
 ```
 ┌─────────────────────┐
-│  Repository Config  │
-│   (YAML/JSON)       │
+│     .meta file      │
+│  (Repository URLs)  │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  Sub-repositories   │
+│  (checked out)      │
 └──────────┬──────────┘
            │
            ▼
