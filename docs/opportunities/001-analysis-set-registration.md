@@ -113,9 +113,27 @@ Scope: Database schema, CLI commands for registration/management, repo discovery
 - `argparse` - CLI argument parsing
 - `sqlite3` - Database storage
 - `pathlib` - Path handling
-- Single executable script: `aina.py`
+- Single executable script: `aina` (no .py extension)
 
 **Distribution:**
-- Single file (`aina.py`)
+- Single file (`aina`)
 - Shebang: `#!/usr/bin/env python3`
+- Make executable: `chmod +x aina`
 - Install via symlink to PATH
+
+**Testing:**
+- `unittest` (standard library)
+- Extract logic into `aina_lib.py` for testability
+- `aina` script as thin wrapper
+- In-memory SQLite (`:memory:`) for fast tests
+- Test structure:
+  ```
+  ainalyzer/
+  ├── aina              # CLI script
+  ├── aina_lib.py       # Importable functions
+  └── tests/
+      ├── test_database.py
+      ├── test_commands.py
+      └── test_repo_discovery.py
+  ```
+- Run tests: `python -m unittest discover`
