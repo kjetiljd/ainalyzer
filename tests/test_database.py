@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from aina_lib import init_database, add_analysis_set
+from aina_lib import init_database, add_analysis_set, list_analysis_sets
 
 
 class TestDatabaseInit(unittest.TestCase):
@@ -82,6 +82,40 @@ class TestAddAnalysisSet(unittest.TestCase):
 
         with self.assertRaises(sqlite3.IntegrityError):
             add_analysis_set(self.conn, 'test-set', '/different/path')
+
+
+class TestListAnalysisSets(unittest.TestCase):
+    """Test listing analysis sets."""
+
+    def setUp(self):
+        """Create temporary database for testing."""
+        self.db_fd, self.db_path = tempfile.mkstemp()
+        self.conn = init_database(self.db_path)
+
+    def tearDown(self):
+        """Clean up temporary database."""
+        self.conn.close()
+        os.close(self.db_fd)
+        os.unlink(self.db_path)
+
+    def test_list_analysis_sets(self):
+        """Test listing analysis sets returns all sets."""
+        add_analysis_set(self.conn, 'set1', '/path/one')
+        add_analysis_set(self.conn, 'set2', '/path/two')
+
+        results = list_analysis_sets(self.conn)
+
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0]['name'], 'set1')
+        self.assertEqual(results[0]['path'], '/path/one')
+        self.assertEqual(results[1]['name'], 'set2')
+        self.assertEqual(results[1]['path'], '/path/two')
+
+    def test_list_empty_database(self):
+        """Test listing from empty database returns empty list."""
+        results = list_analysis_sets(self.conn)
+
+        self.assertEqual(results, [])
 
 
 if __name__ == '__main__':
