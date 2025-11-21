@@ -152,7 +152,23 @@ def cmd_list(db_path):
     Returns:
         bool: True if successful, False on error
     """
-    pass  # Placeholder
+    try:
+        conn = init_database(db_path)
+        sets = list_analysis_sets(conn)
+        conn.close()
+
+        if not sets:
+            print("No analysis sets registered.")
+        else:
+            print(f"{'Name':<20} Path")
+            print("-" * 60)
+            for s in sets:
+                print(f"{s['name']:<20} {s['path']}")
+
+        return True
+    except Exception as e:
+        print(f"Error: {e}")
+        return False
 
 
 def cmd_remove(name, db_path):
