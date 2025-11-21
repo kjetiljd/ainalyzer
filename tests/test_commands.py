@@ -89,5 +89,43 @@ class TestCmdList(unittest.TestCase):
         self.assertTrue(result)
 
 
+class TestCmdRemove(unittest.TestCase):
+    """Test the remove command wrapper."""
+
+    def setUp(self):
+        """Create temporary database for testing."""
+        self.db_fd, self.db_path = tempfile.mkstemp()
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Clean up temporary files."""
+        os.close(self.db_fd)
+        os.unlink(self.db_path)
+        import shutil
+        shutil.rmtree(self.temp_dir)
+
+    def test_cmd_remove_success(self):
+        """Test removing an existing analysis set."""
+        cmd_add('test-set', self.temp_dir, self.db_path)
+
+        result = cmd_remove('test-set', self.db_path)
+
+        self.assertTrue(result)
+
+        # Verify it was removed
+        from aina_lib import init_database
+        conn = init_database(self.db_path)
+        sets = list_analysis_sets(conn)
+        conn.close()
+
+        self.assertEqual(len(sets), 0)
+
+    def test_cmd_remove_nonexistent(self):
+        """Test removing non-existent set."""
+        result = cmd_remove('nonexistent', self.db_path)
+
+        self.assertFalse(result)
+
+
 if __name__ == '__main__':
     unittest.main()

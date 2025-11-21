@@ -181,4 +181,17 @@ def cmd_remove(name, db_path):
     Returns:
         bool: True if successful, False on error
     """
-    pass  # Placeholder
+    try:
+        conn = init_database(db_path)
+        success = remove_analysis_set(conn, name)
+        conn.close()
+
+        if success:
+            print(f"Removed analysis set '{name}'")
+            return True
+        else:
+            print(f"Error: Analysis set '{name}' not found")
+            return False
+    except Exception as e:
+        print(f"Error: {e}")
+        return False
