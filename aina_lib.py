@@ -48,3 +48,19 @@ def add_analysis_set(conn, name, path):
         (name, path)
     )
     conn.commit()
+
+
+def list_analysis_sets(conn):
+    """List all analysis sets from the database.
+
+    Args:
+        conn: sqlite3.Connection
+
+    Returns:
+        List of dicts with 'name' and 'path' keys
+    """
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, path FROM analysis_sets ORDER BY name")
+    rows = cursor.fetchall()
+
+    return [{'name': row[0], 'path': row[1]} for row in rows]
