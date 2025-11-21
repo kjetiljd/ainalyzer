@@ -8,9 +8,9 @@ This plan follows a focused approach where we work on exactly one thing at a tim
 
 ## Now
 
-**Repository management** - No standard way to specify which repositories to analyze across team
+**Repository definition** - No standard way to specify which repositories to analyze across team
 
-→ [docs/opportunities/001-repository-management.md](./docs/opportunities/001-repository-management.md)
+→ [docs/opportunities/001-repository-definition.md](./docs/opportunities/001-repository-definition.md)
 
 ---
 
@@ -20,9 +20,17 @@ This plan follows a focused approach where we work on exactly one thing at a tim
 
    → [docs/opportunities/002-code-visibility.md](./docs/opportunities/002-code-visibility.md)
 
-2. **Change pattern awareness** - Hidden hotspots and change frequency buried in Git history
+2. **Repository provisioning** - Manual cloning and updating of repositories from definitions
 
-3. **Codebase comprehension** - Teams need AI assistance to understand unfamiliar code areas
+   → [docs/opportunities/003-repository-provisioning.md](./docs/opportunities/003-repository-provisioning.md)
+
+3. **Configuration reading** - Analysis tools can't discover which repositories exist programmatically
+
+   → [docs/opportunities/004-configuration-reading.md](./docs/opportunities/004-configuration-reading.md)
+
+4. **Change pattern awareness** - Hidden hotspots and change frequency buried in Git history
+
+5. **Codebase comprehension** - Teams need AI assistance to understand unfamiliar code areas
 
 ---
 

@@ -6,11 +6,11 @@
 
 ## Active Opportunity
 
-**Repository Management**
+**Repository Definition**
 
-→ [docs/opportunities/001-repository-management.md](./docs/opportunities/001-repository-management.md)
+→ [docs/opportunities/001-repository-definition.md](./docs/opportunities/001-repository-definition.md)
 
-**Status:** Planning - opportunity documented, ready to begin implementation
+**Status:** Ready for implementation
 
 ---
 
