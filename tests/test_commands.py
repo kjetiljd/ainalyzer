@@ -57,5 +57,37 @@ class TestCmdAdd(unittest.TestCase):
         self.assertFalse(result)
 
 
+class TestCmdList(unittest.TestCase):
+    """Test the list command wrapper."""
+
+    def setUp(self):
+        """Create temporary database for testing."""
+        self.db_fd, self.db_path = tempfile.mkstemp()
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Clean up temporary files."""
+        os.close(self.db_fd)
+        os.unlink(self.db_path)
+        import shutil
+        shutil.rmtree(self.temp_dir)
+
+    def test_cmd_list_success(self):
+        """Test listing analysis sets."""
+        # Add some sets
+        cmd_add('set1', self.temp_dir, self.db_path)
+        cmd_add('set2', self.temp_dir, self.db_path)
+
+        result = cmd_list(self.db_path)
+
+        self.assertTrue(result)
+
+    def test_cmd_list_empty(self):
+        """Test listing empty database."""
+        result = cmd_list(self.db_path)
+
+        self.assertTrue(result)
+
+
 if __name__ == '__main__':
     unittest.main()
