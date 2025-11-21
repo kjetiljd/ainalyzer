@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from aina_lib import init_database
+from aina_lib import init_database, add_analysis_set
 
 
 class TestDatabaseInit(unittest.TestCase):
@@ -48,6 +48,40 @@ class TestDatabaseInit(unittest.TestCase):
         self.assertIn('created_at', columns)
 
         conn.close()
+
+
+class TestAddAnalysisSet(unittest.TestCase):
+    """Test adding analysis sets."""
+
+    def setUp(self):
+        """Create temporary database for testing."""
+        self.db_fd, self.db_path = tempfile.mkstemp()
+        self.conn = init_database(self.db_path)
+
+    def tearDown(self):
+        """Clean up temporary database."""
+        self.conn.close()
+        os.close(self.db_fd)
+        os.unlink(self.db_path)
+
+    def test_add_analysis_set(self):
+        """Test adding a new analysis set."""
+        add_analysis_set(self.conn, 'test-set', '/path/to/repos')
+
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT name, path FROM analysis_sets WHERE name = ?", ('test-set',))
+        result = cursor.fetchone()
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result[0], 'test-set')
+        self.assertEqual(result[1], '/path/to/repos')
+
+    def test_add_duplicate_name_fails(self):
+        """Test that adding duplicate name raises error."""
+        add_analysis_set(self.conn, 'test-set', '/path/to/repos')
+
+        with self.assertRaises(sqlite3.IntegrityError):
+            add_analysis_set(self.conn, 'test-set', '/different/path')
 
 
 if __name__ == '__main__':

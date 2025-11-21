@@ -29,3 +29,22 @@ def init_database(db_path):
 
     conn.commit()
     return conn
+
+
+def add_analysis_set(conn, name, path):
+    """Add a new analysis set to the database.
+
+    Args:
+        conn: sqlite3.Connection
+        name: Name for the analysis set (must be unique)
+        path: Path to folder containing repositories
+
+    Raises:
+        sqlite3.IntegrityError: If name already exists
+    """
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO analysis_sets (name, path) VALUES (?, ?)",
+        (name, path)
+    )
+    conn.commit()
