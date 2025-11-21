@@ -81,3 +81,31 @@ def remove_analysis_set(conn, name):
     conn.commit()
 
     return cursor.rowcount > 0
+
+
+def discover_repos(path):
+    """Discover Git repositories in a directory.
+
+    Scans the given path and all subdirectories for .git directories.
+
+    Args:
+        path: Path to directory to scan
+
+    Returns:
+        List of repository paths (parent directories of .git)
+
+    Raises:
+        ValueError: If path does not exist
+    """
+    path_obj = Path(path)
+
+    if not path_obj.exists():
+        raise ValueError(f"Path does not exist: {path}")
+
+    repos = []
+
+    for root, dirs, files in path_obj.walk():
+        if '.git' in dirs:
+            repos.append(str(root))
+
+    return sorted(repos)
