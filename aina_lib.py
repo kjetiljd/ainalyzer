@@ -109,3 +109,60 @@ def discover_repos(path):
             repos.append(str(root))
 
     return sorted(repos)
+
+
+# CLI Command wrappers
+
+def cmd_add(name, path, db_path):
+    """CLI command: Add a new analysis set.
+
+    Args:
+        name: Name for the analysis set
+        path: Path to folder containing repositories
+        db_path: Path to SQLite database
+
+    Returns:
+        bool: True if successful, False on error
+    """
+    # Validate path exists
+    if not Path(path).exists():
+        print(f"Error: Path does not exist: {path}")
+        return False
+
+    try:
+        conn = init_database(db_path)
+        add_analysis_set(conn, name, path)
+        conn.close()
+        print(f"Added analysis set '{name}' -> {path}")
+        return True
+    except sqlite3.IntegrityError:
+        print(f"Error: Analysis set '{name}' already exists")
+        return False
+    except Exception as e:
+        print(f"Error: {e}")
+        return False
+
+
+def cmd_list(db_path):
+    """CLI command: List all analysis sets.
+
+    Args:
+        db_path: Path to SQLite database
+
+    Returns:
+        bool: True if successful, False on error
+    """
+    pass  # Placeholder
+
+
+def cmd_remove(name, db_path):
+    """CLI command: Remove an analysis set.
+
+    Args:
+        name: Name of the analysis set to remove
+        db_path: Path to SQLite database
+
+    Returns:
+        bool: True if successful, False on error
+    """
+    pass  # Placeholder
