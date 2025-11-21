@@ -106,4 +106,16 @@ Scope: Database schema, CLI commands for registration/management, repo discovery
 **Dependencies:** None
 **Blocks:** Code visibility (002), all analysis workflows
 
-**Language choice:** TBD (Python, Go, Node.js, Rust)
+**Language choice:** Python with argparse (standard library only)
+
+**Technical stack:**
+- Python 3.6+ (standard library only, zero external dependencies)
+- `argparse` - CLI argument parsing
+- `sqlite3` - Database storage
+- `pathlib` - Path handling
+- Single executable script: `aina.py`
+
+**Distribution:**
+- Single file (`aina.py`)
+- Shebang: `#!/usr/bin/env python3`
+- Install via symlink to PATH
