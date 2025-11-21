@@ -1,7 +1,9 @@
 # Opportunity: Repository Definition
 
-**Status:** Now
+**Status:** Archived
 **Last Updated:** 2025-11-21
+**Archived:** 2025-11-21
+**Reason:** Scope pivot. Ainalyzer will operate on folders containing repos without managing repository definition or sharing. Teams use their own tools for repository management.
 
 ## Desired Outcome
 

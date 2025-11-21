@@ -1,7 +1,9 @@
 # Opportunity: Repository Provisioning
 
-**Status:** Next
+**Status:** Archived
 **Last Updated:** 2025-11-21
+**Archived:** 2025-11-21
+**Reason:** Scope pivot. Repository provisioning (cloning/updating) is out of scope. Teams use their own tools (meta CLI, git clone, etc.).
 
 ## Desired Outcome
 

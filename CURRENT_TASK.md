@@ -6,11 +6,20 @@
 
 ## Active Opportunity
 
-**Repository Definition**
+**Scope Pivot**
 
-→ [docs/opportunities/001-repository-definition.md](./docs/opportunities/001-repository-definition.md)
+Redefining Ainalyzer architecture:
+- Ainalyzer operates on folders containing repos
+- Users manage repo cloning/provisioning with their own tools
+- No .meta format dependency
+- SQLite database tracks analysis sets (name + folder path)
 
-**Status:** Ready for implementation
+Archived opportunities moved to [docs/opportunities/archive/](./docs/opportunities/archive/):
+- 001-repository-definition.md
+- 001a-repository-provisioning.md
+- 001b-configuration-reading.md
+
+**Status:** Planning new opportunity structure
 
 ---
 

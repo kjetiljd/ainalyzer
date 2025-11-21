@@ -1,7 +1,9 @@
 # Opportunity: Configuration Reading
 
-**Status:** Next
+**Status:** Archived
 **Last Updated:** 2025-11-21
+**Archived:** 2025-11-21
+**Reason:** Scope pivot. No .meta format dependency. Ainalyzer discovers repos by scanning folders directly.
 
 ## Desired Outcome
 
