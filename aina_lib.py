@@ -86,7 +86,8 @@ def remove_analysis_set(conn, name):
 def discover_repos(path):
     """Discover Git repositories in a directory.
 
-    Scans the given path and all subdirectories for .git directories.
+    Scans the given path and immediate subdirectories for .git directories.
+    Stops at depth 2 (root + 1 level) to avoid scanning inside repositories.
 
     Args:
         path: Path to directory to scan
@@ -103,10 +104,18 @@ def discover_repos(path):
         raise ValueError(f"Path does not exist: {path}")
 
     repos = []
+    max_depth = 1  # Root (0) + 1 level
 
     for root, dirs, files in path_obj.walk():
+        # Calculate current depth relative to starting path
+        depth = len(Path(root).relative_to(path_obj).parts)
+
         if '.git' in dirs:
             repos.append(str(root))
+
+        # Stop descending if we've reached max depth
+        if depth >= max_depth:
+            dirs.clear()
 
     return sorted(repos)
 
