@@ -8,30 +8,21 @@ This plan follows a focused approach where we work on exactly one thing at a tim
 
 ## Now
 
-**Repository Configuration System**
+**Repository management** - No standard way to specify which repositories to analyze across team
 
-Build the foundation for managing multiple repositories using `.meta` format (compatible with harmony-labs/meta CLI). Sub-repositories will be checked out under this repo. Implement validation and repository listing functionality.
-
-**Why this first:** Everything else depends on knowing which repositories to analyze. This is the entry point for all analysis workflows.
+→ [docs/opportunities/001-repository-management.md](./docs/opportunities/001-repository-management.md)
 
 ---
 
 ## Next
 
-1. **Code Volume Analysis**
-   - Implement language-agnostic line counting
-   - Generate structured JSON output with file/directory/repository metrics
-   - Validate against cloc for accuracy
+1. **Code visibility** - Teams can't see code distribution across repositories without manual exploration
 
-2. **Basic Vue Frontend Setup**
-   - Initialize Vue.js project structure
-   - Create layout for report viewing
-   - Implement data loading from JSON files
+   → [docs/opportunities/002-code-visibility.md](./docs/opportunities/002-code-visibility.md)
 
-3. **Interactive Treemap Visualization**
-   - Integrate D3.js or similar library
-   - Implement WinDirStat-style treemap rendering
-   - Add click-to-drill-down navigation
+2. **Change pattern awareness** - Hidden hotspots and change frequency buried in Git history
+
+3. **Codebase comprehension** - Teams need AI assistance to understand unfamiliar code areas
 
 ---
 
