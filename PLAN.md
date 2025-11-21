@@ -8,9 +8,7 @@ This plan follows a focused approach where we work on exactly one thing at a tim
 
 ## Now
 
-**Analysis set registration** - Users need to register folders containing repos for analysis
-
-→ [docs/opportunities/001-analysis-set-registration.md](./docs/opportunities/001-analysis-set-registration.md)
+*No active task. Pull from Next when ready.*
 
 ---
 
