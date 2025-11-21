@@ -12,10 +12,10 @@ Complete product vision, strategy, and technical architecture. Defines the probl
 ### [PLAN.md](./PLAN.md)
 Current development plan using Now/Next/Later format. Always shows exactly one active task in "Now," upcoming work in "Next," and references the product brief for "Later."
 
-### [decisions/](./decisions/)
+### [docs/adr/](./docs/adr/)
 Architecture Decision Records (ADRs) using Michael Nygard format. Documents significant architectural and technical decisions with context, rationale, and consequences. Numbered sequentially (0001, 0002, etc.).
 
-### [features/](./features/)
+### [docs/features/](./docs/features/)
 Feature specifications and implementation details. Each feature gets its own document describing requirements, design, and acceptance criteria.
 
 ## Quick Start
