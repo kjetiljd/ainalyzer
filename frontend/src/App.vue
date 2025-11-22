@@ -93,25 +93,49 @@ function handleBreadcrumbNavigate(index) {
 <style>
 body {
   margin: 0;
-  padding: 20px;
+  padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #1e1e1e;
   color: #d4d4d4;
 }
 
 .app {
-  max-width: 1400px;
-  margin: 0 auto;
+  container-type: inline-size;
+  container-name: app-container;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
+  max-width: 100vw;
+  padding: clamp(8px, 2vw, 20px);
+  box-sizing: border-box;
+  gap: clamp(8px, 1.5vh, 16px);
 }
 
 h1 {
-  margin: 0 0 20px 0;
-  font-size: 24px;
+  margin: 0;
+  font-size: clamp(18px, 4vw, 24px);
 }
 
 .treemap-container {
   width: 100%;
-  height: calc(100vh - 150px);
+  height: 100%;
+  min-height: 300px;
   overflow: hidden;
+}
+
+/* Container queries for adaptive UI */
+@container app-container (max-width: 768px) {
+  h1 {
+    font-size: clamp(16px, 5vw, 20px);
+    margin-bottom: 8px;
+  }
+}
+
+@container app-container (min-width: 1600px) {
+  .treemap-container {
+    border: 1px solid #3e3e3e;
+  }
 }
 </style>

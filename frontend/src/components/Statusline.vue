@@ -23,18 +23,17 @@ export default {
 
 <style scoped>
 .statusline {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 8px 20px;
+  padding: 8px clamp(12px, 2vw, 20px);
   background: #1e1e1e;
   border-top: 1px solid #3e3e3e;
-  font-size: 13px;
+  font-size: clamp(11px, 2vw, 13px);
   font-family: 'Monaco', 'Menlo', monospace;
   color: #888;
-  height: 30px;
-  line-height: 30px;
+  min-height: 30px;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .statusline.active {
