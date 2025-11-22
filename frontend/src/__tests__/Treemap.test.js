@@ -43,12 +43,12 @@ describe('Treemap', () => {
     expect(rects.length).toBeGreaterThan(0)
   })
 
-  it('emits drill-down event when clicking rectangle with children', async () => {
+  it('emits drill-down event when clicking any rectangle', async () => {
     const wrapper = mount(Treemap, {
       props: { data: mockData }
     })
 
-    // Find a rectangle (should be the repo1 node which has children)
+    // Find a rectangle - any node is clickable
     const rect = wrapper.find('rect')
     await rect.trigger('click')
 

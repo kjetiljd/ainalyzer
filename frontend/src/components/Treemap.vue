@@ -87,11 +87,9 @@ export default {
         rect.setAttribute('stroke-width', '2')
         rect.style.cursor = 'pointer'
 
-        // Add click handler
+        // Add click handler - all nodes are clickable
         rect.addEventListener('click', () => {
-          if (node.data.children) {
-            this.$emit('drill-down', node.data)
-          }
+          this.$emit('drill-down', node.data)
         })
 
         // Add hover handlers
