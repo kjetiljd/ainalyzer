@@ -23,4 +23,23 @@ describe('Treemap', () => {
 
     expect(wrapper.exists()).toBe(true)
   })
+
+  it('renders an SVG element', () => {
+    const wrapper = mount(Treemap, {
+      props: { data: mockData }
+    })
+
+    const svg = wrapper.find('svg')
+    expect(svg.exists()).toBe(true)
+  })
+
+  it('renders rectangles for leaf nodes', () => {
+    const wrapper = mount(Treemap, {
+      props: { data: mockData }
+    })
+
+    const rects = wrapper.findAll('rect')
+    // Should have 2 rectangles for 2 files
+    expect(rects.length).toBeGreaterThan(0)
+  })
 })
