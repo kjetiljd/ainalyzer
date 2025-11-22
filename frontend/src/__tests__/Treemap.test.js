@@ -132,4 +132,19 @@ describe('Treemap', () => {
 
     expect(wrapper.emitted()).toHaveProperty('hover-end')
   })
+
+  it('updates dimensions when width or height props change', async () => {
+    const wrapper = mount(Treemap, {
+      props: { data: mockData, width: 800, height: 600 }
+    })
+
+    const svg = wrapper.find('svg')
+    expect(svg.attributes('width')).toBe('800')
+    expect(svg.attributes('height')).toBe('600')
+
+    await wrapper.setProps({ width: 1200, height: 800 })
+
+    expect(svg.attributes('width')).toBe('1200')
+    expect(svg.attributes('height')).toBe('800')
+  })
 })
