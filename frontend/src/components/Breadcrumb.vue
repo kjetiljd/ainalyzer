@@ -35,9 +35,26 @@ export default {
 
 <style scoped>
 .breadcrumb {
-  margin-bottom: 10px;
-  font-size: 14px;
+  margin: 0;
+  font-size: clamp(12px, 2vw, 14px);
   color: #888;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: thin;
+  scrollbar-color: #3e3e3e #1e1e1e;
+}
+
+.breadcrumb::-webkit-scrollbar {
+  height: 6px;
+}
+
+.breadcrumb::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.breadcrumb::-webkit-scrollbar-thumb {
+  background: #3e3e3e;
+  border-radius: 3px;
 }
 
 .breadcrumb-segment {
