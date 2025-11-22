@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import Treemap from './components/Treemap.vue'
 import Breadcrumb from './components/Breadcrumb.vue'
 import Statusline from './components/Statusline.vue'
@@ -57,27 +57,6 @@ const statuslineText = ref('')
 // Current node being displayed
 const currentNode = ref(mockData)
 
-// Responsive dimensions
-const treemapWidth = ref(1200)
-const treemapHeight = ref(800)
-
-function updateDimensions() {
-  // Account for body padding (20px each side = 40px total)
-  // and max-width constraint on .app container
-  const availableWidth = Math.min(window.innerWidth - 40, 1400)
-  treemapWidth.value = availableWidth
-  // Account for header, breadcrumb, padding, and statusline
-  treemapHeight.value = window.innerHeight - 150
-}
-
-onMounted(() => {
-  updateDimensions()
-  window.addEventListener('resize', updateDimensions)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', updateDimensions)
-})
 
 // Handle drill-down - use full path from event
 function handleDrillDown(event) {
@@ -98,15 +77,15 @@ function handleBreadcrumbNavigate(index) {
   <div class="app">
     <h1>Ainalyzer - Code Visibility</h1>
     <Breadcrumb :path="breadcrumbPath" @navigate="handleBreadcrumbNavigate" />
-    <Treemap
-      :data="mockData"
-      :currentNode="currentNode"
-      :width="treemapWidth"
-      :height="treemapHeight"
-      @drill-down="handleDrillDown"
-      @hover="statuslineText = $event"
-      @hover-end="statuslineText = ''"
-    />
+    <div class="treemap-container">
+      <Treemap
+        :data="mockData"
+        :currentNode="currentNode"
+        @drill-down="handleDrillDown"
+        @hover="statuslineText = $event"
+        @hover-end="statuslineText = ''"
+      />
+    </div>
     <Statusline :text="statuslineText" />
   </div>
 </template>
@@ -128,5 +107,11 @@ body {
 h1 {
   margin: 0 0 20px 0;
   font-size: 24px;
+}
+
+.treemap-container {
+  width: 100%;
+  height: calc(100vh - 150px);
+  overflow: hidden;
 }
 </style>

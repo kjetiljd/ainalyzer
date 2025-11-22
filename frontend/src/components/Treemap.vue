@@ -1,7 +1,5 @@
 <template>
-  <div class="treemap" ref="container">
-    <svg ref="svg" :width="width" :height="height"></svg>
-  </div>
+  <svg class="treemap" ref="svg"></svg>
 </template>
 
 <script>
@@ -17,18 +15,29 @@ export default {
     currentNode: {
       type: Object,
       default: null
-    },
-    width: {
-      type: Number,
-      default: 800
-    },
-    height: {
-      type: Number,
-      default: 600
+    }
+  },
+  data() {
+    return {
+      width: 0,
+      height: 0,
+      resizeObserver: null
     }
   },
   mounted() {
+    this.updateDimensions()
     this.render()
+
+    this.resizeObserver = new ResizeObserver(() => {
+      this.updateDimensions()
+      this.render()
+    })
+    this.resizeObserver.observe(this.$el)
+  },
+  unmounted() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect()
+    }
   },
   watch: {
     data() {
@@ -36,15 +45,15 @@ export default {
     },
     currentNode() {
       this.render()
-    },
-    width() {
-      this.render()
-    },
-    height() {
-      this.render()
     }
   },
   methods: {
+    updateDimensions() {
+      if (!this.$el) return
+      this.width = this.$el.clientWidth
+      this.height = this.$el.clientHeight
+    },
+
     getNodeColor(node) {
       // If node has children, it's a directory - use neutral gray
       if (node.data.children) {
@@ -57,6 +66,7 @@ export default {
     },
 
     render() {
+      if (this.width === 0 || this.height === 0) return
       const svg = this.$refs.svg
       if (!svg) return
 
@@ -135,5 +145,6 @@ export default {
 .treemap {
   width: 100%;
   height: 100%;
+  display: block;
 }
 </style>
