@@ -4,7 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from aina_lib import cmd_add, cmd_list, cmd_remove
+from aina_lib import cmd_add, cmd_list, cmd_remove, cmd_analyze
 
 
 def get_default_db_path():
@@ -50,6 +50,13 @@ def main():
     )
     remove_parser.add_argument('name', help='Name of the analysis set to remove')
 
+    # Analyze command
+    analyze_parser = subparsers.add_parser(
+        'analyze',
+        help='Analyze repositories and generate JSON output'
+    )
+    analyze_parser.add_argument('name', help='Name of the analysis set to analyze')
+
     # Parse arguments
     args = parser.parse_args()
 
@@ -62,6 +69,9 @@ def main():
         sys.exit(0 if success else 1)
     elif args.command == 'remove':
         success = cmd_remove(args.name, args.db)
+        sys.exit(0 if success else 1)
+    elif args.command == 'analyze':
+        success = cmd_analyze(args.name, args.db)
         sys.exit(0 if success else 1)
     else:
         parser.print_help()
