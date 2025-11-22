@@ -82,6 +82,8 @@ function handleBreadcrumbNavigate(index) {
       :width="1200"
       :height="800"
       @drill-down="handleDrillDown"
+      @hover="statuslineText = $event"
+      @hover-end="statuslineText = ''"
     />
     <Statusline :text="statuslineText" />
   </div>

@@ -45,4 +45,26 @@ describe('App Integration', () => {
     const path = breadcrumb.props('path')
     expect(path.length).toBe(1)
   })
+
+  it('updates statusline when hovering over treemap nodes', async () => {
+    const wrapper = mount(App)
+
+    const treemap = wrapper.findComponent(Treemap)
+    const statusline = wrapper.findComponent(Statusline)
+
+    // Initially should have default text
+    expect(statusline.props('text')).toBe('')
+
+    // Emit hover event with path
+    await treemap.vm.$emit('hover', 'ainalyzer-demo / backend-api / src / auth.py (1234 lines)')
+
+    // Statusline should update
+    expect(statusline.props('text')).toBe('ainalyzer-demo / backend-api / src / auth.py (1234 lines)')
+
+    // Emit hover-end event
+    await treemap.vm.$emit('hover-end')
+
+    // Statusline should clear
+    expect(statusline.props('text')).toBe('')
+  })
 })

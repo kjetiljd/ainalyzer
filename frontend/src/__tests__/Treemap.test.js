@@ -106,4 +106,26 @@ describe('Treemap', () => {
     const hasColoredFiles = colors.some(c => c !== '#4a4a4a')
     expect(hasColoredFiles).toBe(true)
   })
+
+  it('emits hover event when mouse enters rectangle', async () => {
+    const wrapper = mount(Treemap, {
+      props: { data: mockData }
+    })
+
+    const rect = wrapper.find('rect')
+    await rect.trigger('mouseenter')
+
+    expect(wrapper.emitted()).toHaveProperty('hover')
+  })
+
+  it('emits hover-end event when mouse leaves rectangle', async () => {
+    const wrapper = mount(Treemap, {
+      props: { data: mockData }
+    })
+
+    const rect = wrapper.find('rect')
+    await rect.trigger('mouseleave')
+
+    expect(wrapper.emitted()).toHaveProperty('hover-end')
+  })
 })

@@ -94,6 +94,25 @@ export default {
           }
         })
 
+        // Add hover handlers
+        rect.addEventListener('mouseenter', () => {
+          // Build full path from root to this node
+          const pathParts = []
+          let currentNode = node
+          while (currentNode) {
+            pathParts.unshift(currentNode.data.name)
+            currentNode = currentNode.parent
+          }
+          const fullPath = pathParts.join(' / ')
+          const lines = node.value ? ` (${node.value.toLocaleString()} lines)` : ''
+
+          this.$emit('hover', fullPath + lines)
+        })
+
+        rect.addEventListener('mouseleave', () => {
+          this.$emit('hover-end')
+        })
+
         svg.appendChild(rect)
       })
     }
