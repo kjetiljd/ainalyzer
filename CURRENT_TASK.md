@@ -19,11 +19,11 @@
 **Progress:**
 - [x] Spike B: D3 treemap prototype (validated interaction model)
 - [x] JSON schema defined (relative paths, file attributes)
-- [ ] Spike C: cloc integration (extract real repo data)
+- [x] Spike C: cloc integration (validated with todo-meta: 10 repos, 5898 files, 1.5M LOC)
 - [ ] Backend implementation: `aina analyze`
 - [ ] Frontend implementation: Vue app with treemap
 
-**Current focus:** Spike C - Test cloc integration with real project data.
+**Current focus:** Backend implementation - build `aina analyze` command.
 
 ## Recently Completed
 
