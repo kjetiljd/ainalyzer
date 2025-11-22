@@ -1,6 +1,9 @@
 """Aina library - Core functionality for analysis set management."""
 import sqlite3
+import subprocess
+import json
 from pathlib import Path
+from datetime import datetime
 
 
 def init_database(db_path):
@@ -203,4 +206,323 @@ def cmd_remove(name, db_path):
             return False
     except Exception as e:
         print(f"Error: {e}")
+        return False
+
+
+# Analysis functions
+
+def run_cloc(repo_path):
+    """Run cloc on a repository and return parsed JSON.
+
+    Args:
+        repo_path: Path to repository to analyze
+
+    Returns:
+        dict: Parsed cloc JSON output, or None on error
+
+    Raises:
+        FileNotFoundError: If cloc is not installed
+        subprocess.CalledProcessError: If cloc fails
+    """
+    try:
+        result = subprocess.run(
+            ['cloc', '--json', '--by-file', str(repo_path)],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return json.loads(result.stdout)
+    except FileNotFoundError:
+        raise FileNotFoundError("cloc not found. Install with: brew install cloc")
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"cloc failed: {e.stderr}")
+
+
+def build_directory_tree(files, base_path):
+    """Build hierarchical directory tree from flat file list.
+
+    Args:
+        files: Dict of {filepath: {blank, comment, code, language}}
+        base_path: Base path to make all paths relative to
+
+    Returns:
+        dict: Tree structure with nested directories and files
+    """
+    base = Path(base_path)
+
+    # Build tree structure - root has _dirs and _files
+    tree = {'_dirs': {}, '_files': []}
+
+    for filepath, stats in files.items():
+        path = Path(filepath)
+
+        try:
+            rel_path = path.relative_to(base)
+        except ValueError:
+            # File outside base path, skip
+            continue
+
+        # Navigate/create tree structure
+        parts = rel_path.parts
+        filename = parts[-1]
+
+        # Start at root, which has _dirs for subdirectories
+        current = tree
+
+        # Navigate through directory parts (all but filename)
+        for part in parts[:-1]:
+            # Navigate into _dirs to find or create the directory
+            if part not in current['_dirs']:
+                current['_dirs'][part] = {'_dirs': {}, '_files': []}
+            current = current['_dirs'][part]
+
+        # Now current is the directory node that should contain this file
+        # Add the file to this directory's _files list
+        current['_files'].append({
+            'name': filename,
+            'path': str(rel_path),
+            'value': stats.get('code', 0),
+            'language': stats.get('language', 'Unknown'),
+            'extension': path.suffix,
+            'blank': stats.get('blank', 0),
+            'comment': stats.get('comment', 0)
+        })
+
+    return tree
+
+
+def tree_to_schema(tree, name, path_prefix=''):
+    """Convert internal tree structure to JSON schema format.
+
+    Args:
+        tree: Internal tree structure from build_directory_tree
+        name: Name of this node
+        path_prefix: Path prefix for this node
+
+    Returns:
+        dict: Node in JSON schema format
+    """
+    # Determine if this is a directory or repository
+    node_path = f"{path_prefix}/{name}" if path_prefix else name
+
+    # Check if we have any children (dirs or files)
+    has_dirs = '_dirs' in tree and tree['_dirs']
+    has_files = '_files' in tree and tree['_files']
+
+    if not has_dirs and not has_files:
+        # Leaf directory with no content - skip
+        return None
+
+    children = []
+
+    # Add subdirectories
+    if has_dirs:
+        for dirname, subtree in sorted(tree['_dirs'].items()):
+            child = tree_to_schema(subtree, dirname, node_path)
+            if child:
+                children.append(child)
+
+    # Add files
+    if has_files:
+        for file in sorted(tree['_files'], key=lambda f: f['name']):
+            file_node = {
+                'name': file['name'],
+                'type': 'file',
+                'path': file['path'],
+                'value': file['value'],
+                'language': file['language'],
+                'extension': file['extension']
+            }
+            children.append(file_node)
+
+    node = {
+        'name': name,
+        'type': 'directory',
+        'path': node_path,
+        'children': children
+    }
+
+    return node
+
+
+def analyze_repos(analysis_set_name, analysis_set_path):
+    """Analyze all repositories in an analysis set.
+
+    Args:
+        analysis_set_name: Name of the analysis set
+        analysis_set_path: Path to folder containing repositories
+
+    Returns:
+        dict: Analysis results in JSON schema format
+
+    Raises:
+        ValueError: If path doesn't exist or no repos found
+        FileNotFoundError: If cloc is not installed
+    """
+    path_obj = Path(analysis_set_path)
+
+    if not path_obj.exists():
+        raise ValueError(f"Path does not exist: {analysis_set_path}")
+
+    # Discover repositories
+    repos = discover_repos(analysis_set_path)
+
+    if not repos:
+        raise ValueError(f"No Git repositories found in: {analysis_set_path}")
+
+    print(f"Found {len(repos)} repositories")
+
+    # Aggregate statistics
+    total_files = 0
+    total_lines = 0
+    languages = {}
+
+    # Build tree for each repository
+    repo_nodes = []
+
+    for i, repo_path in enumerate(repos, 1):
+        repo_name = Path(repo_path).name
+        print(f"[{i}/{len(repos)}] Analyzing {repo_name}...")
+
+        try:
+            # Run cloc
+            cloc_data = run_cloc(repo_path)
+
+            # Extract file data (skip header and SUM)
+            files = {k: v for k, v in cloc_data.items()
+                    if k not in ['header', 'SUM']}
+
+            if not files:
+                print(f"  No files found in {repo_name}, skipping")
+                continue
+
+            # Build tree for this repo
+            repo_tree = build_directory_tree(files, repo_path)
+
+            # Convert to schema format - repo_tree has _dirs and _files at root
+            children = []
+
+            # Add subdirectories from _dirs
+            for dirname, subtree in sorted(repo_tree['_dirs'].items()):
+                child = tree_to_schema(subtree, dirname, repo_name)
+                if child:
+                    children.append(child)
+
+            # Add root-level files from _files
+            for file in sorted(repo_tree['_files'], key=lambda f: f['name']):
+                file_node = {
+                    'name': file['name'],
+                    'type': 'file',
+                    'path': file['path'],
+                    'value': file['value'],
+                    'language': file['language'],
+                    'extension': file['extension']
+                }
+                children.append(file_node)
+
+            # Create repo node
+            repo_node = {
+                'name': repo_name,
+                'type': 'repository',
+                'path': repo_name,
+                'children': children
+            }
+
+            if children:  # Only add if we have content
+                repo_nodes.append(repo_node)
+
+                # Update statistics
+                for file in files.values():
+                    total_files += 1
+                    code_lines = file.get('code', 0)
+                    total_lines += code_lines
+                    lang = file.get('language', 'Unknown')
+                    languages[lang] = languages.get(lang, 0) + code_lines
+
+                print(f"  {len(files)} files, {sum(f.get('code', 0) for f in files.values()):,} lines")
+
+        except Exception as e:
+            print(f"  Error analyzing {repo_name}: {e}")
+            continue
+
+    if not repo_nodes:
+        raise ValueError("No repositories were successfully analyzed")
+
+    # Build final JSON structure
+    analysis_json = {
+        'analysis_set': analysis_set_name,
+        'generated_at': datetime.utcnow().isoformat() + 'Z',
+        'stats': {
+            'total_files': total_files,
+            'total_lines': total_lines,
+            'total_repos': len(repo_nodes),
+            'languages': dict(sorted(languages.items(), key=lambda x: x[1], reverse=True))
+        },
+        'tree': {
+            'name': analysis_set_name,
+            'type': 'analysis_set',
+            'children': repo_nodes
+        }
+    }
+
+    return analysis_json
+
+
+def cmd_analyze(name, db_path):
+    """CLI command: Analyze an analysis set and generate JSON.
+
+    Args:
+        name: Name of the analysis set to analyze
+        db_path: Path to SQLite database
+
+    Returns:
+        bool: True if successful, False on error
+    """
+    try:
+        # Get analysis set from database
+        conn = init_database(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT path FROM analysis_sets WHERE name = ?", (name,))
+        row = cursor.fetchone()
+        conn.close()
+
+        if not row:
+            print(f"Error: Analysis set '{name}' not found")
+            return False
+
+        analysis_set_path = row[0]
+
+        print(f"Analyzing '{name}' at {analysis_set_path}")
+
+        # Run analysis
+        analysis_json = analyze_repos(name, analysis_set_path)
+
+        # Write output
+        output_dir = Path.home() / '.aina' / 'analysis'
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        output_path = output_dir / f"{name}.json"
+
+        with open(output_path, 'w') as f:
+            json.dump(analysis_json, f, indent=2)
+
+        stats = analysis_json['stats']
+        print(f"\nAnalysis complete!")
+        print(f"  Repositories: {stats['total_repos']}")
+        print(f"  Files: {stats['total_files']:,}")
+        print(f"  Lines of code: {stats['total_lines']:,}")
+        print(f"\nOutput: {output_path}")
+
+        return True
+
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
+        return False
+    except ValueError as e:
+        print(f"Error: {e}")
+        return False
+    except Exception as e:
+        print(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
         return False
