@@ -14,6 +14,10 @@ export default {
       type: Object,
       required: true
     },
+    currentNode: {
+      type: Object,
+      default: null
+    },
     width: {
       type: Number,
       default: 800
@@ -29,6 +33,9 @@ export default {
   watch: {
     data() {
       this.render()
+    },
+    currentNode() {
+      this.render()
     }
   },
   methods: {
@@ -39,8 +46,11 @@ export default {
       // Clear previous rendering
       svg.innerHTML = ''
 
+      // Use currentNode if provided, otherwise use data
+      const nodeToRender = this.currentNode || this.data
+
       // Create hierarchy
-      const root = hierarchy(this.data)
+      const root = hierarchy(nodeToRender)
         .sum(d => d.value || 0)
         .sort((a, b) => (b.value || 0) - (a.value || 0))
 
@@ -64,6 +74,14 @@ export default {
         rect.setAttribute('fill', '#4a4a4a')
         rect.setAttribute('stroke', '#1e1e1e')
         rect.setAttribute('stroke-width', '2')
+        rect.style.cursor = 'pointer'
+
+        // Add click handler
+        rect.addEventListener('click', () => {
+          if (node.data.children) {
+            this.$emit('drill-down', node.data)
+          }
+        })
 
         svg.appendChild(rect)
       })
