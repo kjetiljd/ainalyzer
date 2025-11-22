@@ -62,8 +62,11 @@ const treemapWidth = ref(1200)
 const treemapHeight = ref(800)
 
 function updateDimensions() {
-  // Account for padding, header, breadcrumb, and statusline
-  treemapWidth.value = window.innerWidth - 40
+  // Account for body padding (20px each side = 40px total)
+  // and max-width constraint on .app container
+  const availableWidth = Math.min(window.innerWidth - 40, 1400)
+  treemapWidth.value = availableWidth
+  // Account for header, breadcrumb, padding, and statusline
   treemapHeight.value = window.innerHeight - 150
 }
 
