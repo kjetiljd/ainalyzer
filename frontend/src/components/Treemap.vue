@@ -36,6 +36,12 @@ export default {
     },
     currentNode() {
       this.render()
+    },
+    width() {
+      this.render()
+    },
+    height() {
+      this.render()
     }
   },
   methods: {

@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import Treemap from './components/Treemap.vue'
 import Breadcrumb from './components/Breadcrumb.vue'
 import Statusline from './components/Statusline.vue'
@@ -57,6 +57,25 @@ const statuslineText = ref('')
 // Current node being displayed
 const currentNode = ref(mockData)
 
+// Responsive dimensions
+const treemapWidth = ref(1200)
+const treemapHeight = ref(800)
+
+function updateDimensions() {
+  // Account for padding, header, breadcrumb, and statusline
+  treemapWidth.value = window.innerWidth - 40
+  treemapHeight.value = window.innerHeight - 150
+}
+
+onMounted(() => {
+  updateDimensions()
+  window.addEventListener('resize', updateDimensions)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateDimensions)
+})
+
 // Handle drill-down - use full path from event
 function handleDrillDown(event) {
   navigationStack.value = event.path
@@ -79,8 +98,8 @@ function handleBreadcrumbNavigate(index) {
     <Treemap
       :data="mockData"
       :currentNode="currentNode"
-      :width="1200"
-      :height="800"
+      :width="treemapWidth"
+      :height="treemapHeight"
       @drill-down="handleDrillDown"
       @hover="statuslineText = $event"
       @hover-end="statuslineText = ''"
