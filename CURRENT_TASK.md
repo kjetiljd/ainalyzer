@@ -14,7 +14,16 @@
 
 **Approach:** Vue.js single-page app with static deployment (see [ADR 0002](./docs/adr/0002-vue-static-deployment-for-visualization.md))
 
-**Status:** Planning implementation, identifying spikes needed.
+**Status:** In progress - running spikes to validate technical approach.
+
+**Progress:**
+- [x] Spike B: D3 treemap prototype (validated interaction model)
+- [x] JSON schema defined (relative paths, file attributes)
+- [ ] Spike C: cloc integration (extract real repo data)
+- [ ] Backend implementation: `aina analyze`
+- [ ] Frontend implementation: Vue app with treemap
+
+**Current focus:** Spike C - Test cloc integration with real project data.
 
 ## Recently Completed
 
