@@ -75,4 +75,35 @@ describe('Treemap', () => {
     const newRectCount = wrapper.findAll('rect').length
     expect(newRectCount).not.toBe(initialRectCount)
   })
+
+  it('colors directories with neutral gray', () => {
+    const wrapper = mount(Treemap, {
+      props: { data: mockData }
+    })
+
+    const rects = wrapper.findAll('rect')
+    // First rect is root node (has children) - should be gray
+    const rootRect = rects[0]
+    expect(rootRect.attributes('fill')).toBe('#4a4a4a')
+  })
+
+  it('colors files with ColorBrewer Set2 palette based on depth', () => {
+    const dataWithFiles = {
+      name: 'root',
+      children: [
+        { name: 'file1.js', value: 100 },
+        { name: 'file2.py', value: 200 }
+      ]
+    }
+
+    const wrapper = mount(Treemap, {
+      props: { data: dataWithFiles }
+    })
+
+    const rects = wrapper.findAll('rect')
+    // Files should have ColorBrewer colors, not gray
+    const colors = rects.map(r => r.attributes('fill'))
+    const hasColoredFiles = colors.some(c => c !== '#4a4a4a')
+    expect(hasColoredFiles).toBe(true)
+  })
 })

@@ -39,6 +39,17 @@ export default {
     }
   },
   methods: {
+    getNodeColor(node) {
+      // If node has children, it's a directory - use neutral gray
+      if (node.data.children) {
+        return '#4a4a4a'
+      }
+
+      // It's a file - color by depth using ColorBrewer Set2
+      const fileColors = ['#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f']
+      return fileColors[node.depth % fileColors.length]
+    },
+
     render() {
       const svg = this.$refs.svg
       if (!svg) return
@@ -71,7 +82,7 @@ export default {
         rect.setAttribute('y', node.y0)
         rect.setAttribute('width', node.x1 - node.x0)
         rect.setAttribute('height', node.y1 - node.y0)
-        rect.setAttribute('fill', '#4a4a4a')
+        rect.setAttribute('fill', this.getNodeColor(node))
         rect.setAttribute('stroke', '#1e1e1e')
         rect.setAttribute('stroke-width', '2')
         rect.style.cursor = 'pointer'
