@@ -89,7 +89,14 @@ export default {
 
         // Add click handler - all nodes are clickable
         rect.addEventListener('click', () => {
-          this.$emit('drill-down', node.data)
+          // Build full path from root to this node
+          const pathNodes = []
+          let currentNode = node
+          while (currentNode) {
+            pathNodes.unshift(currentNode.data)
+            currentNode = currentNode.parent
+          }
+          this.$emit('drill-down', { node: node.data, path: pathNodes })
         })
 
         // Add hover handlers
