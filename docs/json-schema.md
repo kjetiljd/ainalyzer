@@ -22,7 +22,7 @@ The analysis output is a hierarchical tree structure representing:
 {
   "name": "backend-api",
   "type": "directory",
-  "path": "/Users/kjetil/projects/backend-api/src",
+  "path": "backend-api/src",
   "children": [...]
 }
 ```
@@ -32,7 +32,7 @@ The analysis output is a hierarchical tree structure representing:
 {
   "name": "auth.py",
   "type": "file",
-  "path": "/Users/kjetil/projects/backend-api/src/auth.py",
+  "path": "backend-api/src/auth.py",
   "value": 1234,
   "language": "Python",
   "extension": ".py",
@@ -44,6 +44,8 @@ The analysis output is a hierarchical tree structure representing:
   }
 }
 ```
+
+**Note:** All paths are relative to the analysis set root. No absolute filesystem paths are included, making the JSON portable and shareable.
 
 ---
 
@@ -70,22 +72,22 @@ The analysis output is a hierarchical tree structure representing:
       {
         "name": "backend-api",
         "type": "repository",
-        "path": "/Users/kjetil/projects/backend-api",
+        "path": "backend-api",
         "children": [
           {
             "name": "src",
             "type": "directory",
-            "path": "/Users/kjetil/projects/backend-api/src",
+            "path": "backend-api/src",
             "children": [
               {
                 "name": "services",
                 "type": "directory",
-                "path": "/Users/kjetil/projects/backend-api/src/services",
+                "path": "backend-api/src/services",
                 "children": [
                   {
                     "name": "auth.py",
                     "type": "file",
-                    "path": "/Users/kjetil/projects/backend-api/src/services/auth.py",
+                    "path": "backend-api/src/services/auth.py",
                     "value": 1234,
                     "language": "Python",
                     "extension": ".py",
@@ -99,7 +101,7 @@ The analysis output is a hierarchical tree structure representing:
                   {
                     "name": "database.py",
                     "type": "file",
-                    "path": "/Users/kjetil/projects/backend-api/src/services/database.py",
+                    "path": "backend-api/src/services/database.py",
                     "value": 2100,
                     "language": "Python",
                     "extension": ".py",
@@ -117,12 +119,12 @@ The analysis output is a hierarchical tree structure representing:
           {
             "name": "tests",
             "type": "directory",
-            "path": "/Users/kjetil/projects/backend-api/tests",
+            "path": "backend-api/tests",
             "children": [
               {
                 "name": "test_auth.py",
                 "type": "file",
-                "path": "/Users/kjetil/projects/backend-api/tests/test_auth.py",
+                "path": "backend-api/tests/test_auth.py",
                 "value": 800,
                 "language": "Python",
                 "extension": ".py",
@@ -140,17 +142,17 @@ The analysis output is a hierarchical tree structure representing:
       {
         "name": "frontend",
         "type": "repository",
-        "path": "/Users/kjetil/projects/frontend",
+        "path": "frontend",
         "children": [
           {
             "name": "components",
             "type": "directory",
-            "path": "/Users/kjetil/projects/frontend/components",
+            "path": "frontend/components",
             "children": [
               {
                 "name": "Header.vue",
                 "type": "file",
-                "path": "/Users/kjetil/projects/frontend/components/Header.vue",
+                "path": "frontend/components/Header.vue",
                 "value": 450,
                 "language": "Vue",
                 "extension": ".vue",
@@ -189,7 +191,7 @@ The analysis output is a hierarchical tree structure representing:
 |-------|------|----------|-------------|
 | `name` | string | Yes | Node name (directory/repo name) |
 | `type` | enum | Yes | `"analysis_set"`, `"repository"`, or `"directory"` |
-| `path` | string | No | Absolute filesystem path (omit for analysis_set root) |
+| `path` | string | No | Relative path from analysis set root (omit for analysis_set root) |
 | `children` | array | Yes | Child nodes (directories or files) |
 
 ### Node Object (Leaf/File)
@@ -198,7 +200,7 @@ The analysis output is a hierarchical tree structure representing:
 |-------|------|----------|-------------|
 | `name` | string | Yes | Filename with extension |
 | `type` | enum | Yes | `"file"` |
-| `path` | string | Yes | Absolute filesystem path |
+| `path` | string | Yes | Relative path from analysis set root |
 | `value` | integer | Yes | Lines of code (from cloc) |
 | `language` | string | Yes | Programming language (from cloc or extension mapping) |
 | `extension` | string | Yes | File extension (e.g. ".py", ".js") |
