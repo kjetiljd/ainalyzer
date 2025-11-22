@@ -226,7 +226,7 @@ def run_cloc(repo_path):
     """
     try:
         result = subprocess.run(
-            ['cloc', '--json', '--by-file', str(repo_path)],
+            ['cloc', '--vcs=git', '--json', '--by-file', str(repo_path)],
             capture_output=True,
             text=True,
             check=True
