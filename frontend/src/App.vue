@@ -1,5 +1,8 @@
 <script setup>
+import { ref } from 'vue'
 import Treemap from './components/Treemap.vue'
+import Breadcrumb from './components/Breadcrumb.vue'
+import Statusline from './components/Statusline.vue'
 
 const mockData = {
   name: 'ainalyzer-demo',
@@ -45,12 +48,42 @@ const mockData = {
     }
   ]
 }
+
+// Navigation state
+const navigationStack = ref([mockData])
+const breadcrumbPath = ref([mockData.name])
+const statuslineText = ref('')
+
+// Current node being displayed
+const currentNode = ref(mockData)
+
+// Handle drill-down
+function handleDrillDown(node) {
+  navigationStack.value.push(node)
+  breadcrumbPath.value.push(node.name)
+  currentNode.value = node
+}
+
+// Handle breadcrumb navigation
+function handleBreadcrumbNavigate(index) {
+  navigationStack.value = navigationStack.value.slice(0, index + 1)
+  breadcrumbPath.value = breadcrumbPath.value.slice(0, index + 1)
+  currentNode.value = navigationStack.value[index]
+}
 </script>
 
 <template>
   <div class="app">
     <h1>Ainalyzer - Code Visibility</h1>
-    <Treemap :data="mockData" :width="1200" :height="800" />
+    <Breadcrumb :path="breadcrumbPath" @navigate="handleBreadcrumbNavigate" />
+    <Treemap
+      :data="mockData"
+      :currentNode="currentNode"
+      :width="1200"
+      :height="800"
+      @drill-down="handleDrillDown"
+    />
+    <Statusline :text="statuslineText" />
   </div>
 </template>
 
