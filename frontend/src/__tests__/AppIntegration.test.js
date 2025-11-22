@@ -14,28 +14,43 @@ describe('App Integration', () => {
     expect(wrapper.findComponent(Statusline).exists()).toBe(true)
   })
 
-  it('updates breadcrumb path when drilling down', async () => {
+  it('updates breadcrumb path with full hierarchy when drilling down', async () => {
     const wrapper = mount(App)
 
     const treemap = wrapper.findComponent(Treemap)
 
-    // Emit drill-down event
-    const drillData = { name: 'backend-api', children: [] }
-    await treemap.vm.$emit('drill-down', drillData)
+    // Emit drill-down event with new format (node + path)
+    const rootNode = { name: 'ainalyzer-demo', children: [] }
+    const backendNode = { name: 'backend-api', children: [] }
+    await treemap.vm.$emit('drill-down', {
+      node: backendNode,
+      path: [rootNode, backendNode]
+    })
 
     const breadcrumb = wrapper.findComponent(Breadcrumb)
     const path = breadcrumb.props('path')
 
-    expect(path).toContain('backend-api')
+    // Should have both root and backend-api
+    expect(path).toEqual(['ainalyzer-demo', 'backend-api'])
   })
 
   it('navigates back when clicking breadcrumb segment', async () => {
     const wrapper = mount(App)
 
-    // Simulate being drilled down
+    // Simulate being drilled down with full paths
     const treemap = wrapper.findComponent(Treemap)
-    await treemap.vm.$emit('drill-down', { name: 'backend-api', children: [] })
-    await treemap.vm.$emit('drill-down', { name: 'src', children: [] })
+    const rootNode = { name: 'ainalyzer-demo', children: [] }
+    const backendNode = { name: 'backend-api', children: [] }
+    const srcNode = { name: 'src', children: [] }
+
+    await treemap.vm.$emit('drill-down', {
+      node: backendNode,
+      path: [rootNode, backendNode]
+    })
+    await treemap.vm.$emit('drill-down', {
+      node: srcNode,
+      path: [rootNode, backendNode, srcNode]
+    })
 
     // Click first breadcrumb segment (root)
     const breadcrumb = wrapper.findComponent(Breadcrumb)

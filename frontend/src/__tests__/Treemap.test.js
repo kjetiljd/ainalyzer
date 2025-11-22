@@ -43,7 +43,7 @@ describe('Treemap', () => {
     expect(rects.length).toBeGreaterThan(0)
   })
 
-  it('emits drill-down event when clicking any rectangle', async () => {
+  it('emits drill-down event with full path when clicking any rectangle', async () => {
     const wrapper = mount(Treemap, {
       props: { data: mockData }
     })
@@ -52,8 +52,12 @@ describe('Treemap', () => {
     const rect = wrapper.find('rect')
     await rect.trigger('click')
 
-    // Should emit 'drill-down' event
+    // Should emit 'drill-down' event with node and path
     expect(wrapper.emitted()).toHaveProperty('drill-down')
+    const emitted = wrapper.emitted('drill-down')
+    expect(emitted[0][0]).toHaveProperty('node')
+    expect(emitted[0][0]).toHaveProperty('path')
+    expect(Array.isArray(emitted[0][0].path)).toBe(true)
   })
 
   it('re-renders when currentNode prop changes', async () => {

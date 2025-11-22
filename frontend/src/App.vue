@@ -57,11 +57,11 @@ const statuslineText = ref('')
 // Current node being displayed
 const currentNode = ref(mockData)
 
-// Handle drill-down
-function handleDrillDown(node) {
-  navigationStack.value.push(node)
-  breadcrumbPath.value.push(node.name)
-  currentNode.value = node
+// Handle drill-down - use full path from event
+function handleDrillDown(event) {
+  navigationStack.value = event.path
+  breadcrumbPath.value = event.path.map(n => n.name)
+  currentNode.value = event.node
 }
 
 // Handle breadcrumb navigation
