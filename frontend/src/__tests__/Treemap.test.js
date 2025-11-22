@@ -42,4 +42,37 @@ describe('Treemap', () => {
     // Should have 2 rectangles for 2 files
     expect(rects.length).toBeGreaterThan(0)
   })
+
+  it('emits drill-down event when clicking rectangle with children', async () => {
+    const wrapper = mount(Treemap, {
+      props: { data: mockData }
+    })
+
+    // Find a rectangle (should be the repo1 node which has children)
+    const rect = wrapper.find('rect')
+    await rect.trigger('click')
+
+    // Should emit 'drill-down' event
+    expect(wrapper.emitted()).toHaveProperty('drill-down')
+  })
+
+  it('re-renders when currentNode prop changes', async () => {
+    const wrapper = mount(Treemap, {
+      props: {
+        data: mockData,
+        currentNode: mockData
+      }
+    })
+
+    const initialRectCount = wrapper.findAll('rect').length
+
+    // Change to drill into repo1
+    await wrapper.setProps({
+      currentNode: mockData.children[0]
+    })
+
+    // Should re-render with different rectangles
+    const newRectCount = wrapper.findAll('rect').length
+    expect(newRectCount).not.toBe(initialRectCount)
+  })
 })
