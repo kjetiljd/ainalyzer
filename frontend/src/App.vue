@@ -1,61 +1,44 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import Treemap from './components/Treemap.vue'
 import Breadcrumb from './components/Breadcrumb.vue'
 import Statusline from './components/Statusline.vue'
 
-const mockData = {
-  name: 'ainalyzer-demo',
-  children: [
-    {
-      name: 'backend-api',
-      children: [
-        {
-          name: 'src',
-          children: [
-            { name: 'auth.py', value: 1234 },
-            { name: 'database.py', value: 2100 },
-            { name: 'api.py', value: 890 }
-          ]
-        },
-        {
-          name: 'tests',
-          children: [
-            { name: 'test_auth.py', value: 800 },
-            { name: 'test_api.py', value: 950 }
-          ]
-        }
-      ]
-    },
-    {
-      name: 'frontend',
-      children: [
-        {
-          name: 'components',
-          children: [
-            { name: 'Header.vue', value: 450 },
-            { name: 'Sidebar.vue', value: 380 }
-          ]
-        },
-        {
-          name: 'views',
-          children: [
-            { name: 'Dashboard.vue', value: 1200 },
-            { name: 'Settings.vue', value: 560 }
-          ]
-        }
-      ]
-    }
-  ]
-}
+// Data will be loaded from backend
+const data = ref(null)
+const loading = ref(true)
+const error = ref(null)
 
 // Navigation state
-const navigationStack = ref([mockData])
-const breadcrumbPath = ref([mockData.name])
+const navigationStack = ref([])
+const breadcrumbPath = ref([])
 const statuslineText = ref('')
+const currentNode = ref(null)
 
-// Current node being displayed
-const currentNode = ref(mockData)
+// Load data from backend-generated JSON
+onMounted(async () => {
+  try {
+    const response = await fetch('/data.json')
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const json = await response.json()
+
+    // Extract tree from backend JSON structure
+    data.value = json.tree
+    navigationStack.value = [json.tree]
+    breadcrumbPath.value = [json.tree.name]
+    currentNode.value = json.tree
+    loading.value = false
+
+    console.log('Loaded analysis:', json.analysis_set)
+    console.log('Stats:', json.stats)
+  } catch (e) {
+    error.value = e.message
+    loading.value = false
+    console.error('Failed to load data:', e)
+  }
+})
 
 
 // Handle drill-down - use full path from event
@@ -76,17 +59,23 @@ function handleBreadcrumbNavigate(index) {
 <template>
   <div class="app">
     <h1>Ainalyzer - Code Visibility</h1>
-    <Breadcrumb :path="breadcrumbPath" @navigate="handleBreadcrumbNavigate" />
-    <div class="treemap-container">
-      <Treemap
-        :data="mockData"
-        :currentNode="currentNode"
-        @drill-down="handleDrillDown"
-        @hover="statuslineText = $event"
-        @hover-end="statuslineText = ''"
-      />
-    </div>
-    <Statusline :text="statuslineText" />
+
+    <div v-if="loading" class="loading">Loading analysis data...</div>
+    <div v-else-if="error" class="error">Error loading data: {{ error }}</div>
+
+    <template v-else-if="data">
+      <Breadcrumb :path="breadcrumbPath" @navigate="handleBreadcrumbNavigate" />
+      <div class="treemap-container">
+        <Treemap
+          :data="data"
+          :currentNode="currentNode"
+          @drill-down="handleDrillDown"
+          @hover="statuslineText = $event"
+          @hover-end="statuslineText = ''"
+        />
+      </div>
+      <Statusline :text="statuslineText" />
+    </template>
   </div>
 </template>
 
@@ -116,6 +105,16 @@ body {
 h1 {
   margin: 0;
   font-size: clamp(18px, 4vw, 24px);
+}
+
+.loading, .error {
+  padding: 40px;
+  text-align: center;
+  font-size: 18px;
+}
+
+.error {
+  color: #ff6b6b;
 }
 
 .treemap-container {
