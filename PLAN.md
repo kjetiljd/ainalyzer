@@ -8,13 +8,14 @@ This plan follows a focused approach where we work on exactly one thing at a tim
 
 ## Now
 
-**User Preferences and Configuration (009)** - Started 2025-11-24
+**Refactor aina_lib.py to improve cohesion** - Started 2025-11-24
 
-Implement localStorage-based preferences system with cushion treemap toggle as first preference.
+Restructure aina_lib.py using OO design to improve cohesion without splitting into multiple files.
 
-- Hybrid approach: localStorage for persistence + URL params for sharing
-- Start with cushion treemap toggle (Opportunity 008)
-- CSS gradient implementation for 3D effect
+- Convert procedural code to class-based design
+- Each class has single, clear responsibility
+- Maintain all existing tests (21 passing tests)
+- Stepwise refactoring with test verification at each step
 
 ---
 

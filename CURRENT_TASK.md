@@ -6,13 +6,68 @@
 
 ## Active Task
 
-**No active task** - Context-Aware Statistics Panel completed 2025-11-24
+**Refactor aina_lib.py to improve cohesion** - Started 2025-11-24
 
-Ready to pull next opportunity from PLAN.md
+→ [PLAN.md](./PLAN.md)
+
+**Goal:** Restructure aina_lib.py using OO design to improve cohesion without splitting into multiple files.
+
+**Approach:** Stepwise refactoring with test verification at each step
+
+**Phase 1: Database class** (NEXT)
+- Extract Database class with context manager
+- Replace all init_database/cursor patterns
+- Run tests → verify 21 passing
+
+**Phase 2: RepositoryScanner & ClocRunner**
+- Extract RepositoryScanner.discover()
+- Extract ClocRunner.analyze()
+- Run tests → verify 21 passing
+
+**Phase 3: TreeBuilder class**
+- Extract TreeBuilder with build() and to_schema()
+- Run tests → verify 21 passing
+
+**Phase 4: Analyzer class**
+- Extract Analyzer with progress callback
+- Run tests → verify 21 passing
+
+**Phase 5: AnalysisIndex class**
+- Extract AnalysisIndex
+- Run tests → verify 21 passing
+
+**Phase 6: Update cmd_* functions**
+- Simplify to thin wrappers using new classes
+- Run tests → verify 21 passing
+
+**Success criteria:**
+- All 21 tests pass at every step
+- Improved cohesion (each class has single responsibility)
+- No behavioral changes (same CLI interface)
+- Single file (no file sprawl)
 
 ---
 
 ## Recently Completed
+
+**User Preferences and Configuration (009)** - Completed 2025-11-24
+
+→ [docs/opportunities/009-user-preferences.md](./docs/opportunities/009-user-preferences.md)
+
+**Delivered:**
+- usePreferences composable (localStorage + URL params hybrid)
+- 12 passing tests for preferences system
+- Analysis selection persistence via localStorage
+- URL param `?analysis=name` overrides stored preference
+- URL updates automatically when selection changes
+- General-purpose design for future preferences
+
+**Implementation:**
+- Composable: `frontend/src/composables/usePreferences.js`
+- Tests: `frontend/src/__tests__/usePreferences.test.js`
+- Integration: `frontend/src/App.vue`
+
+---
 
 **Context-Aware Statistics Panel** - Completed 2025-11-24
 
