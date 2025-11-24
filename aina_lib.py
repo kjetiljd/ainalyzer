@@ -5,85 +5,83 @@ import json
 from pathlib import Path
 from datetime import datetime
 
+class Database:
 
-def init_database(db_path):
-    """Initialize database with analysis_sets table.
+    def __init__(self, db_path):
+        """Initialize database with analysis_sets table.
 
-    Args:
-        db_path: Path to SQLite database file
+        Args:
+            db_path: Path to SQLite database file
 
-    Returns:
-        sqlite3.Connection: Database connection
-    """
-    # Ensure parent directory exists
-    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        Returns:
+            sqlite3.Connection: Database connection
+        """
+        # Ensure parent directory exists
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+        self.conn = sqlite3.connect(db_path)
+        cursor = self.conn.cursor()
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS analysis_sets (
-            id INTEGER PRIMARY KEY,
-            name TEXT UNIQUE NOT NULL,
-            path TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS analysis_sets (
+                id INTEGER PRIMARY KEY,
+                name TEXT UNIQUE NOT NULL,
+                path TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        self.conn.commit()
+
+    def list_analysis_sets(self):
+        """List all analysis sets from the database.
+
+        Args:
+            conn: sqlite3.Connection
+
+        Returns:
+            List of dicts with 'name' and 'path' keys
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT name, path FROM analysis_sets ORDER BY name")
+        rows = cursor.fetchall()
+
+        return [{'name': row[0], 'path': row[1]} for row in rows]
+
+    def add_analysis_set(self, name, path):
+        """Add a new analysis set to the database.
+
+        Args:
+            conn: sqlite3.Connection
+            name: Name for the analysis set (must be unique)
+            path: Path to folder containing repositories
+
+        Raises:
+            sqlite3.IntegrityError: If name already exists
+        """
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "INSERT INTO analysis_sets (name, path) VALUES (?, ?)",
+            (name, path)
         )
-    """)
-
-    conn.commit()
-    return conn
+        self.conn.commit()
 
 
-def add_analysis_set(conn, name, path):
-    """Add a new analysis set to the database.
+    def remove_analysis_set(self, name):
+        """Remove an analysis set from the database.
 
-    Args:
-        conn: sqlite3.Connection
-        name: Name for the analysis set (must be unique)
-        path: Path to folder containing repositories
+        Args:
+            conn: sqlite3.Connection
+            name: Name of the analysis set to remove
 
-    Raises:
-        sqlite3.IntegrityError: If name already exists
-    """
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO analysis_sets (name, path) VALUES (?, ?)",
-        (name, path)
-    )
-    conn.commit()
+        Returns:
+            bool: True if set was removed, False if not found
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("DELETE FROM analysis_sets WHERE name = ?", (name,))
+        self.conn.commit()
 
-
-def list_analysis_sets(conn):
-    """List all analysis sets from the database.
-
-    Args:
-        conn: sqlite3.Connection
-
-    Returns:
-        List of dicts with 'name' and 'path' keys
-    """
-    cursor = conn.cursor()
-    cursor.execute("SELECT name, path FROM analysis_sets ORDER BY name")
-    rows = cursor.fetchall()
-
-    return [{'name': row[0], 'path': row[1]} for row in rows]
-
-
-def remove_analysis_set(conn, name):
-    """Remove an analysis set from the database.
-
-    Args:
-        conn: sqlite3.Connection
-        name: Name of the analysis set to remove
-
-    Returns:
-        bool: True if set was removed, False if not found
-    """
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM analysis_sets WHERE name = ?", (name,))
-    conn.commit()
-
-    return cursor.rowcount > 0
+        return cursor.rowcount > 0
 
 
 def discover_repos(path):
@@ -142,9 +140,8 @@ def cmd_add(name, path, db_path):
         return False
 
     try:
-        conn = init_database(db_path)
-        add_analysis_set(conn, name, path)
-        conn.close()
+        database = Database(db_path)
+        database.add_analysis_set(name, path)
         print(f"Added analysis set '{name}' -> {path}")
         return True
     except sqlite3.IntegrityError:
@@ -165,9 +162,8 @@ def cmd_list(db_path):
         bool: True if successful, False on error
     """
     try:
-        conn = init_database(db_path)
-        sets = list_analysis_sets(conn)
-        conn.close()
+        database = Database(db_path)
+        sets = database.list_analysis_sets()
 
         if not sets:
             print("No analysis sets registered.")
@@ -194,9 +190,8 @@ def cmd_remove(name, db_path):
         bool: True if successful, False on error
     """
     try:
-        conn = init_database(db_path)
-        success = remove_analysis_set(conn, name)
-        conn.close()
+        database = Database(db_path)
+        success = database.remove_analysis_set(name)
 
         if success:
             print(f"Removed analysis set '{name}'")

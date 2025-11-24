@@ -8,7 +8,7 @@ import sqlite3
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from aina_lib import cmd_add, cmd_list, cmd_remove, list_analysis_sets
+from aina_lib import cmd_add, cmd_list, cmd_remove
 
 
 class TestCmdAdd(unittest.TestCase):
@@ -33,10 +33,9 @@ class TestCmdAdd(unittest.TestCase):
         self.assertTrue(result)
 
         # Verify it was added to database
-        from aina_lib import init_database
-        conn = init_database(self.db_path)
-        sets = list_analysis_sets(conn)
-        conn.close()
+        from aina_lib import Database
+        database = Database(self.db_path)
+        sets = database.list_analysis_sets()
 
         self.assertEqual(len(sets), 1)
         self.assertEqual(sets[0]['name'], 'test-set')
@@ -113,10 +112,10 @@ class TestCmdRemove(unittest.TestCase):
         self.assertTrue(result)
 
         # Verify it was removed
-        from aina_lib import init_database
-        conn = init_database(self.db_path)
-        sets = list_analysis_sets(conn)
-        conn.close()
+        from aina_lib import Database
+        database = Database(self.db_path)
+        sets = database.list_analysis_sets()
+
 
         self.assertEqual(len(sets), 0)
 
