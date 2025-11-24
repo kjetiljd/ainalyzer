@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import Treemap from './components/Treemap.vue'
 import Breadcrumb from './components/Breadcrumb.vue'
+import StatsBar from './components/StatsBar.vue'
 import Statusline from './components/Statusline.vue'
 
 // Available analyses
@@ -135,6 +136,7 @@ function handleBreadcrumbNavigate(index) {
 
     <template v-else-if="data">
       <Breadcrumb :path="breadcrumbPath" @navigate="handleBreadcrumbNavigate" />
+      <StatsBar :currentNode="currentNode" />
       <div class="treemap-container">
         <Treemap
           :data="data"
@@ -163,7 +165,7 @@ body {
   container-type: inline-size;
   container-name: app-container;
   display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-rows: auto auto auto 1fr auto;
   height: 100vh;
   height: 100dvh;
   width: 100vw;

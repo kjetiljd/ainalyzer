@@ -6,13 +6,34 @@
 
 ## Active Task
 
-**No active task** - Treemap In-Cell Labels completed 2025-11-24
+**No active task** - Context-Aware Statistics Panel completed 2025-11-24
 
 Ready to pull next opportunity from PLAN.md
 
 ---
 
 ## Recently Completed
+
+**Context-Aware Statistics Panel** - Completed 2025-11-24
+
+→ [docs/opportunities/archive/007-context-stats-panel.md](./docs/opportunities/archive/007-context-stats-panel.md)
+
+**Goal:** Show aggregate statistics for current treemap view that updates when drilling down.
+
+**Delivered:**
+- StatsBar.vue component with reactive computed properties
+- Horizontal layout between breadcrumb and treemap (matches spike design)
+- Three statistics: total lines (formatted), file count, directory count
+- Recursive calculations that work at any tree depth
+- Automatic updates on navigation (drill-down and breadcrumb)
+- Styling consistent with breadcrumb (colors, font size, scrollbar)
+- Bullet separators between stats
+
+**Implementation:**
+- Component: `frontend/src/components/StatsBar.vue`
+- Integration: `frontend/src/App.vue` (updated grid layout to accommodate stats bar)
+
+---
 
 **Treemap In-Cell Labels** - Completed 2025-11-24
 

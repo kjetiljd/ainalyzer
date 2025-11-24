@@ -38,8 +38,8 @@ Each opportunity is scored on three dimensions:
 
 | # | Opportunity | Impact | Effort | Complexity | Score | Status |
 |---|-------------|--------|--------|------------|-------|--------|
-| 007 | [Context Stats Panel](#007-context-stats-panel) | 4 | 2 | 2 | 2.00 | Identified |
 | 003 | [Exclusion Patterns](#003-exclusion-patterns) | 3 | 2 | 2 | 1.50 | Identified |
+| 007 | [Context Stats Panel](#007-context-stats-panel) | 4 | 2 | 2 | 2.00 | ✅ Complete |
 | 004 | [Treemap Labels](#004-treemap-labels) | 4 | 3 | 3 | 1.33 | ✅ Complete |
 | 002 | [Code Visibility](#002-code-visibility) | 5 | 4 | 3 | 1.25 | ✅ Complete |
 | 009 | [User Preferences](#009-user-preferences) | 4 | 4 | 1 | 1.00 | Identified |
@@ -62,19 +62,18 @@ Each opportunity is scored on three dimensions:
 
 **Impact:** 4 | **Effort:** 2 | **Complexity:** 2 | **Score:** 2.00
 
-**Status:** Identified | **Parent:** 002 (Code Visibility)
+**Status:** ✅ Complete (2025-11-24) | **Parent:** 002 (Code Visibility)
 
-Show aggregate statistics (total lines, file count, directory count) that update when drilling down. Based on D3 spike design.
+Show aggregate statistics (total lines, file count, directory count) that update when drilling down.
 
-**Why High Priority:**
-- Quick win (2-3 hours implementation)
-- High user value (quantifies what you're looking at)
-- Proven design from spike
-- No dependencies
+**Delivered:**
+- StatsBar.vue component with reactive computed properties
+- Horizontal layout between breadcrumb and treemap
+- Three statistics: total lines (formatted), file count, directory count
+- Automatic updates on navigation
+- Styling consistent with breadcrumb
 
-**Next Steps:** Implement horizontal stats bar (Solution 1)
-
-[View opportunity →](007-context-stats-panel.md)
+[View opportunity →](archive/007-context-stats-panel.md)
 
 ---
 
@@ -297,6 +296,9 @@ Identified → Next → In Progress → Complete → Archive
 
 Completed opportunities are moved to `archive/` with completion date:
 
+- [007-context-stats-panel.md](archive/007-context-stats-panel.md) - Completed 2025-11-24
+- [004-treemap-labels.md](archive/004-treemap-labels.md) - Completed 2025-11-24
+- [002-code-visibility.md](archive/002-code-visibility.md) - Completed 2025-11-23
 - [001-analysis-set-registration.md](archive/001-analysis-set-registration.md) - Completed 2025-11-21
 
 ## Notes
