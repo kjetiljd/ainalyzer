@@ -2,11 +2,11 @@
 
 > **Purpose:** This file points to the opportunity we're currently working on and tracks its status. Keep this file updated as work progresses.
 
-**Last Updated:** 2025-11-22
+**Last Updated:** 2025-11-23
 
-## Active Opportunity
+## Recently Completed
 
-**Code Visibility** - Completed 2025-11-22
+**Code Visibility** - Completed 2025-11-23
 
 → [docs/opportunities/002-code-visibility.md](./docs/opportunities/002-code-visibility.md)
 
@@ -22,28 +22,36 @@
 - [x] Spike C: cloc integration (validated with todo-meta: 10 repos, 5898 files, 1.5M LOC)
 - [x] Backend implementation: `aina analyze`
 - [x] Frontend implementation: Vue app with treemap
+- [x] Automatic analysis discovery (no manual copying)
 
 **Delivered:**
 - `aina analyze` command with cloc integration (respects .gitignore)
 - Hierarchical directory tree building (repos → dirs → files)
 - JSON output to `~/.aina/analysis/<name>.json`
+- Automatic index.json generation listing all analyses
 - Vue.js frontend with D3 treemap visualization
 - Responsive layout using CSS container queries
 - Interactive drill-down navigation with breadcrumbs
 - Real-time hover tooltips showing paths and line counts
-- End-to-end workflow: analyze → copy JSON → visualize
+- Analysis selector dropdown with auto-discovery
+- Vite middleware serving analyses via /api/analyses
+- **Zero manual steps** - complete automation
 
 **Usage:**
 ```bash
+# 1. Register and analyze
 ./aina add my-projects ~/code
 ./aina analyze my-projects
-cp ~/.aina/analysis/my-projects.json frontend/public/data.json
-# View at http://localhost:5173
+
+# 2. View in browser
+open http://localhost:5173
+
+# 3. Select analysis from dropdown and explore!
 ```
 
-**Next:** Ready to move to next opportunity or iterate on current features.
+**Next:** Ready to pull next opportunity from PLAN.md
 
-## Recently Completed
+---
 
 **Analysis Set Registration** - Completed 2025-11-21
 

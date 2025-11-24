@@ -8,17 +8,23 @@ This plan follows a focused approach where we work on exactly one thing at a tim
 
 ## Now
 
-**Code visibility** - Teams can't see code distribution across repositories without manual exploration
+**No active task** - Code Visibility opportunity completed 2025-11-23.
 
-→ [docs/opportunities/002-code-visibility.md](./docs/opportunities/002-code-visibility.md)
+Ready to pull next opportunity.
 
 ---
 
 ## Next
 
 1. **Change pattern awareness** - Hidden hotspots and change frequency buried in Git history
+   - Git history overlays for treemap
+   - Integration with Code Maat for churn analysis
+   - Color-coded visualization of change hotspots
 
 2. **Codebase comprehension** - Teams need AI assistance to understand unfamiliar code areas
+   - AI-powered prompt toolkit
+   - Pattern discovery and architecture insights
+   - Natural language exploration of analysis data
 
 ---
 
