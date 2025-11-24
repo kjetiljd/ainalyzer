@@ -93,6 +93,11 @@ onMounted(async () => {
 
 // Handle drill-down - use full path from event
 function handleDrillDown(event) {
+  // If clicking the same node we're already at, ignore it
+  if (currentNode.value === event.node) {
+    return
+  }
+
   navigationStack.value = event.path
   breadcrumbPath.value = event.path.map(n => n.name)
   currentNode.value = event.node
