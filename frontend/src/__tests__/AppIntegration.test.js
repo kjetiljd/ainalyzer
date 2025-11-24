@@ -1,13 +1,56 @@
-import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
 import App from '../App.vue'
 import Treemap from '../components/Treemap.vue'
 import Breadcrumb from '../components/Breadcrumb.vue'
 import Statusline from '../components/Statusline.vue'
 
 describe('App Integration', () => {
-  it('renders all main components', () => {
+  beforeEach(() => {
+    // Mock fetch API
+    global.fetch = vi.fn((url) => {
+      if (url === '/api/analyses/') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            analyses: [
+              {
+                filename: 'test-analysis.json',
+                name: 'test-analysis',
+                stats: { total_files: 100, total_lines: 5000 }
+              }
+            ]
+          })
+        })
+      }
+      if (url === '/api/analyses/test-analysis.json') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            analysis_set: 'test-analysis',
+            generated_at: '2024-01-01T00:00:00Z',
+            stats: { total_files: 100, total_lines: 5000 },
+            tree: {
+              name: 'ainalyzer-demo',
+              children: [
+                {
+                  name: 'backend-api',
+                  children: [
+                    { name: 'api.py', value: 500 }
+                  ]
+                }
+              ]
+            }
+          })
+        })
+      }
+      return Promise.reject(new Error('Unknown URL'))
+    })
+  })
+
+  it('renders all main components', async () => {
     const wrapper = mount(App)
+    await flushPromises()
 
     expect(wrapper.findComponent(Treemap).exists()).toBe(true)
     expect(wrapper.findComponent(Breadcrumb).exists()).toBe(true)
@@ -16,6 +59,7 @@ describe('App Integration', () => {
 
   it('updates breadcrumb path with full hierarchy when drilling down', async () => {
     const wrapper = mount(App)
+    await flushPromises()
 
     const treemap = wrapper.findComponent(Treemap)
 
@@ -36,6 +80,7 @@ describe('App Integration', () => {
 
   it('navigates back when clicking breadcrumb segment', async () => {
     const wrapper = mount(App)
+    await flushPromises()
 
     // Simulate being drilled down with full paths
     const treemap = wrapper.findComponent(Treemap)
@@ -63,6 +108,7 @@ describe('App Integration', () => {
 
   it('updates statusline when hovering over treemap nodes', async () => {
     const wrapper = mount(App)
+    await flushPromises()
 
     const treemap = wrapper.findComponent(Treemap)
     const statusline = wrapper.findComponent(Statusline)

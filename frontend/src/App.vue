@@ -139,6 +139,7 @@ function handleBreadcrumbNavigate(index) {
         <Treemap
           :data="data"
           :currentNode="currentNode"
+          :navigationStack="navigationStack"
           @drill-down="handleDrillDown"
           @hover="statuslineText = $event"
           @hover-end="statuslineText = ''"
