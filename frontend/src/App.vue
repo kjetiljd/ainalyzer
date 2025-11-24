@@ -4,6 +4,10 @@ import Treemap from './components/Treemap.vue'
 import Breadcrumb from './components/Breadcrumb.vue'
 import StatsBar from './components/StatsBar.vue'
 import Statusline from './components/Statusline.vue'
+import { usePreferences } from './composables/usePreferences'
+
+// Preferences
+const { preferences, updateURL } = usePreferences()
 
 // Available analyses
 const analyses = ref([])
@@ -31,7 +35,16 @@ async function loadAnalysesList() {
     const index = await response.json()
     analyses.value = index.analyses || []
 
-    // Auto-select first analysis if available
+    // Try to restore last selected analysis by name
+    if (preferences.value.lastSelectedAnalysis) {
+      const exists = analyses.value.find(a => a.name === preferences.value.lastSelectedAnalysis)
+      if (exists) {
+        selectedAnalysis.value = exists.filename
+        return
+      }
+    }
+
+    // Fallback: auto-select first analysis if available
     if (analyses.value.length > 0 && !selectedAnalysis.value) {
       selectedAnalysis.value = analyses.value[0].filename
     }
@@ -83,6 +96,12 @@ async function loadAnalysis(filename) {
 watch(selectedAnalysis, (newValue) => {
   if (newValue) {
     loadAnalysis(newValue)
+    // Persist selection by name
+    const analysis = analyses.value.find(a => a.filename === newValue)
+    if (analysis) {
+      preferences.value.lastSelectedAnalysis = analysis.name
+      updateURL()
+    }
   }
 })
 

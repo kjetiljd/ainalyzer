@@ -8,9 +8,13 @@ This plan follows a focused approach where we work on exactly one thing at a tim
 
 ## Now
 
-**No active task** - Context-Aware Statistics Panel completed 2025-11-24.
+**User Preferences and Configuration (009)** - Started 2025-11-24
 
-Ready to pull next opportunity.
+Implement localStorage-based preferences system with cushion treemap toggle as first preference.
+
+- Hybrid approach: localStorage for persistence + URL params for sharing
+- Start with cushion treemap toggle (Opportunity 008)
+- CSS gradient implementation for 3D effect
 
 ---
 
