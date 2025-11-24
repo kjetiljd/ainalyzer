@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from aina_lib import init_database, add_analysis_set, list_analysis_sets, remove_analysis_set
+from aina_lib import Database
 
 
 class DatabaseTestCase(unittest.TestCase):
@@ -31,8 +31,8 @@ class TestDatabaseInit(DatabaseTestCase):
 
     def test_init_database_creates_table(self):
         """Test that init_database creates analysis_sets table."""
-        conn = init_database(self.db_path)
-        cursor = conn.cursor()
+        database = Database(self.db_path)
+        cursor = database.conn.cursor()
 
         # Check table exists
         cursor.execute("""
@@ -53,7 +53,6 @@ class TestDatabaseInit(DatabaseTestCase):
         self.assertIn('path', columns)
         self.assertIn('created_at', columns)
 
-        conn.close()
 
 
 class TestAddAnalysisSet(DatabaseTestCase):
@@ -62,13 +61,13 @@ class TestAddAnalysisSet(DatabaseTestCase):
     def setUp(self):
         """Create temporary database for testing."""
         super().setUp()
-        self.conn = init_database(self.db_path)
+        self.database = Database(self.db_path)
 
     def test_add_analysis_set(self):
         """Test adding a new analysis set."""
-        add_analysis_set(self.conn, 'test-set', '/path/to/repos')
+        self.database.add_analysis_set('test-set', '/path/to/repos')
 
-        cursor = self.conn.cursor()
+        cursor = self.database.conn.cursor()
         cursor.execute("SELECT name, path FROM analysis_sets WHERE name = ?", ('test-set',))
         result = cursor.fetchone()
 
@@ -78,10 +77,10 @@ class TestAddAnalysisSet(DatabaseTestCase):
 
     def test_add_duplicate_name_fails(self):
         """Test that adding duplicate name raises error."""
-        add_analysis_set(self.conn, 'test-set', '/path/to/repos')
+        self.database.add_analysis_set('test-set', '/path/to/repos')
 
         with self.assertRaises(sqlite3.IntegrityError):
-            add_analysis_set(self.conn, 'test-set', '/different/path')
+            self.database.add_analysis_set('test-set', '/different/path')
 
 
 class TestListAnalysisSets(DatabaseTestCase):
@@ -90,14 +89,14 @@ class TestListAnalysisSets(DatabaseTestCase):
     def setUp(self):
         """Create temporary database for testing."""
         super().setUp()
-        self.conn = init_database(self.db_path)
+        self.database = Database(self.db_path)
 
     def test_list_analysis_sets(self):
         """Test listing analysis sets returns all sets."""
-        add_analysis_set(self.conn, 'set1', '/path/one')
-        add_analysis_set(self.conn, 'set2', '/path/two')
+        self.database.add_analysis_set('set1', '/path/one')
+        self.database.add_analysis_set('set2', '/path/two')
 
-        results = list_analysis_sets(self.conn)
+        results = self.database.list_analysis_sets()
 
         self.assertEqual(len(results), 2)
         self.assertEqual(results[0]['name'], 'set1')
@@ -107,7 +106,7 @@ class TestListAnalysisSets(DatabaseTestCase):
 
     def test_list_empty_database(self):
         """Test listing from empty database returns empty list."""
-        results = list_analysis_sets(self.conn)
+        results = self.database.list_analysis_sets()
 
         self.assertEqual(results, [])
 
@@ -118,28 +117,28 @@ class TestRemoveAnalysisSet(DatabaseTestCase):
     def setUp(self):
         """Create temporary database for testing."""
         super().setUp()
-        self.conn = init_database(self.db_path)
+        self.database = Database(self.db_path)
 
     def test_remove_analysis_set(self):
         """Test removing an existing analysis set."""
-        add_analysis_set(self.conn, 'test-set', '/path/to/repos')
+        self.database.add_analysis_set('test-set', '/path/to/repos')
 
-        remove_analysis_set(self.conn, 'test-set')
+        self.database.remove_analysis_set('test-set')
 
-        results = list_analysis_sets(self.conn)
+        results = self.database.list_analysis_sets()
         self.assertEqual(len(results), 0)
 
     def test_remove_nonexistent_set(self):
         """Test removing non-existent set returns False."""
-        result = remove_analysis_set(self.conn, 'nonexistent')
+        result = self.database.remove_analysis_set('nonexistent')
 
         self.assertFalse(result)
 
     def test_remove_returns_true_on_success(self):
         """Test removing existing set returns True."""
-        add_analysis_set(self.conn, 'test-set', '/path/to/repos')
+        self.database.add_analysis_set('test-set', '/path/to/repos')
 
-        result = remove_analysis_set(self.conn, 'test-set')
+        result = self.database.remove_analysis_set('test-set')
 
         self.assertTrue(result)
 
