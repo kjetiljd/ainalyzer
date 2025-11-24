@@ -142,4 +142,53 @@ describe('Treemap', () => {
     expect(svg.classes()).toContain('treemap')
     expect(svg.exists()).toBe(true)
   })
+
+  it('includes ancestors from navigationStack in drill-down path when already drilled down', async () => {
+    // Simulate being drilled down to repo1
+    const rootNode = { name: 'test-set', children: [mockData.children[0]] }
+    const repo1Node = mockData.children[0]
+    const navigationStack = [rootNode, repo1Node]
+
+    const wrapper = mount(Treemap, {
+      props: {
+        data: mockData,
+        currentNode: repo1Node,
+        navigationStack: navigationStack
+      }
+    })
+
+    // Click a file in the drilled-down view
+    const rect = wrapper.find('rect')
+    await rect.trigger('click')
+
+    // Should emit path that includes ancestors from navigationStack
+    const emitted = wrapper.emitted('drill-down')
+    const emittedPath = emitted[0][0].path
+
+    // Path should start with root node from navigationStack
+    expect(emittedPath[0]).toEqual(rootNode)
+
+    // Path should be complete from root to clicked node
+    expect(emittedPath.length).toBeGreaterThan(1)
+    expect(emittedPath[0].name).toBe('test-set')
+  })
+
+  it('builds correct path when navigationStack is empty (at root)', async () => {
+    const wrapper = mount(Treemap, {
+      props: {
+        data: mockData,
+        navigationStack: []
+      }
+    })
+
+    const rect = wrapper.find('rect')
+    await rect.trigger('click')
+
+    const emitted = wrapper.emitted('drill-down')
+    const emittedPath = emitted[0][0].path
+
+    // Path should start from root of data
+    expect(emittedPath.length).toBeGreaterThan(0)
+    expect(emittedPath[0].name).toBe('test-set')
+  })
 })

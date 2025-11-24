@@ -2,9 +2,37 @@
 
 > **Purpose:** This file points to the opportunity we're currently working on and tracks its status. Keep this file updated as work progresses.
 
-**Last Updated:** 2025-11-23
+**Last Updated:** 2025-11-24
+
+## Active Task
+
+**No active task** - Treemap In-Cell Labels completed 2025-11-24
+
+Ready to pull next opportunity from PLAN.md
+
+---
 
 ## Recently Completed
+
+**Treemap In-Cell Labels** - Completed 2025-11-24
+
+→ [docs/opportunities/004-treemap-labels.md](./docs/opportunities/004-treemap-labels.md)
+
+**Goal:** Add readable labels directly in treemap cells to reduce hover dependency.
+
+**Delivered:**
+- Three-tier progressive disclosure based on cell size
+- 60x30px: Filename only (truncated if needed)
+- 100x50px: Filename + line count formatted with toLocaleString()
+- 150x80px: Filename + line count + language
+- Automatic text color contrast (black/white) based on background luminance
+- Ellipsis truncation for long filenames
+- Smooth fade-in animation (0.2s)
+- Performance: O(n) rendering, no additional overhead
+
+**Impact:** Users can now identify files without hovering. Large cells display rich information at a glance.
+
+---
 
 **Code Visibility** - Completed 2025-11-23
 

@@ -1,7 +1,8 @@
 # Opportunity: Treemap In-Cell Labels
 
-**Status:** Next
-**Last Updated:** 2025-11-23
+**Status:** Complete
+**Last Updated:** 2025-11-24
+**Completed:** 2025-11-24
 **Parent:** 002 (Code Visibility)
 
 ## Desired Outcome
@@ -324,3 +325,40 @@ function getLabelByDepth(node, depth) {
 │  │  (no label, hover to see)
 └──┘
 ```
+
+## Implementation Notes
+
+**Delivered:** 2025-11-24
+
+**Approach:** Solution 1 (Size Thresholds) fully implemented with all enhancements.
+
+**Changes:**
+- Modified `frontend/src/components/Treemap.vue`
+- Added `createLabel()` method with three-tier progressive disclosure
+- Added `getTextColor()` for automatic contrast calculation (WCAG luminance formula)
+- Added `truncateText()` for ellipsis truncation
+- Added fade-in CSS animation (0.2s)
+
+**Label Tiers Implemented:**
+1. **60x30px minimum:** Filename only (truncated)
+2. **100x50px compact:** Filename + line count with toLocaleString()
+3. **150x80px full:** Filename + line count + language
+
+**Technical Details:**
+- Uses SVG `<g>` groups to hold multi-line text elements
+- Text color automatically switches black/white based on background luminance
+- Text shadow adapts to text color for optimal contrast
+- Labels have `pointer-events: none` to avoid blocking interactions
+- Performance: O(n) with render loop, no additional overhead
+
+**Testing:**
+- Verified with dev server (http://localhost:5173)
+- HMR updates successful
+- No console errors
+- Smooth animations confirmed
+
+**Success Criteria Met:**
+- ✅ Labels visible on cells ≥60x30px
+- ✅ No performance degradation
+- ✅ Reduced hover interactions for exploration
+- ✅ Clean fallback on small cells
