@@ -468,6 +468,55 @@ def analyze_repos(analysis_set_name, analysis_set_path):
     return analysis_json
 
 
+def generate_analysis_index():
+    """Generate index.json listing all available analyses.
+
+    Returns:
+        bool: True if successful, False on error
+    """
+    try:
+        analysis_dir = Path.home() / '.aina' / 'analysis'
+
+        if not analysis_dir.exists():
+            return True  # No analyses yet, that's ok
+
+        # Find all JSON files
+        analyses = []
+        for json_file in analysis_dir.glob('*.json'):
+            if json_file.name == 'index.json':
+                continue  # Skip the index itself
+
+            try:
+                with open(json_file) as f:
+                    data = json.load(f)
+                    analyses.append({
+                        'name': data.get('analysis_set', json_file.stem),
+                        'filename': json_file.name,
+                        'generated_at': data.get('generated_at'),
+                        'stats': data.get('stats', {})
+                    })
+            except Exception as e:
+                print(f"Warning: Failed to read {json_file.name}: {e}")
+                continue
+
+        # Sort by name
+        analyses.sort(key=lambda x: x['name'])
+
+        # Write index
+        index_path = analysis_dir / 'index.json'
+        with open(index_path, 'w') as f:
+            json.dump({
+                'analyses': analyses,
+                'updated_at': datetime.utcnow().isoformat() + 'Z'
+            }, f, indent=2)
+
+        return True
+
+    except Exception as e:
+        print(f"Error generating index: {e}")
+        return False
+
+
 def cmd_analyze(name, db_path):
     """CLI command: Analyze an analysis set and generate JSON.
 
@@ -505,6 +554,9 @@ def cmd_analyze(name, db_path):
 
         with open(output_path, 'w') as f:
             json.dump(analysis_json, f, indent=2)
+
+        # Update index
+        generate_analysis_index()
 
         stats = analysis_json['stats']
         print(f"\nAnalysis complete!")
