@@ -12,9 +12,6 @@ class Database:
 
         Args:
             db_path: Path to SQLite database file
-
-        Returns:
-            sqlite3.Connection: Database connection
         """
         # Ensure parent directory exists
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -36,9 +33,6 @@ class Database:
     def list_analysis_sets(self):
         """List all analysis sets from the database.
 
-        Args:
-            conn: sqlite3.Connection
-
         Returns:
             List of dicts with 'name' and 'path' keys
         """
@@ -52,7 +46,6 @@ class Database:
         """Add a new analysis set to the database.
 
         Args:
-            conn: sqlite3.Connection
             name: Name for the analysis set (must be unique)
             path: Path to folder containing repositories
 
@@ -71,7 +64,6 @@ class Database:
         """Remove an analysis set from the database.
 
         Args:
-            conn: sqlite3.Connection
             name: Name of the analysis set to remove
 
         Returns:
