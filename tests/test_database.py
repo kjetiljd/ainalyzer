@@ -32,26 +32,28 @@ class TestDatabaseInit(DatabaseTestCase):
     def test_init_database_creates_table(self):
         """Test that init_database creates analysis_sets table."""
         database = Database(self.db_path)
-        cursor = database.conn.cursor()
 
-        # Check table exists
-        cursor.execute("""
-            SELECT name FROM sqlite_master
-            WHERE type='table' AND name='analysis_sets'
-        """)
-        result = cursor.fetchone()
+        with database._connect() as conn:
+            cursor = conn.cursor()
 
-        self.assertIsNotNone(result)
-        self.assertEqual(result[0], 'analysis_sets')
+            # Check table exists
+            cursor.execute("""
+                SELECT name FROM sqlite_master
+                WHERE type='table' AND name='analysis_sets'
+            """)
+            result = cursor.fetchone()
 
-        # Check table schema
-        cursor.execute("PRAGMA table_info(analysis_sets)")
-        columns = {row[1]: row[2] for row in cursor.fetchall()}
+            self.assertIsNotNone(result)
+            self.assertEqual(result[0], 'analysis_sets')
 
-        self.assertIn('id', columns)
-        self.assertIn('name', columns)
-        self.assertIn('path', columns)
-        self.assertIn('created_at', columns)
+            # Check table schema
+            cursor.execute("PRAGMA table_info(analysis_sets)")
+            columns = {row[1]: row[2] for row in cursor.fetchall()}
+
+            self.assertIn('id', columns)
+            self.assertIn('name', columns)
+            self.assertIn('path', columns)
+            self.assertIn('created_at', columns)
 
 
 
@@ -67,9 +69,10 @@ class TestAddAnalysisSet(DatabaseTestCase):
         """Test adding a new analysis set."""
         self.database.add_analysis_set('test-set', '/path/to/repos')
 
-        cursor = self.database.conn.cursor()
-        cursor.execute("SELECT name, path FROM analysis_sets WHERE name = ?", ('test-set',))
-        result = cursor.fetchone()
+        with self.database._connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name, path FROM analysis_sets WHERE name = ?", ('test-set',))
+            result = cursor.fetchone()
 
         self.assertIsNotNone(result)
         self.assertEqual(result[0], 'test-set')
