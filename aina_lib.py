@@ -13,22 +13,31 @@ class Database:
         Args:
             db_path: Path to SQLite database file
         """
+        self.db_path = db_path
         # Ensure parent directory exists
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        self._init_schema()
 
-        self.conn = sqlite3.connect(db_path)
-        cursor = self.conn.cursor()
+    def _connect(self):
+        """Create a new database connection.
 
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS analysis_sets (
-                id INTEGER PRIMARY KEY,
-                name TEXT UNIQUE NOT NULL,
-                path TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+        Returns:
+            sqlite3.Connection: Database connection
+        """
+        return sqlite3.connect(self.db_path)
 
-        self.conn.commit()
+    def _init_schema(self):
+        """Initialize database schema."""
+        with self._connect() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS analysis_sets (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT UNIQUE NOT NULL,
+                    path TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
 
     def list_analysis_sets(self):
         """List all analysis sets from the database.
@@ -36,11 +45,11 @@ class Database:
         Returns:
             List of dicts with 'name' and 'path' keys
         """
-        cursor = self.conn.cursor()
-        cursor.execute("SELECT name, path FROM analysis_sets ORDER BY name")
-        rows = cursor.fetchall()
-
-        return [{'name': row[0], 'path': row[1]} for row in rows]
+        with self._connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name, path FROM analysis_sets ORDER BY name")
+            rows = cursor.fetchall()
+            return [{'name': row[0], 'path': row[1]} for row in rows]
 
     def add_analysis_set(self, name, path):
         """Add a new analysis set to the database.
@@ -52,13 +61,12 @@ class Database:
         Raises:
             sqlite3.IntegrityError: If name already exists
         """
-        cursor = self.conn.cursor()
-        cursor.execute(
-            "INSERT INTO analysis_sets (name, path) VALUES (?, ?)",
-            (name, path)
-        )
-        self.conn.commit()
-
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO analysis_sets (name, path) VALUES (?, ?)",
+                (name, path)
+            )
+            conn.commit()
 
     def remove_analysis_set(self, name):
         """Remove an analysis set from the database.
@@ -69,11 +77,26 @@ class Database:
         Returns:
             bool: True if set was removed, False if not found
         """
-        cursor = self.conn.cursor()
-        cursor.execute("DELETE FROM analysis_sets WHERE name = ?", (name,))
-        self.conn.commit()
+        with self._connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM analysis_sets WHERE name = ?", (name,))
+            conn.commit()
+            return cursor.rowcount > 0
 
-        return cursor.rowcount > 0
+    def get_analysis_set(self, name):
+        """Get an analysis set by name.
+
+        Args:
+            name: Name of the analysis set
+
+        Returns:
+            dict with 'name' and 'path' keys, or None if not found
+        """
+        with self._connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name, path FROM analysis_sets WHERE name = ?", (name,))
+            row = cursor.fetchone()
+            return {'name': row[0], 'path': row[1]} if row else None
 
 
 def discover_repos(path):
@@ -516,17 +539,14 @@ def cmd_analyze(name, db_path):
     """
     try:
         # Get analysis set from database
-        conn = init_database(db_path)
-        cursor = conn.cursor()
-        cursor.execute("SELECT path FROM analysis_sets WHERE name = ?", (name,))
-        row = cursor.fetchone()
-        conn.close()
+        database = Database(db_path)
+        analysis_set = database.get_analysis_set(name)
 
-        if not row:
+        if not analysis_set:
             print(f"Error: Analysis set '{name}' not found")
             return False
 
-        analysis_set_path = row[0]
+        analysis_set_path = analysis_set['path']
 
         print(f"Analyzing '{name}' at {analysis_set_path}")
 
