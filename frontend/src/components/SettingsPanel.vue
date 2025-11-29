@@ -76,16 +76,68 @@
           Exclude files matching patterns in .clocignore from visualization and stats.
         </p>
       </section>
+
+      <section class="settings-section">
+        <h3>Custom Exclusions</h3>
+
+        <div class="exclusion-list">
+          <div v-if="customExclusions.length === 0" class="empty-state">
+            No custom exclusions
+          </div>
+          <div v-for="excl in customExclusions" :key="excl.pattern" class="exclusion-item">
+            <input
+              type="checkbox"
+              :checked="excl.enabled"
+              @change="handleToggleExclusion(excl.pattern)"
+            />
+            <span class="pattern">{{ excl.pattern }}</span>
+            <button class="remove-button" @click="handleRemoveExclusion(excl.pattern)">
+              &times;
+            </button>
+          </div>
+        </div>
+
+        <div class="add-exclusion">
+          <input
+            v-model="newPattern"
+            placeholder="Add pattern..."
+            @keydown.enter="handleAddExclusion"
+          />
+          <button @click="handleAddExclusion">Add</button>
+        </div>
+      </section>
     </div>
   </div>
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
 import { usePreferences } from '../composables/usePreferences'
 
 defineEmits(['close'])
 
-const { preferences, updateURL } = usePreferences()
+const { preferences, updateURL, addExclusion, removeExclusion, toggleExclusion } = usePreferences()
+
+const newPattern = ref('')
+
+const customExclusions = computed(() => {
+  return preferences.value.filters?.customExclusions || []
+})
+
+function handleAddExclusion() {
+  if (newPattern.value.trim()) {
+    addExclusion(newPattern.value.trim())
+    newPattern.value = ''
+  }
+}
+
+function handleRemoveExclusion(pattern) {
+  removeExclusion(pattern)
+}
+
+function handleToggleExclusion(pattern) {
+  toggleExclusion(pattern)
+}
 
 function toggleCushion(event) {
   if (!preferences.value.appearance) {
@@ -254,5 +306,101 @@ function toggleHideClocignore(event) {
   height: 18px;
   cursor: pointer;
   accent-color: #4fc3f7;
+}
+
+.exclusion-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+  border: 1px solid #3e3e3e;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.exclusion-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #3e3e3e;
+}
+
+.exclusion-item:last-child {
+  border-bottom: none;
+}
+
+.exclusion-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #4fc3f7;
+  flex-shrink: 0;
+}
+
+.exclusion-item .pattern {
+  flex: 1;
+  font-size: 13px;
+  font-family: monospace;
+  color: #d4d4d4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exclusion-item .remove-button {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.exclusion-item .remove-button:hover {
+  color: #ff6b6b;
+}
+
+.empty-state {
+  color: #888;
+  font-size: 13px;
+  text-align: center;
+  padding: 12px;
+}
+
+.add-exclusion {
+  display: flex;
+  gap: 8px;
+}
+
+.add-exclusion input {
+  flex: 1;
+  padding: 8px 12px;
+  background: #1e1e1e;
+  border: 1px solid #3e3e3e;
+  border-radius: 4px;
+  color: #d4d4d4;
+  font-size: 13px;
+  font-family: monospace;
+}
+
+.add-exclusion input:focus {
+  outline: none;
+  border-color: #4fc3f7;
+}
+
+.add-exclusion button {
+  padding: 8px 16px;
+  background: #3e3e3e;
+  border: none;
+  border-radius: 4px;
+  color: #d4d4d4;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.add-exclusion button:hover {
+  background: #4fc3f7;
+  color: #1e1e1e;
 }
 </style>

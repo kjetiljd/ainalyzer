@@ -421,6 +421,16 @@ export default {
           this.$emit('hover-end')
         })
 
+        // Add context menu handler for exclusion
+        rect.addEventListener('contextmenu', (event) => {
+          event.preventDefault()
+          this.$emit('contextmenu', {
+            node: node.data,
+            x: event.clientX,
+            y: event.clientY
+          })
+        })
+
         svg.appendChild(rect)
 
         // Create and append label if cell is large enough

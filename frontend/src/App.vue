@@ -6,12 +6,21 @@ import StatsBar from './components/StatsBar.vue'
 import Statusline from './components/Statusline.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 import FileViewer from './components/FileViewer.vue'
+import ExclusionMenu from './components/ExclusionMenu.vue'
 import { usePreferences } from './composables/usePreferences'
 import { parseClocignore, filterTree } from './utils/clocignore'
 
 // Preferences
-const { preferences, updateURL } = usePreferences()
+const { preferences, updateURL, addExclusion } = usePreferences()
 const showSettings = ref(false)
+
+// Context menu state
+const contextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+  node: null
+})
 
 // Available analyses
 const analyses = ref([])
@@ -36,13 +45,53 @@ const viewingFile = ref(null)
 // Clocignore patterns
 const clocignorePatterns = ref([])
 
+// Combine .clocignore patterns with enabled custom exclusions
+const allExclusionPatterns = computed(() => {
+  const patterns = [...clocignorePatterns.value]
+
+  // Add enabled custom exclusions
+  const customExclusions = preferences.value.filters?.customExclusions || []
+  for (const excl of customExclusions) {
+    if (excl.enabled) {
+      patterns.push(excl.pattern)
+    }
+  }
+
+  return patterns
+})
+
 // Filtered tree (computed based on preferences)
 const filteredData = computed(() => {
   if (!data.value) return null
-  if (!preferences.value.filters?.hideClocignore || clocignorePatterns.value.length === 0) {
+
+  // Check if .clocignore filtering is disabled AND no custom exclusions
+  const hideClocignore = preferences.value.filters?.hideClocignore
+  const hasCustomExclusions = (preferences.value.filters?.customExclusions || [])
+    .some(e => e.enabled)
+
+  if (!hideClocignore && !hasCustomExclusions) {
     return data.value
   }
-  return filterTree(data.value, clocignorePatterns.value)
+
+  // Build combined pattern list
+  const patterns = []
+
+  if (hideClocignore) {
+    patterns.push(...clocignorePatterns.value)
+  }
+
+  const customExclusions = preferences.value.filters?.customExclusions || []
+  for (const excl of customExclusions) {
+    if (excl.enabled) {
+      patterns.push(excl.pattern)
+    }
+  }
+
+  if (patterns.length === 0) {
+    return data.value
+  }
+
+  return filterTree(data.value, patterns)
 })
 
 // Find matching node in filtered tree for stats calculation
@@ -218,6 +267,26 @@ function handleBreadcrumbNavigate(index) {
   breadcrumbPath.value = breadcrumbPath.value.slice(0, index + 1)
   currentNode.value = navigationStack.value[index]
 }
+
+// Handle context menu from treemap
+function handleContextMenu(event) {
+  contextMenu.value = {
+    visible: true,
+    x: event.x,
+    y: event.y,
+    node: event.node
+  }
+}
+
+// Handle exclusion from context menu
+function handleExclude(pattern) {
+  addExclusion(pattern)
+}
+
+// Close context menu
+function closeContextMenu() {
+  contextMenu.value.visible = false
+}
 </script>
 
 <template>
@@ -254,6 +323,14 @@ function handleBreadcrumbNavigate(index) {
       :displayPath="breadcrumbPath.slice(1).join(' / ')"
       @close="viewingFile = null"
     />
+    <ExclusionMenu
+      :visible="contextMenu.visible"
+      :x="contextMenu.x"
+      :y="contextMenu.y"
+      :node="contextMenu.node"
+      @exclude="handleExclude"
+      @close="closeContextMenu"
+    />
 
     <div v-if="loading" class="loading">Loading analysis data...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
@@ -272,6 +349,7 @@ function handleBreadcrumbNavigate(index) {
           @drill-down="handleDrillDown"
           @hover="statuslineText = $event"
           @hover-end="statuslineText = ''"
+          @contextmenu="handleContextMenu"
         />
       </div>
       <Statusline :text="statuslineText" />
