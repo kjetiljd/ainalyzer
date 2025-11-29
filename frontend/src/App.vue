@@ -264,7 +264,7 @@ function handleBreadcrumbNavigate(index) {
       <div class="treemap-container">
         <Treemap
           :data="filteredData"
-          :currentNode="currentNode"
+          :currentNode="filteredCurrentNode"
           :navigationStack="navigationStack"
           :cushionMode="preferences.appearance?.cushionTreemap"
           :hideFolderBorders="preferences.appearance?.hideFolderBorders"
