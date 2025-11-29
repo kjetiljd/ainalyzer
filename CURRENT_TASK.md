@@ -6,7 +6,9 @@
 
 ## Active Task
 
-*No active task. See [PLAN.md](./PLAN.md) to pull from Next.*
+**Exclusion Patterns (003)** - Phase 1: UI filtering of .clocignore files
+
+→ [PLAN.md](./PLAN.md) for TDD test specifications
 
 ---
 

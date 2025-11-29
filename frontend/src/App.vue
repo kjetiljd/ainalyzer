@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import Treemap from './components/Treemap.vue'
 import Breadcrumb from './components/Breadcrumb.vue'
 import StatsBar from './components/StatsBar.vue'
@@ -7,6 +7,7 @@ import Statusline from './components/Statusline.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 import FileViewer from './components/FileViewer.vue'
 import { usePreferences } from './composables/usePreferences'
+import { parseClocignore, filterTree } from './utils/clocignore'
 
 // Preferences
 const { preferences, updateURL } = usePreferences()
@@ -31,6 +32,43 @@ const currentNode = ref(null)
 
 // File viewer state
 const viewingFile = ref(null)
+
+// Clocignore patterns
+const clocignorePatterns = ref([])
+
+// Filtered tree (computed based on preferences)
+const filteredData = computed(() => {
+  if (!data.value) return null
+  if (!preferences.value.filters?.hideClocignore || clocignorePatterns.value.length === 0) {
+    return data.value
+  }
+  return filterTree(data.value, clocignorePatterns.value)
+})
+
+// Find matching node in filtered tree for stats calculation
+const filteredCurrentNode = computed(() => {
+  if (!filteredData.value || !currentNode.value) return null
+  if (!preferences.value.filters?.hideClocignore || clocignorePatterns.value.length === 0) {
+    return currentNode.value
+  }
+
+  // Navigate to matching node in filtered tree using path
+  const path = currentNode.value.path
+  if (!path) return filteredData.value
+
+  function findNode(node, targetPath) {
+    if (node.path === targetPath) return node
+    if (node.children) {
+      for (const child of node.children) {
+        const found = findNode(child, targetPath)
+        if (found) return found
+      }
+    }
+    return null
+  }
+
+  return findNode(filteredData.value, path) || filteredData.value
+})
 
 // Load list of available analyses
 async function loadAnalysesList() {
@@ -95,10 +133,29 @@ async function loadAnalysis(filename) {
 
     console.log('Loaded analysis:', json.analysis_set)
     console.log('Stats:', json.stats)
+
+    // Load .clocignore patterns
+    await loadClocignore(json.analysis_set)
   } catch (e) {
     error.value = e.message
     loading.value = false
     console.error('Failed to load analysis:', e)
+  }
+}
+
+// Load .clocignore patterns for current analysis
+async function loadClocignore(analysisName) {
+  try {
+    const response = await fetch(`/api/clocignore?analysis=${encodeURIComponent(analysisName)}`)
+    if (response.ok) {
+      const data = await response.json()
+      clocignorePatterns.value = parseClocignore(data.content || '')
+    } else {
+      clocignorePatterns.value = []
+    }
+  } catch (e) {
+    console.warn('Failed to load .clocignore:', e)
+    clocignorePatterns.value = []
   }
 }
 
@@ -201,12 +258,12 @@ function handleBreadcrumbNavigate(index) {
     <div v-if="loading" class="loading">Loading analysis data...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
 
-    <template v-else-if="data">
+    <template v-else-if="filteredData">
       <Breadcrumb :path="breadcrumbPath" @navigate="handleBreadcrumbNavigate" />
-      <StatsBar :currentNode="currentNode" />
+      <StatsBar :currentNode="filteredCurrentNode" />
       <div class="treemap-container">
         <Treemap
-          :data="data"
+          :data="filteredData"
           :currentNode="currentNode"
           :navigationStack="navigationStack"
           :cushionMode="preferences.appearance?.cushionTreemap"
