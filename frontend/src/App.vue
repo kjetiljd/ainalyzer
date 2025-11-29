@@ -194,6 +194,7 @@ function handleBreadcrumbNavigate(index) {
       v-if="viewingFile"
       :path="viewingFile"
       :rootPath="rootPath"
+      :displayPath="breadcrumbPath.slice(1).join(' / ')"
       @close="viewingFile = null"
     />
 
