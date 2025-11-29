@@ -12,25 +12,27 @@ None - Ready for next opportunity
 
 ## Recently Completed
 
-**Exclusion Patterns (003)** - Phase 1 Complete 2025-11-29
+**Exclusion Patterns (003)** - Complete 2025-11-29
 
 → [docs/opportunities/003-analysis-exclusion-patterns.md](./docs/opportunities/003-analysis-exclusion-patterns.md)
 
-**Delivered:**
+**Delivered (Phase 1 + Phase 2):**
 - Parse .clocignore patterns from analysis root and all repo subdirectories
 - Client-side tree filtering via Vue computed property
 - Settings toggle "Hide .clocignore files" (default: on)
-- StatsBar reflects filtered tree
-- Multi-repo support with path-prefixed patterns
-- 115 passing frontend tests
+- Right-click context menu with 6 exclusion options
+- Custom exclusions stored in preferences (localStorage)
+- Settings panel with scrollable exclusion list (toggle/remove/add)
+- Combined filtering of .clocignore + custom exclusions
+- 158 passing frontend tests
 
 **Implementation:**
 - Pattern utilities: `frontend/src/utils/clocignore.js`
-- Tests: `frontend/src/__tests__/clocignore.test.js` (32 tests)
+- ExclusionMenu: `frontend/src/components/ExclusionMenu.vue`
 - API endpoint: `/api/clocignore` in `frontend/vite.config.js`
-- Preferences: `filters.hideClocignore` in `usePreferences.js`
-- Integration: `filteredData`, `filteredCurrentNode` computed in App.vue
-- Settings UI: Toggle in `SettingsPanel.vue`
+- Preferences: `filters.hideClocignore`, `filters.customExclusions`
+- Helpers: `addExclusion`, `removeExclusion`, `toggleExclusion`
+- Integration: Context menu + combined pattern filtering in App.vue
 
 ---
 

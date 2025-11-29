@@ -1,6 +1,6 @@
 # Opportunity: Analysis Exclusion Patterns
 
-**Status:** In Progress (Phase 1 complete)
+**Status:** Complete (Phase 1 + Phase 2)
 **Last Updated:** 2025-11-29
 **Parent:** 002 (Code Visibility)
 
@@ -295,7 +295,18 @@ Commits:
 - `da1f635` Add .clocignore UI filtering (003 Phase 1)
 - `1392497` Fix .clocignore filtering for multi-repo analysis sets
 
-**Phase 2: Backend .clocignore Support (Optional)**
+**Phase 2: Interactive Exclusions** ✅ COMPLETE
+- Right-click context menu with 6 exclusion options
+- Exclusions stored in preferences (localStorage)
+- Settings panel with scrollable exclusion list
+- Toggle enable/disable, remove, add manual patterns
+- Combined filtering with .clocignore patterns
+- 158 passing tests
+
+Commits:
+- `85e4a99` Add interactive exclusion via context menu (003 Phase 2)
+
+**Phase 3: Backend .clocignore Support (Optional)**
 1. Add `get_files_with_exclusions()` using git pathspec
 2. Modify `run_cloc()` to use `--list-file` instead of `--vcs=git`
 3. Document .clocignore syntax in README
