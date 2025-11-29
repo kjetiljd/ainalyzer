@@ -6,7 +6,19 @@
 
 ## Active Task
 
-*No active task. See [PLAN.md](./PLAN.md) to pull from Next.*
+**Color by File Type (010)** - In Progress
+
+→ [docs/opportunities/010-color-by-filetype.md](./docs/opportunities/010-color-by-filetype.md)
+→ [PLAN.md](./PLAN.md) for TDD implementation plan
+
+**Goal:** Users can toggle treemap coloring between depth-based and file type-based modes.
+
+**Progress:**
+- [ ] Phase 1: colorUtils.js (tests + implementation)
+- [ ] Phase 2: Preferences (colorMode)
+- [ ] Phase 3: SettingsPanel (radio buttons)
+- [ ] Phase 4: Treemap integration
+- [ ] Phase 5: App wiring
 
 ---
 
@@ -14,8 +26,8 @@
 
 **Cushion Treemap + Settings Panel (008 + 009)** - Completed 2025-11-29
 
-→ [docs/opportunities/008-cushion-treemap.md](./docs/opportunities/008-cushion-treemap.md)
-→ [docs/opportunities/009-user-preferences.md](./docs/opportunities/009-user-preferences.md)
+→ [docs/opportunities/archive/008-cushion-treemap.md](./docs/opportunities/archive/008-cushion-treemap.md)
+→ [docs/opportunities/archive/009-user-preferences.md](./docs/opportunities/archive/009-user-preferences.md)
 
 **Delivered:**
 - CSS radial gradient cushion effect for treemap cells (3D visual depth)
