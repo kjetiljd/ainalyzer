@@ -335,10 +335,11 @@ def tree_to_schema(tree, name, path_prefix=''):
     # Add files
     if has_files:
         for file in sorted(tree['_files'], key=lambda f: f['name']):
+            file_path = f"{node_path}/{file['name']}"
             file_node = {
                 'name': file['name'],
                 'type': 'file',
-                'path': file['path'],
+                'path': file_path,
                 'value': file['value'],
                 'language': file['language'],
                 'extension': file['extension']
@@ -409,21 +410,27 @@ def analyze_repos(analysis_set_name, analysis_set_path):
             # Build tree for this repo
             repo_tree = build_directory_tree(files, repo_path)
 
+            # Determine path prefix: empty if repo IS the analysis_set_path
+            # (root_path already points to repo, no need to prefix repo_name)
+            is_root_repo = Path(repo_path).resolve() == path_obj.resolve()
+            path_prefix = '' if is_root_repo else repo_name
+
             # Convert to schema format - repo_tree has _dirs and _files at root
             children = []
 
             # Add subdirectories from _dirs
             for dirname, subtree in sorted(repo_tree['_dirs'].items()):
-                child = tree_to_schema(subtree, dirname, repo_name)
+                child = tree_to_schema(subtree, dirname, path_prefix)
                 if child:
                     children.append(child)
 
             # Add root-level files from _files
             for file in sorted(repo_tree['_files'], key=lambda f: f['name']):
+                file_path = f"{path_prefix}/{file['name']}" if path_prefix else file['name']
                 file_node = {
                     'name': file['name'],
                     'type': 'file',
-                    'path': file['path'],
+                    'path': file_path,
                     'value': file['value'],
                     'language': file['language'],
                     'extension': file['extension']
@@ -434,7 +441,7 @@ def analyze_repos(analysis_set_name, analysis_set_path):
             repo_node = {
                 'name': repo_name,
                 'type': 'repository',
-                'path': repo_name,
+                'path': path_prefix if path_prefix else repo_name,
                 'children': children
             }
 
@@ -461,6 +468,7 @@ def analyze_repos(analysis_set_name, analysis_set_path):
     # Build final JSON structure
     analysis_json = {
         'analysis_set': analysis_set_name,
+        'root_path': str(analysis_set_path),
         'generated_at': datetime.utcnow().isoformat() + 'Z',
         'stats': {
             'total_files': total_files,
