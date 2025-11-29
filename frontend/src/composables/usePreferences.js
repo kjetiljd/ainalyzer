@@ -7,7 +7,8 @@ const defaultPreferences = {
   lastSelectedAnalysis: null,
   appearance: {
     cushionTreemap: false,
-    hideFolderBorders: true  // Only applies when cushionTreemap is true
+    hideFolderBorders: true,  // Only applies when cushionTreemap is true
+    colorMode: 'depth'  // 'depth' | 'filetype'
   }
 }
 
@@ -56,6 +57,9 @@ export function usePreferences() {
     if (params.has('cushion')) {
       stored.appearance.cushionTreemap = params.get('cushion') === 'true'
     }
+    if (params.has('colorMode')) {
+      stored.appearance.colorMode = params.get('colorMode')
+    }
 
     return stored
   }
@@ -78,6 +82,9 @@ export function usePreferences() {
     if (preferences.value.appearance?.cushionTreemap !== defaultPreferences.appearance.cushionTreemap) {
       params.set('cushion', String(preferences.value.appearance.cushionTreemap))
     }
+    if (preferences.value.appearance?.colorMode !== defaultPreferences.appearance.colorMode) {
+      params.set('colorMode', preferences.value.appearance.colorMode)
+    }
 
     const url = new URL(window.location.href)
     url.search = params.toString()
@@ -93,6 +100,9 @@ export function usePreferences() {
     }
     if (preferences.value.appearance?.cushionTreemap !== defaultPreferences.appearance.cushionTreemap) {
       params.set('cushion', String(preferences.value.appearance.cushionTreemap))
+    }
+    if (preferences.value.appearance?.colorMode !== defaultPreferences.appearance.colorMode) {
+      params.set('colorMode', preferences.value.appearance.colorMode)
     }
 
     const url = new URL(window.location.href)

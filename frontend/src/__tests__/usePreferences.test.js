@@ -56,7 +56,8 @@ describe('usePreferences', () => {
       lastSelectedAnalysis: null,
       appearance: {
         cushionTreemap: false,
-        hideFolderBorders: true
+        hideFolderBorders: true,
+        colorMode: 'depth'
       }
     })
   })
@@ -181,7 +182,8 @@ describe('usePreferences', () => {
       lastSelectedAnalysis: null,
       appearance: {
         cushionTreemap: false,
-        hideFolderBorders: true
+        hideFolderBorders: true,
+        colorMode: 'depth'
       }
     })
   })
@@ -276,5 +278,62 @@ describe('usePreferences', () => {
     const { preferences } = usePreferences()
 
     expect(preferences.value.appearance.hideFolderBorders).toBe(false)
+  })
+
+  it('default colorMode is depth', async () => {
+    const { usePreferences } = await import('../composables/usePreferences')
+    const { preferences } = usePreferences()
+
+    expect(preferences.value.appearance.colorMode).toBe('depth')
+  })
+
+  it('loads colorMode from localStorage', async () => {
+    const stored = {
+      version: '1.0',
+      lastSelectedAnalysis: null,
+      appearance: { colorMode: 'filetype' }
+    }
+    localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+
+    const { usePreferences } = await import('../composables/usePreferences')
+    const { preferences } = usePreferences()
+
+    expect(preferences.value.appearance.colorMode).toBe('filetype')
+  })
+
+  it('overrides colorMode with URL param', async () => {
+    const stored = {
+      version: '1.0',
+      lastSelectedAnalysis: null,
+      appearance: { colorMode: 'depth' }
+    }
+    localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+    global.location.search = '?colorMode=filetype'
+
+    const { usePreferences } = await import('../composables/usePreferences')
+    const { preferences } = usePreferences()
+
+    expect(preferences.value.appearance.colorMode).toBe('filetype')
+  })
+
+  it('includes colorMode in URL when not default', async () => {
+    const { usePreferences } = await import('../composables/usePreferences')
+    const { preferences, updateURL } = usePreferences()
+    preferences.value.appearance.colorMode = 'filetype'
+
+    updateURL()
+
+    const url = history.replaceState.mock.calls[0][2]
+    expect(url).toContain('colorMode=filetype')
+  })
+
+  it('resets colorMode to default', async () => {
+    const { usePreferences } = await import('../composables/usePreferences')
+    const { preferences, resetPreferences } = usePreferences()
+    preferences.value.appearance.colorMode = 'filetype'
+
+    resetPreferences()
+
+    expect(preferences.value.appearance.colorMode).toBe('depth')
   })
 })
