@@ -51,7 +51,7 @@ function ainaAnalysisPlugin() {
         }
       })
 
-      // Serve .clocignore from analysis root_path
+      // Serve merged .clocignore from analysis root_path and all repos
       server.middlewares.use('/api/clocignore', (req, res) => {
         const url = new URL(req.url, 'http://localhost')
         const analysisName = url.searchParams.get('analysis')
@@ -76,19 +76,44 @@ function ainaAnalysisPlugin() {
           const analysisJson = JSON.parse(fs.readFileSync(analysisPath, 'utf-8'))
           const rootPath = analysisJson.root_path
 
-          // Try .clocignore in root_path
-          const clocignorePath = join(rootPath, '.clocignore')
-          if (fs.existsSync(clocignorePath)) {
-            const content = fs.readFileSync(clocignorePath, 'utf-8')
-            res.setHeader('Content-Type', 'application/json')
-            res.setHeader('Access-Control-Allow-Origin', '*')
-            res.end(JSON.stringify({ content }))
-          } else {
-            // No .clocignore file - return empty content
-            res.setHeader('Content-Type', 'application/json')
-            res.setHeader('Access-Control-Allow-Origin', '*')
-            res.end(JSON.stringify({ content: '' }))
+          // Collect patterns from all .clocignore files
+          const allPatterns = []
+
+          // Helper to read and add patterns from a .clocignore file
+          function addPatternsFrom(filePath, prefix = '') {
+            if (fs.existsSync(filePath)) {
+              const content = fs.readFileSync(filePath, 'utf-8')
+              content.split('\n').forEach(line => {
+                line = line.trim()
+                if (line && !line.startsWith('#')) {
+                  // Prefix repo-specific patterns with repo name
+                  if (prefix) {
+                    allPatterns.push(`${prefix}/${line}`)
+                  } else {
+                    allPatterns.push(line)
+                  }
+                }
+              })
+            }
           }
+
+          // Read root .clocignore (applies to all)
+          addPatternsFrom(join(rootPath, '.clocignore'))
+
+          // Read .clocignore from each immediate subdirectory (repos)
+          // These patterns are prefixed with repo name
+          const entries = fs.readdirSync(rootPath, { withFileTypes: true })
+          for (const entry of entries) {
+            if (entry.isDirectory() && !entry.name.startsWith('.')) {
+              const repoPath = join(rootPath, entry.name)
+              addPatternsFrom(join(repoPath, '.clocignore'), entry.name)
+            }
+          }
+
+          const content = allPatterns.join('\n')
+          res.setHeader('Content-Type', 'application/json')
+          res.setHeader('Access-Control-Allow-Origin', '*')
+          res.end(JSON.stringify({ content }))
         } catch (err) {
           res.statusCode = 500
           res.setHeader('Content-Type', 'application/json')

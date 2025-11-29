@@ -48,6 +48,12 @@ export function matchesPattern(filePath, pattern) {
     return parts.length >= 3 && parts.slice(1, -1).includes(middle)
   }
 
+  // If pattern contains /, it's a path pattern - match exactly or as suffix
+  if (pattern.includes('/')) {
+    // Exact path match or path ends with pattern
+    return filePath === pattern || filePath.endsWith('/' + pattern)
+  }
+
   // Exact filename match (anywhere in path)
   const filename = filePath.split('/').pop()
   return filename === pattern
