@@ -2,7 +2,7 @@
   <div class="file-viewer-overlay" @click.self="$emit('close')">
     <div class="file-viewer">
       <div class="file-viewer-header">
-        <span class="file-path">{{ path }}</span>
+        <span class="file-path">{{ displayPath || path }}</span>
         <button class="close-button" @click="$emit('close')">&times;</button>
       </div>
       <div class="file-viewer-content">
@@ -64,6 +64,10 @@ export default {
     rootPath: {
       type: String,
       required: true
+    },
+    displayPath: {
+      type: String,
+      default: ''
     }
   },
   emits: ['close'],
