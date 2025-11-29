@@ -1,6 +1,6 @@
 # Opportunity: Analysis Exclusion Patterns
 
-**Status:** Next
+**Status:** In Progress (Phase 1 complete)
 **Last Updated:** 2025-11-29
 **Parent:** 002 (Code Visibility)
 
@@ -284,18 +284,28 @@ CREATE TABLE analysis_exclusions (
 
 ## Implementation Plan
 
-**Phase 1: .clocignore Support (Solution 1B)**
+**Phase 1: UI Filtering of .clocignore** ✅ COMPLETE
+- Parse .clocignore patterns from analysis root and repo subdirectories
+- Filter tree in Vue computed property (client-side)
+- Add Settings toggle "Hide .clocignore files" (default: on)
+- StatsBar shows filtered stats
+- Patterns prefixed with repo name for multi-repo analysis sets
+
+Commits:
+- `da1f635` Add .clocignore UI filtering (003 Phase 1)
+- `1392497` Fix .clocignore filtering for multi-repo analysis sets
+
+**Phase 2: Backend .clocignore Support (Optional)**
 1. Add `get_files_with_exclusions()` using git pathspec
 2. Modify `run_cloc()` to use `--list-file` instead of `--vcs=git`
 3. Document .clocignore syntax in README
 
-**Phase 2: UI Indication (Optional)**
-1. Parse .clocignore during frontend load
-2. Gray out excluded files in treemap
-3. Add "Show excluded files" toggle
-4. Display exclusion reason on hover
+**Phase 3: UI Indication (Optional)**
+1. Gray out excluded files in treemap (instead of hiding)
+2. Add "Show excluded files" toggle (show grayed vs hide completely)
+3. Display exclusion reason on hover
 
-**Phase 3: UI Exclusion (Future)**
+**Phase 4: UI Exclusion (Future)**
 1. Add context menu to treemap
 2. Store exclusions in SQLite
 3. Merge with .clocignore patterns

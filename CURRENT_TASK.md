@@ -6,13 +6,33 @@
 
 ## Active Task
 
-**Exclusion Patterns (003)** - Phase 1: UI filtering of .clocignore files
-
-→ [PLAN.md](./PLAN.md) for TDD test specifications
+None - Ready for next opportunity
 
 ---
 
 ## Recently Completed
+
+**Exclusion Patterns (003)** - Phase 1 Complete 2025-11-29
+
+→ [docs/opportunities/003-analysis-exclusion-patterns.md](./docs/opportunities/003-analysis-exclusion-patterns.md)
+
+**Delivered:**
+- Parse .clocignore patterns from analysis root and all repo subdirectories
+- Client-side tree filtering via Vue computed property
+- Settings toggle "Hide .clocignore files" (default: on)
+- StatsBar reflects filtered tree
+- Multi-repo support with path-prefixed patterns
+- 115 passing frontend tests
+
+**Implementation:**
+- Pattern utilities: `frontend/src/utils/clocignore.js`
+- Tests: `frontend/src/__tests__/clocignore.test.js` (32 tests)
+- API endpoint: `/api/clocignore` in `frontend/vite.config.js`
+- Preferences: `filters.hideClocignore` in `usePreferences.js`
+- Integration: `filteredData`, `filteredCurrentNode` computed in App.vue
+- Settings UI: Toggle in `SettingsPanel.vue`
+
+---
 
 **Code Viewing (006)** - Completed 2025-11-29
 
