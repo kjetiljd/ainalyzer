@@ -1,13 +1,57 @@
 // Color utilities for file type coloring
 // Based on ggthemes Classic_20 extended to 60 colors via tiered approach
 
-// Classic_20 exact colors (tier 0) - hardcoded for precision
-const CLASSIC_20 = [
+// Classic_20 original colors (before saturation adjustment)
+const CLASSIC_20_ORIGINAL = [
   '#1f77b4', '#aec7e8', '#ff7f0e', '#ffbb78', '#2ca02c',
   '#98df8a', '#d62728', '#ff9896', '#9467bd', '#c5b0d5',
   '#8c564b', '#c49c94', '#e377c2', '#f7b6d2', '#7f7f7f',
   '#c7c7c7', '#bcbd22', '#dbdb8d', '#17becf', '#9edae5'
 ]
+
+// HSL conversion utilities
+function hexToHsl(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255
+  const g = parseInt(hex.slice(3, 5), 16) / 255
+  const b = parseInt(hex.slice(5, 7), 16) / 255
+  const max = Math.max(r, g, b), min = Math.min(r, g, b)
+  let h, s, l = (max + min) / 2
+  if (max === min) {
+    h = s = 0
+  } else {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break
+      case g: h = ((b - r) / d + 2) / 6; break
+      case b: h = ((r - g) / d + 4) / 6; break
+    }
+  }
+  return [h * 360, s * 100, l * 100]
+}
+
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100
+  const a = s * Math.min(l, 1 - l)
+  const f = n => {
+    const k = (n + h / 30) % 12
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1)
+    return Math.round(255 * color).toString(16).padStart(2, '0')
+  }
+  return `#${f(0)}${f(8)}${f(4)}`
+}
+
+function reduceSaturation(hex, factor) {
+  const [h, s, l] = hexToHsl(hex)
+  return hslToHex(h, s * factor, l)
+}
+
+// Generate tier 0: muted darks (70% sat), original lights
+const CLASSIC_20 = CLASSIC_20_ORIGINAL.map((color, i) => {
+  // Even indices are dark variants - reduce saturation
+  // Odd indices are light variants - keep as-is
+  return i % 2 === 0 ? reduceSaturation(color, 0.7) : color
+})
 
 // 10 base hues with HSV parameters (for generating tiers 1 and 2)
 const BASE_HUES = [

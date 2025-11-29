@@ -1,12 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { PALETTE_60, OVERFLOW_COLOR, simpleHash, assignColors } from '../utils/colorUtils'
 
-// Classic_20 reference (ggthemes Tableau-style)
-const CLASSIC_20 = [
-  '#1f77b4', '#aec7e8', '#ff7f0e', '#ffbb78', '#2ca02c',
-  '#98df8a', '#d62728', '#ff9896', '#9467bd', '#c5b0d5',
-  '#8c564b', '#c49c94', '#e377c2', '#f7b6d2', '#7f7f7f',
-  '#c7c7c7', '#bcbd22', '#dbdb8d', '#17becf', '#9edae5'
+// Classic_20 reference - light variants only (odd indices)
+const CLASSIC_20_LIGHTS = [
+  '#aec7e8', '#ffbb78', '#98df8a', '#ff9896', '#c5b0d5',
+  '#c49c94', '#f7b6d2', '#c7c7c7', '#dbdb8d', '#9edae5'
 ]
 
 describe('colorUtils', () => {
@@ -15,9 +13,26 @@ describe('colorUtils', () => {
       expect(PALETTE_60).toHaveLength(60)
     })
 
-    it('first 20 colors match Classic_20 exactly', () => {
-      for (let i = 0; i < 20; i++) {
-        expect(PALETTE_60[i].toLowerCase()).toBe(CLASSIC_20[i].toLowerCase())
+    it('light variants (odd indices) match Classic_20 lights', () => {
+      // Odd indices in tier 0 are light variants - should match exactly
+      for (let i = 0; i < 10; i++) {
+        const paletteIdx = i * 2 + 1  // 1, 3, 5, 7, ...
+        expect(PALETTE_60[paletteIdx].toLowerCase()).toBe(CLASSIC_20_LIGHTS[i].toLowerCase())
+      }
+    })
+
+    it('dark variants (even indices) are muted from Classic_20', () => {
+      // Even indices should be different from original Classic_20 (reduced saturation)
+      // Exception: gray (#7f7f7f) has 0% saturation so it's unchanged
+      const CLASSIC_20_DARKS = [
+        '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+        '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+      ]
+      for (let i = 0; i < 10; i++) {
+        if (i === 7) continue  // Skip gray - has 0 saturation
+        const paletteIdx = i * 2  // 0, 2, 4, 6, ...
+        // Should NOT match original (they're muted)
+        expect(PALETTE_60[paletteIdx].toLowerCase()).not.toBe(CLASSIC_20_DARKS[i].toLowerCase())
       }
     })
 
