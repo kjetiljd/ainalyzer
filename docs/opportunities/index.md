@@ -2,7 +2,7 @@
 
 **Purpose:** Catalog and prioritize feature opportunities using Impact/Effort scoring.
 
-**Last Updated:** 2025-11-24
+**Last Updated:** 2025-11-29
 
 ## Prioritization Framework
 
@@ -42,9 +42,10 @@ Each opportunity is scored on three dimensions:
 | 007 | [Context Stats Panel](#007-context-stats-panel) | 4 | 2 | 2 | 2.00 | ✅ Complete |
 | 004 | [Treemap Labels](#004-treemap-labels) | 4 | 3 | 3 | 1.33 | ✅ Complete |
 | 002 | [Code Visibility](#002-code-visibility) | 5 | 4 | 3 | 1.25 | ✅ Complete |
-| 009 | [User Preferences](#009-user-preferences) | 4 | 4 | 1 | 1.00 | Identified |
-| 006 | [Code Viewing](#006-code-viewing) | 3 | 3 | 3 | 1.00 | Identified |
-| 008 | [Cushion Treemap](#008-cushion-treemap) | 2 | 2 | 4 | 1.00 | Identified |
+| 010 | [Color by File Type](#010-color-by-file-type) | 3 | 2 | 2 | 1.50 | ✅ Complete |
+| 009 | [User Preferences](#009-user-preferences) | 4 | 4 | 1 | 1.00 | ✅ Complete |
+| 006 | [Code Viewing](#006-code-viewing) | 3 | 3 | 3 | 1.00 | ✅ Complete |
+| 008 | [Cushion Treemap](#008-cushion-treemap) | 2 | 2 | 4 | 1.00 | ✅ Complete |
 | 005 | [Deep Module Refactoring](#005-deep-module-refactoring) | 2 | 3 | 1 | 0.67 | Identified |
 
 **Sorted by priority score (descending)**
@@ -117,25 +118,40 @@ Allow users to exclude files/directories from analysis using .gitignore-style pa
 
 ---
 
+### 010: Color by File Type
+
+**Impact:** 3 | **Effort:** 2 | **Complexity:** 2 | **Score:** 1.50
+
+**Status:** ✅ Complete (2025-11-29) | **Parent:** 002 (Code Visibility)
+
+Color treemap cells by file type/language instead of depth.
+
+**Delivered:**
+- Toggle between depth-based and file type-based coloring in Settings
+- 60-color tiered palette (Classic_20 extended with darker/lighter variants)
+- Frequency-based color assignment with tier escalation
+- Colors stable across navigation within an analysis
+
+[View opportunity →](archive/010-color-by-filetype.md)
+
+---
+
 ### 009: User Preferences
 
 **Impact:** 4 | **Effort:** 4 | **Complexity:** 1 | **Score:** 1.00
 
-**Status:** Identified | **Parent:** Infrastructure
+**Status:** ✅ Complete (2025-11-29) | **Parent:** Infrastructure
 
 Persistent user configuration for visualization behavior, appearance, filters, and navigation.
 
-**Why Important:**
-- Foundation for many other features (toggles cushion treemap, stats panel, etc.)
-- Enables customization and personalization
-- Required by: 007, 008, future features
-- **Low complexity:** Simplifies future features (just add preference toggle)
+**Delivered:**
+- usePreferences composable (localStorage + URL params hybrid)
+- Analysis selection persistence
+- URL param overrides for sharing
+- Settings panel with gear icon
+- Appearance preferences: cushionTreemap, hideFolderBorders, colorMode
 
-**Trade-off:** Higher effort upfront, but dramatically simplifies future development
-
-**Next Steps:** Implement hybrid approach (localStorage + URL params)
-
-[View opportunity →](009-user-preferences.md)
+[View opportunity →](archive/009-user-preferences.md)
 
 ---
 
@@ -143,18 +159,17 @@ Persistent user configuration for visualization behavior, appearance, filters, a
 
 **Impact:** 3 | **Effort:** 3 | **Complexity:** 3 | **Score:** 1.00
 
-**Status:** Identified | **Parent:** 002 (Code Visibility)
+**Status:** ✅ Complete (2025-11-29) | **Parent:** 002 (Code Visibility)
 
 View source code when clicking file nodes in treemap.
 
-**Why Moderate Priority:**
-- Useful but not critical (can open files in editor)
-- Moderate effort (backend API + modal component)
-- Moderate impact (nice to have, not essential)
+**Delivered:**
+- FileViewer modal with syntax highlighting (highlight.js)
+- API endpoint with path validation (prevents directory traversal)
+- Double-click to open: first click zooms to file, second click opens viewer
+- Full breadcrumb path display in viewer header
 
-**Next Steps:** Implement modal overlay with syntax highlighting
-
-[View opportunity →](006-code-viewing.md)
+[View opportunity →](archive/006-code-viewing.md)
 
 ---
 
@@ -162,21 +177,17 @@ View source code when clicking file nodes in treemap.
 
 **Impact:** 2 | **Effort:** 2 | **Complexity:** 4 | **Score:** 1.00
 
-**Status:** Identified | **Parent:** 002 (Code Visibility)
+**Status:** ✅ Complete (2025-11-29) | **Parent:** 002 (Code Visibility)
 
 WinDirStat-style 3D visual effect using gradient shading for depth perception.
 
-**Why Lower Priority:**
-- Cosmetic enhancement (doesn't add functionality)
-- Low impact (aesthetic preference)
-- **High complexity:** Alternative rendering approach complicates treemap logic
-- Can be done incrementally (CSS gradients → full algorithm)
+**Delivered:**
+- CSS radial gradient cushion effect for treemap cells
+- Toggle in Settings panel
+- Hide folder borders option for cleaner visualization
+- When cushion + hide borders: directories not rendered, zero padding
 
-**Dependencies:** Should implement after 009 (preferences) for toggle control
-
-**Next Steps:** Experiment with CSS radial gradients
-
-[View opportunity →](008-cushion-treemap.md)
+[View opportunity →](archive/008-cushion-treemap.md)
 
 ---
 
@@ -296,6 +307,10 @@ Identified → Next → In Progress → Complete → Archive
 
 Completed opportunities are moved to `archive/` with completion date:
 
+- [010-color-by-filetype.md](archive/010-color-by-filetype.md) - Completed 2025-11-29
+- [009-user-preferences.md](archive/009-user-preferences.md) - Completed 2025-11-29
+- [008-cushion-treemap.md](archive/008-cushion-treemap.md) - Completed 2025-11-29
+- [006-code-viewing.md](archive/006-code-viewing.md) - Completed 2025-11-29
 - [007-context-stats-panel.md](archive/007-context-stats-panel.md) - Completed 2025-11-24
 - [004-treemap-labels.md](archive/004-treemap-labels.md) - Completed 2025-11-24
 - [002-code-visibility.md](archive/002-code-visibility.md) - Completed 2025-11-23

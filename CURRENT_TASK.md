@@ -12,16 +12,33 @@
 
 ## Recently Completed
 
+**Code Viewing (006)** - Completed 2025-11-29
+
+→ [docs/opportunities/archive/006-code-viewing.md](./docs/opportunities/archive/006-code-viewing.md)
+
+**Delivered:**
+- FileViewer modal with syntax highlighting (highlight.js)
+- API endpoint `/api/file` with path validation (prevents directory traversal)
+- Double-click to open: first click zooms to file, second click opens viewer
+- Full breadcrumb path display in viewer header
+- 83 passing tests
+
+**Implementation:**
+- FileViewer: `frontend/src/components/FileViewer.vue`
+- API endpoint: `frontend/vite.config.js`
+- Updated: App.vue (drill-down logic, FileViewer integration)
+
+---
+
 **Color by File Type (010)** - Completed 2025-11-29
 
-→ [docs/opportunities/010-color-by-filetype.md](./docs/opportunities/010-color-by-filetype.md)
+→ [docs/opportunities/archive/010-color-by-filetype.md](./docs/opportunities/archive/010-color-by-filetype.md)
 
 **Delivered:**
 - Toggle between depth-based and file type-based coloring in Settings
 - 60-color tiered palette (Classic_20 extended with darker/lighter variants)
 - Frequency-based color assignment with tier escalation
 - Colors stable across navigation within an analysis
-- 82 passing tests (30 new)
 
 **Implementation:**
 - colorUtils: `frontend/src/utils/colorUtils.js`
