@@ -8,14 +8,7 @@ This plan follows a focused approach where we work on exactly one thing at a tim
 
 ## Now
 
-**Refactor aina_lib.py to improve cohesion** - Started 2025-11-24
-
-Restructure aina_lib.py using OO design to improve cohesion without splitting into multiple files.
-
-- Convert procedural code to class-based design
-- Each class has single, clear responsibility
-- Maintain all existing tests (21 passing tests)
-- Stepwise refactoring with test verification at each step
+*No active task. Pull from Next when ready.*
 
 ---
 
@@ -34,6 +27,10 @@ Restructure aina_lib.py using OO design to improve cohesion without splitting in
 ---
 
 ## Later
+
+**Refactor aina_lib.py to improve cohesion** (paused)
+- OO redesign: Database class done, remaining phases: RepositoryScanner, ClocRunner, TreeBuilder, Analyzer, AnalysisIndex
+- Maintain 21 passing tests
 
 See [PRODUCT_BRIEF.md](./PRODUCT_BRIEF.md) for full feature roadmap including:
 - Git history analysis (Code Maat integration)

@@ -1,12 +1,39 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import App from '../App.vue'
-import Treemap from '../components/Treemap.vue'
-import Breadcrumb from '../components/Breadcrumb.vue'
-import Statusline from '../components/Statusline.vue'
 
 describe('App Integration', () => {
-  beforeEach(() => {
+  let originalLocalStorage
+  let originalLocation
+
+  beforeEach(async () => {
+    // Reset module state for usePreferences
+    await vi.resetModules()
+
+    // Mock localStorage
+    originalLocalStorage = global.localStorage
+    const storage = {}
+    global.localStorage = {
+      getItem: vi.fn((key) => storage[key] || null),
+      setItem: vi.fn((key, value) => { storage[key] = value }),
+      removeItem: vi.fn((key) => { delete storage[key] }),
+      clear: vi.fn(() => { Object.keys(storage).forEach(key => delete storage[key]) })
+    }
+
+    // Mock location
+    originalLocation = global.location
+    delete global.location
+    global.location = {
+      search: '',
+      href: 'http://localhost:5173/',
+      origin: 'http://localhost:5173',
+      pathname: '/'
+    }
+
+    // Mock history
+    global.history = {
+      replaceState: vi.fn()
+    }
+
     // Mock fetch API
     global.fetch = vi.fn((url) => {
       if (url === '/api/analyses/') {
@@ -48,7 +75,17 @@ describe('App Integration', () => {
     })
   })
 
+  afterEach(() => {
+    global.location = originalLocation
+    global.localStorage = originalLocalStorage
+    vi.clearAllMocks()
+  })
+
   it('renders all main components', async () => {
+    const { default: App } = await import('../App.vue')
+    const { default: Treemap } = await import('../components/Treemap.vue')
+    const { default: Breadcrumb } = await import('../components/Breadcrumb.vue')
+    const { default: Statusline } = await import('../components/Statusline.vue')
     const wrapper = mount(App)
     await flushPromises()
 
@@ -58,6 +95,9 @@ describe('App Integration', () => {
   })
 
   it('updates breadcrumb path with full hierarchy when drilling down', async () => {
+    const { default: App } = await import('../App.vue')
+    const { default: Treemap } = await import('../components/Treemap.vue')
+    const { default: Breadcrumb } = await import('../components/Breadcrumb.vue')
     const wrapper = mount(App)
     await flushPromises()
 
@@ -79,6 +119,9 @@ describe('App Integration', () => {
   })
 
   it('navigates back when clicking breadcrumb segment', async () => {
+    const { default: App } = await import('../App.vue')
+    const { default: Treemap } = await import('../components/Treemap.vue')
+    const { default: Breadcrumb } = await import('../components/Breadcrumb.vue')
     const wrapper = mount(App)
     await flushPromises()
 
@@ -107,6 +150,9 @@ describe('App Integration', () => {
   })
 
   it('updates statusline when hovering over treemap nodes', async () => {
+    const { default: App } = await import('../App.vue')
+    const { default: Treemap } = await import('../components/Treemap.vue')
+    const { default: Statusline } = await import('../components/Statusline.vue')
     const wrapper = mount(App)
     await flushPromises()
 

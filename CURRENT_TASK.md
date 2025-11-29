@@ -2,53 +2,36 @@
 
 > **Purpose:** This file points to the opportunity we're currently working on and tracks its status. Keep this file updated as work progresses.
 
-**Last Updated:** 2025-11-24
+**Last Updated:** 2025-11-29
 
 ## Active Task
 
-**Refactor aina_lib.py to improve cohesion** - Started 2025-11-24
-
-→ [PLAN.md](./PLAN.md)
-
-**Goal:** Restructure aina_lib.py using OO design to improve cohesion without splitting into multiple files.
-
-**Approach:** Stepwise refactoring with test verification at each step
-
-**Phase 1: Database class** (NEXT)
-- Extract Database class with context manager
-- Replace all init_database/cursor patterns
-- Run tests → verify 21 passing
-
-**Phase 2: RepositoryScanner & ClocRunner**
-- Extract RepositoryScanner.discover()
-- Extract ClocRunner.analyze()
-- Run tests → verify 21 passing
-
-**Phase 3: TreeBuilder class**
-- Extract TreeBuilder with build() and to_schema()
-- Run tests → verify 21 passing
-
-**Phase 4: Analyzer class**
-- Extract Analyzer with progress callback
-- Run tests → verify 21 passing
-
-**Phase 5: AnalysisIndex class**
-- Extract AnalysisIndex
-- Run tests → verify 21 passing
-
-**Phase 6: Update cmd_* functions**
-- Simplify to thin wrappers using new classes
-- Run tests → verify 21 passing
-
-**Success criteria:**
-- All 21 tests pass at every step
-- Improved cohesion (each class has single responsibility)
-- No behavioral changes (same CLI interface)
-- Single file (no file sprawl)
+*No active task. See [PLAN.md](./PLAN.md) to pull from Next.*
 
 ---
 
 ## Recently Completed
+
+**Cushion Treemap + Settings Panel (008 + 009)** - Completed 2025-11-29
+
+→ [docs/opportunities/008-cushion-treemap.md](./docs/opportunities/008-cushion-treemap.md)
+→ [docs/opportunities/009-user-preferences.md](./docs/opportunities/009-user-preferences.md)
+
+**Delivered:**
+- CSS radial gradient cushion effect for treemap cells (3D visual depth)
+- Settings panel with gear icon in header
+- Two appearance preferences: cushionTreemap, hideFolderBorders
+- When cushion + hide borders enabled: directories not rendered, zero padding
+- Preferences persist in localStorage, URL params override
+- 52 passing tests
+
+**Implementation:**
+- Settings: `frontend/src/components/SettingsPanel.vue`
+- Preferences: `frontend/src/composables/usePreferences.js`
+- Treemap cushion: `frontend/src/components/Treemap.vue`
+- Tests: `frontend/src/__tests__/SettingsPanel.test.js`, updated usePreferences tests
+
+---
 
 **User Preferences and Configuration (009)** - Completed 2025-11-24
 

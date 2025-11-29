@@ -53,7 +53,11 @@ describe('usePreferences', () => {
 
     expect(preferences.value).toEqual({
       version: '1.0',
-      lastSelectedAnalysis: null
+      lastSelectedAnalysis: null,
+      appearance: {
+        cushionTreemap: false,
+        hideFolderBorders: true
+      }
     })
   })
 
@@ -174,7 +178,11 @@ describe('usePreferences', () => {
 
     expect(preferences.value).toEqual({
       version: '1.0',
-      lastSelectedAnalysis: null
+      lastSelectedAnalysis: null,
+      appearance: {
+        cushionTreemap: false,
+        hideFolderBorders: true
+      }
     })
   })
 
@@ -187,5 +195,86 @@ describe('usePreferences', () => {
 
     const url = history.replaceState.mock.calls[0][2]
     expect(url).toBe('http://localhost:5173/')
+  })
+
+  it('loads cushionTreemap from localStorage', async () => {
+    const stored = {
+      version: '1.0',
+      lastSelectedAnalysis: null,
+      appearance: { cushionTreemap: true }
+    }
+    localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+
+    const { usePreferences } = await import('../composables/usePreferences')
+    const { preferences } = usePreferences()
+
+    expect(preferences.value.appearance.cushionTreemap).toBe(true)
+  })
+
+  it('overrides cushionTreemap with URL param', async () => {
+    const stored = {
+      version: '1.0',
+      lastSelectedAnalysis: null,
+      appearance: { cushionTreemap: false }
+    }
+    localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+    global.location.search = '?cushion=true'
+
+    const { usePreferences } = await import('../composables/usePreferences')
+    const { preferences } = usePreferences()
+
+    expect(preferences.value.appearance.cushionTreemap).toBe(true)
+  })
+
+  it('includes cushion in URL when enabled', async () => {
+    const { usePreferences } = await import('../composables/usePreferences')
+    const { preferences, updateURL } = usePreferences()
+    preferences.value.appearance.cushionTreemap = true
+
+    updateURL()
+
+    const url = history.replaceState.mock.calls[0][2]
+    expect(url).toContain('cushion=true')
+  })
+
+  it('preserves appearance defaults when loading partial preferences', async () => {
+    const stored = {
+      version: '1.0',
+      lastSelectedAnalysis: 'my-project'
+      // No appearance object
+    }
+    localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+
+    const { usePreferences } = await import('../composables/usePreferences')
+    const { preferences } = usePreferences()
+
+    expect(preferences.value.appearance.cushionTreemap).toBe(false)
+    expect(preferences.value.appearance.hideFolderBorders).toBe(true)
+  })
+
+  it('resets appearance preferences to defaults', async () => {
+    const { usePreferences } = await import('../composables/usePreferences')
+    const { preferences, resetPreferences } = usePreferences()
+    preferences.value.appearance.cushionTreemap = true
+    preferences.value.appearance.hideFolderBorders = false
+
+    resetPreferences()
+
+    expect(preferences.value.appearance.cushionTreemap).toBe(false)
+    expect(preferences.value.appearance.hideFolderBorders).toBe(true)
+  })
+
+  it('loads hideFolderBorders from localStorage', async () => {
+    const stored = {
+      version: '1.0',
+      lastSelectedAnalysis: null,
+      appearance: { cushionTreemap: true, hideFolderBorders: false }
+    }
+    localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+
+    const { usePreferences } = await import('../composables/usePreferences')
+    const { preferences } = usePreferences()
+
+    expect(preferences.value.appearance.hideFolderBorders).toBe(false)
   })
 })

@@ -1,7 +1,7 @@
 # Opportunity: Analysis Exclusion Patterns
 
 **Status:** Next
-**Last Updated:** 2025-11-23
+**Last Updated:** 2025-11-29
 **Parent:** 002 (Code Visibility)
 
 ## Desired Outcome
@@ -105,6 +105,77 @@ docs/_build/**
 - Requires creating file manually
 - Not discoverable from UI
 - Need to re-run analysis after changes
+- Requires implementing gitignore pattern parsing
+
+---
+
+### Solution 1B: .clocignore with Git Pathspec (Recommended)
+
+**Philosophy:** Reuse git's native gitignore pattern matching. Zero parsing code.
+
+**Approach:**
+- `.clocignore` file in repository root (standard cloc convention)
+- Convert patterns to git pathspec format (`:!pattern`)
+- Use `git ls-files` to get filtered file list
+- Pass to cloc via `--list-file`
+
+**Implementation:**
+```python
+def get_files_with_exclusions(repo_path, ignore_file='.clocignore'):
+    """Get file list using git's native gitignore pattern matching."""
+    ignore_path = Path(repo_path) / ignore_file
+
+    pathspecs = []
+    if ignore_path.exists():
+        for line in ignore_path.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith('#'):
+                pathspecs.append(f':!{line}')
+
+    result = subprocess.run(
+        ['git', 'ls-files', '--'] + pathspecs,
+        cwd=repo_path,
+        capture_output=True, text=True
+    )
+    return result.stdout.splitlines()
+
+def run_cloc(repo_path):
+    files = get_files_with_exclusions(repo_path)
+
+    # Write to temp file for cloc --list-file
+    with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
+        f.write('\n'.join(files))
+        list_file = f.name
+
+    subprocess.run(['cloc', '--json', '--by-file', '--list-file', list_file])
+```
+
+**Example .clocignore:**
+```gitignore
+# Lock files
+*.lock
+package-lock.json
+
+# Test fixtures
+test/fixtures/**
+__tests__/__snapshots__/**
+
+# Generated
+dist/**
+*.generated.*
+```
+
+**Benefits:**
+- Zero Python dependencies - uses git's built-in pattern matching
+- Full gitignore syntax support (`**`, `!` negation, etc.)
+- Faster than cloc's `--exclude-list-file` (filtering before cloc runs)
+- Standard `.clocignore` filename (cloc convention)
+- Users already know gitignore syntax
+
+**Trade-offs:**
+- Requires git (already a project dependency)
+- Requires creating file manually
+- Not discoverable from UI
 
 ---
 
@@ -190,35 +261,36 @@ CREATE TABLE analysis_exclusions (
 
 ## Comparison Matrix
 
-| Criterion | .ainaignore | UI-Only | Hybrid |
-|-----------|-------------|---------|--------|
-| Team consistency | High | Low | High |
-| Discoverability | Low | High | Medium |
-| Version control | Yes | No | Partial |
-| Ease of use | Medium | High | Medium |
-| Offline editing | Yes | No | Yes |
-| Maintenance burden | Low | Medium | High |
+| Criterion | 1: .ainaignore | 1B: Git Pathspec | 2: UI-Only | 3: Hybrid |
+|-----------|----------------|------------------|------------|-----------|
+| Team consistency | High | High | Low | High |
+| Discoverability | Low | Low | High | Medium |
+| Version control | Yes | Yes | No | Partial |
+| Ease of use | Medium | Medium | High | Medium |
+| Offline editing | Yes | Yes | No | Yes |
+| Implementation complexity | Medium | Low | Medium | High |
+| Dependencies | pathspec lib | git (existing) | None | Mixed |
 
 ## Recommendation
 
-**Start with Solution 1 (.ainaignore)** for MVP:
-- Familiar pattern for developers
+**Start with Solution 1B (.clocignore with Git Pathspec)** for MVP:
+- Zero new dependencies - reuses git's pattern matching
+- Standard `.clocignore` filename (cloc convention)
+- Full gitignore syntax support without custom parsing
 - Version-controlled team rules
-- Simple implementation
 - Can add UI features later (Solution 3)
 
 **Future iteration:** Add UI exclusion as enhancement (Solution 3)
 
 ## Implementation Plan
 
-**Phase 1: .ainaignore Support**
-1. Add `read_ainaignore()` function to parse patterns
-2. Modify `run_cloc()` to accept exclusion patterns
-3. Convert patterns to cloc `--exclude-dir` and `--exclude-file` flags
-4. Document .ainaignore syntax in README
+**Phase 1: .clocignore Support (Solution 1B)**
+1. Add `get_files_with_exclusions()` using git pathspec
+2. Modify `run_cloc()` to use `--list-file` instead of `--vcs=git`
+3. Document .clocignore syntax in README
 
 **Phase 2: UI Indication (Optional)**
-1. Parse .ainaignore during frontend load
+1. Parse .clocignore during frontend load
 2. Gray out excluded files in treemap
 3. Add "Show excluded files" toggle
 4. Display exclusion reason on hover
@@ -226,14 +298,23 @@ CREATE TABLE analysis_exclusions (
 **Phase 3: UI Exclusion (Future)**
 1. Add context menu to treemap
 2. Store exclusions in SQLite
-3. Merge with .ainaignore patterns
+3. Merge with .clocignore patterns
 4. Add exclusion management UI panel
+
+## Implementation Notes
+
+**Unfiltered view option:** Consider storing/generating both filtered and unfiltered results so users can toggle between views in the UI. Options:
+1. Run analysis twice (with/without exclusions) → two JSON files
+2. Store exclusion metadata in JSON → filter client-side
+3. Mark excluded files in tree with `excluded: true` flag → toggle visibility in UI
+
+Option 3 is most flexible: single analysis run, full data preserved, client controls visibility.
 
 ## Assumption Tests
 
-- [ ] .ainaignore patterns correctly exclude files from cloc
+- [ ] .clocignore patterns correctly exclude files via git pathspec
 - [ ] Exclusion significantly improves visualization clarity
-- [ ] Teams create and maintain .ainaignore files
+- [ ] Teams create and maintain .clocignore files
 - [ ] Excluded files can be shown on demand (transparency)
 
 ## Success Metrics
@@ -241,4 +322,4 @@ CREATE TABLE analysis_exclusions (
 - Reduction in "noise" files (lock files, fixtures) in visualizations
 - Improved accuracy of language statistics
 - User reports better focus on maintainable code
-- .ainaignore files added to team repositories
+- .clocignore files added to team repositories
