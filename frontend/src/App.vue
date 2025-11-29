@@ -4,10 +4,12 @@ import Treemap from './components/Treemap.vue'
 import Breadcrumb from './components/Breadcrumb.vue'
 import StatsBar from './components/StatsBar.vue'
 import Statusline from './components/Statusline.vue'
+import SettingsPanel from './components/SettingsPanel.vue'
 import { usePreferences } from './composables/usePreferences'
 
 // Preferences
 const { preferences, updateURL } = usePreferences()
+const showSettings = ref(false)
 
 // Available analyses
 const analyses = ref([])
@@ -136,19 +138,28 @@ function handleBreadcrumbNavigate(index) {
     <header class="app-header">
       <h1>Ainalyzer - Code Visibility</h1>
 
-      <div v-if="analyses.length > 0" class="analysis-selector">
-        <label for="analysis-select">Analysis:</label>
-        <select id="analysis-select" v-model="selectedAnalysis">
-          <option v-for="analysis in analyses" :key="analysis.filename" :value="analysis.filename">
-            {{ analysis.name }}
-            <template v-if="analysis.stats">
-              ({{ analysis.stats.total_files.toLocaleString() }} files,
-               {{ analysis.stats.total_lines.toLocaleString() }} lines)
-            </template>
-          </option>
-        </select>
+      <div class="header-controls">
+        <div v-if="analyses.length > 0" class="analysis-selector">
+          <label for="analysis-select">Analysis:</label>
+          <select id="analysis-select" v-model="selectedAnalysis">
+            <option v-for="analysis in analyses" :key="analysis.filename" :value="analysis.filename">
+              {{ analysis.name }}
+              <template v-if="analysis.stats">
+                ({{ analysis.stats.total_files.toLocaleString() }} files,
+                 {{ analysis.stats.total_lines.toLocaleString() }} lines)
+              </template>
+            </option>
+          </select>
+        </div>
+        <button class="settings-button" @click="showSettings = true" aria-label="Open settings">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+          </svg>
+        </button>
       </div>
     </header>
+
+    <SettingsPanel v-if="showSettings" @close="showSettings = false" />
 
     <div v-if="loading" class="loading">Loading analysis data...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
@@ -161,6 +172,8 @@ function handleBreadcrumbNavigate(index) {
           :data="data"
           :currentNode="currentNode"
           :navigationStack="navigationStack"
+          :cushionMode="preferences.appearance?.cushionTreemap"
+          :hideFolderBorders="preferences.appearance?.hideFolderBorders"
           @drill-down="handleDrillDown"
           @hover="statuslineText = $event"
           @hover-end="statuslineText = ''"
@@ -199,6 +212,29 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 20px;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.settings-button {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.settings-button:hover {
+  color: #d4d4d4;
+  background: #3e3e3e;
 }
 
 h1 {

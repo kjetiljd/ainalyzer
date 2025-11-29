@@ -4,7 +4,11 @@ const STORAGE_KEY = 'ainalyzer-preferences'
 
 const defaultPreferences = {
   version: '1.0',
-  lastSelectedAnalysis: null
+  lastSelectedAnalysis: null,
+  appearance: {
+    cushionTreemap: false,
+    hideFolderBorders: true  // Only applies when cushionTreemap is true
+  }
 }
 
 // Shared state across all component instances
@@ -23,12 +27,22 @@ export function usePreferences() {
 
   function loadPreferences() {
     // 1. Load from localStorage
-    let stored = { ...defaultPreferences }
+    let stored = {
+      ...defaultPreferences,
+      appearance: { ...defaultPreferences.appearance }
+    }
     const localData = localStorage.getItem(STORAGE_KEY)
     if (localData) {
       try {
         const parsed = JSON.parse(localData)
-        stored = { ...defaultPreferences, ...parsed }
+        stored = {
+          ...defaultPreferences,
+          ...parsed,
+          appearance: {
+            ...defaultPreferences.appearance,
+            ...(parsed.appearance || {})
+          }
+        }
       } catch (e) {
         console.error('Failed to parse preferences:', e)
       }
@@ -39,13 +53,19 @@ export function usePreferences() {
     if (params.has('analysis')) {
       stored.lastSelectedAnalysis = params.get('analysis')
     }
+    if (params.has('cushion')) {
+      stored.appearance.cushionTreemap = params.get('cushion') === 'true'
+    }
 
     return stored
   }
 
   function resetPreferences() {
-    // Replace all properties to trigger reactivity
-    Object.assign(preferences.value, { ...defaultPreferences })
+    // Replace all properties to trigger reactivity (deep copy)
+    Object.assign(preferences.value, {
+      ...defaultPreferences,
+      appearance: { ...defaultPreferences.appearance }
+    })
   }
 
   function updateURL() {
@@ -54,6 +74,9 @@ export function usePreferences() {
     // Add non-default preferences to URL
     if (preferences.value.lastSelectedAnalysis !== defaultPreferences.lastSelectedAnalysis) {
       params.set('analysis', preferences.value.lastSelectedAnalysis)
+    }
+    if (preferences.value.appearance?.cushionTreemap !== defaultPreferences.appearance.cushionTreemap) {
+      params.set('cushion', String(preferences.value.appearance.cushionTreemap))
     }
 
     const url = new URL(window.location.href)
@@ -67,6 +90,9 @@ export function usePreferences() {
     // Add non-default preferences to URL
     if (preferences.value.lastSelectedAnalysis !== defaultPreferences.lastSelectedAnalysis) {
       params.set('analysis', preferences.value.lastSelectedAnalysis)
+    }
+    if (preferences.value.appearance?.cushionTreemap !== defaultPreferences.appearance.cushionTreemap) {
+      params.set('cushion', String(preferences.value.appearance.cushionTreemap))
     }
 
     const url = new URL(window.location.href)
@@ -85,7 +111,14 @@ export function usePreferences() {
   function importPreferences(json) {
     try {
       const imported = JSON.parse(json)
-      Object.assign(preferences.value, { ...defaultPreferences, ...imported })
+      Object.assign(preferences.value, {
+        ...defaultPreferences,
+        ...imported,
+        appearance: {
+          ...defaultPreferences.appearance,
+          ...(imported.appearance || {})
+        }
+      })
     } catch (e) {
       throw new Error('Invalid preferences JSON')
     }

@@ -19,6 +19,14 @@ export default {
     navigationStack: {
       type: Array,
       default: () => []
+    },
+    cushionMode: {
+      type: Boolean,
+      default: false
+    },
+    hideFolderBorders: {
+      type: Boolean,
+      default: true
     }
   },
   data() {
@@ -49,6 +57,12 @@ export default {
     },
     currentNode() {
       this.render()
+    },
+    cushionMode() {
+      this.render()
+    },
+    hideFolderBorders() {
+      this.render()
     }
   },
   methods: {
@@ -69,19 +83,31 @@ export default {
       return fileColors[node.depth % fileColors.length]
     },
 
+    hexToRgb(hex) {
+      const h = hex.replace('#', '')
+      return {
+        r: parseInt(h.substr(0, 2), 16),
+        g: parseInt(h.substr(2, 2), 16),
+        b: parseInt(h.substr(4, 2), 16)
+      }
+    },
+
     getTextColor(bgColor) {
       // Phase 3: Calculate text color based on background for contrast
-      // Convert hex to RGB
-      const hex = bgColor.replace('#', '')
-      const r = parseInt(hex.substr(0, 2), 16)
-      const g = parseInt(hex.substr(2, 2), 16)
-      const b = parseInt(hex.substr(4, 2), 16)
+      const { r, g, b } = this.hexToRgb(bgColor)
 
       // Calculate relative luminance (WCAG formula)
       const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
 
       // Return black for light backgrounds, white for dark backgrounds
       return luminance > 0.5 ? '#000000' : '#ffffff'
+    },
+
+    getCushionColors(baseColor) {
+      const { r, g, b } = this.hexToRgb(baseColor)
+      const lighter = `rgb(${Math.min(255, r + 30)}, ${Math.min(255, g + 30)}, ${Math.min(255, b + 30)})`
+      const darker = `rgb(${Math.max(0, r - 20)}, ${Math.max(0, g - 20)}, ${Math.max(0, b - 20)})`
+      return { lighter, darker }
     },
 
     truncateText(text, maxWidth, fontSize) {
@@ -236,12 +262,28 @@ export default {
         .sort((a, b) => (b.value || 0) - (a.value || 0))
 
       // Create treemap layout
+      // In cushion mode with hidden borders, remove all padding since shading provides separation
+      const useCushionPadding = this.cushionMode && this.hideFolderBorders
       const layout = treemap()
         .size([this.width, this.height])
-        .paddingOuter(3)
-        .paddingInner(1)
+
+      if (useCushionPadding) {
+        // No padding - cells tile perfectly, cushion shading provides separation
+        layout.padding(0)
+      } else {
+        // Standard padding for bordered mode
+        layout.paddingOuter(3).paddingInner(1)
+      }
 
       layout(root)
+
+      // Create defs element for gradients if in cushion mode
+      const gradientMap = new Map()
+      let defs = null
+      if (this.cushionMode) {
+        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs')
+        svg.appendChild(defs)
+      }
 
       // Render rectangles
       const nodes = root.descendants()
@@ -250,15 +292,58 @@ export default {
         // Calculate cell dimensions
         const width = node.x1 - node.x0
         const height = node.y1 - node.y0
+        const isFolder = node.data.children && node.data.children.length > 0
+
+        // In cushion mode with hidden borders, skip rendering parent nodes (directories)
+        // Only render leaf nodes - the cushion shading provides visual hierarchy
+        if (this.cushionMode && this.hideFolderBorders && isFolder) {
+          return // Skip directory rectangles
+        }
+
+        const baseColor = this.getNodeColor(node)
+        let fillValue = baseColor
+
+        // Create gradient for cushion mode
+        if (this.cushionMode) {
+          if (!gradientMap.has(baseColor)) {
+            const gradientId = `cushion-${baseColor.replace('#', '')}`
+            const { lighter, darker } = this.getCushionColors(baseColor)
+
+            const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'radialGradient')
+            gradient.setAttribute('id', gradientId)
+            gradient.setAttribute('cx', '50%')
+            gradient.setAttribute('cy', '50%')
+            gradient.setAttribute('r', '70%')
+
+            const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop')
+            stop1.setAttribute('offset', '0%')
+            stop1.setAttribute('stop-color', lighter)
+
+            const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop')
+            stop2.setAttribute('offset', '100%')
+            stop2.setAttribute('stop-color', darker)
+
+            gradient.appendChild(stop1)
+            gradient.appendChild(stop2)
+            defs.appendChild(gradient)
+
+            gradientMap.set(baseColor, gradientId)
+          }
+          fillValue = `url(#${gradientMap.get(baseColor)})`
+        }
 
         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
         rect.setAttribute('x', node.x0)
         rect.setAttribute('y', node.y0)
         rect.setAttribute('width', width)
         rect.setAttribute('height', height)
-        rect.setAttribute('fill', this.getNodeColor(node))
-        rect.setAttribute('stroke', '#1e1e1e')
-        rect.setAttribute('stroke-width', '2')
+        rect.setAttribute('fill', fillValue)
+        // Determine stroke based on cushion mode and folder border settings
+        // Note: isFolder already defined above for early return check
+        const shouldHideBorder = this.cushionMode && this.hideFolderBorders && isFolder
+
+        rect.setAttribute('stroke', shouldHideBorder ? 'none' : '#1e1e1e')
+        rect.setAttribute('stroke-width', shouldHideBorder ? '0' : (this.cushionMode ? '0.5' : '2'))
         rect.style.cursor = 'pointer'
 
         // Add click handler - all nodes are clickable
