@@ -5,6 +5,7 @@ import Breadcrumb from './components/Breadcrumb.vue'
 import StatsBar from './components/StatsBar.vue'
 import Statusline from './components/Statusline.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
+import FileViewer from './components/FileViewer.vue'
 import { usePreferences } from './composables/usePreferences'
 
 // Preferences
@@ -18,6 +19,7 @@ const selectedAnalysis = ref(null)
 // Current analysis data
 const data = ref(null)
 const analysisInfo = ref(null)
+const rootPath = ref(null)
 const loading = ref(true)
 const error = ref(null)
 
@@ -26,6 +28,9 @@ const navigationStack = ref([])
 const breadcrumbPath = ref([])
 const statuslineText = ref('')
 const currentNode = ref(null)
+
+// File viewer state
+const viewingFile = ref(null)
 
 // Load list of available analyses
 async function loadAnalysesList() {
@@ -78,6 +83,9 @@ async function loadAnalysis(filename) {
       stats: json.stats
     }
 
+    // Store root path for file opening
+    rootPath.value = json.root_path
+
     // Extract tree for visualization
     data.value = json.tree
     navigationStack.value = [json.tree]
@@ -115,14 +123,39 @@ onMounted(async () => {
 
 // Handle drill-down - use full path from event
 function handleDrillDown(event) {
-  // If clicking the same node we're already at, ignore it
-  if (currentNode.value === event.node) {
+  const node = event.node
+
+  // Check if this is a file by type property
+  if (node.type === 'file') {
+    const isDirectChild = currentNode.value?.children?.includes(node)
+    if (isDirectChild && node.path && rootPath.value) {
+      // Fully zoomed in - open the file
+      openFileInEditor(node.path)
+    } else if (event.path.length > 1) {
+      // Navigate to file's parent directory
+      const parentPath = event.path.slice(0, -1)
+      const parentNode = parentPath[parentPath.length - 1]
+      navigationStack.value = parentPath
+      breadcrumbPath.value = parentPath.map(n => n.name)
+      currentNode.value = parentNode
+    }
     return
   }
 
+  // If clicking the same directory we're already at, ignore it
+  if (currentNode.value === node) {
+    return
+  }
+
+  // Navigate to directory
   navigationStack.value = event.path
   breadcrumbPath.value = event.path.map(n => n.name)
-  currentNode.value = event.node
+  currentNode.value = node
+}
+
+// Open file viewer
+function openFileInEditor(relativePath) {
+  viewingFile.value = relativePath
 }
 
 // Handle breadcrumb navigation
@@ -160,6 +193,12 @@ function handleBreadcrumbNavigate(index) {
     </header>
 
     <SettingsPanel v-if="showSettings" @close="showSettings = false" />
+    <FileViewer
+      v-if="viewingFile"
+      :path="viewingFile"
+      :rootPath="rootPath"
+      @close="viewingFile = null"
+    />
 
     <div v-if="loading" class="loading">Loading analysis data...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
