@@ -51,6 +51,51 @@ function ainaAnalysisPlugin() {
         }
       })
 
+      // Serve .clocignore from analysis root_path
+      server.middlewares.use('/api/clocignore', (req, res) => {
+        const url = new URL(req.url, 'http://localhost')
+        const analysisName = url.searchParams.get('analysis')
+
+        if (!analysisName) {
+          res.statusCode = 400
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Missing analysis parameter' }))
+          return
+        }
+
+        // Load analysis JSON to get root_path
+        const analysisPath = join(ainaAnalysisDir, `${analysisName}.json`)
+        if (!fs.existsSync(analysisPath)) {
+          res.statusCode = 404
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Analysis not found', content: '' }))
+          return
+        }
+
+        try {
+          const analysisJson = JSON.parse(fs.readFileSync(analysisPath, 'utf-8'))
+          const rootPath = analysisJson.root_path
+
+          // Try .clocignore in root_path
+          const clocignorePath = join(rootPath, '.clocignore')
+          if (fs.existsSync(clocignorePath)) {
+            const content = fs.readFileSync(clocignorePath, 'utf-8')
+            res.setHeader('Content-Type', 'application/json')
+            res.setHeader('Access-Control-Allow-Origin', '*')
+            res.end(JSON.stringify({ content }))
+          } else {
+            // No .clocignore file - return empty content
+            res.setHeader('Content-Type', 'application/json')
+            res.setHeader('Access-Control-Allow-Origin', '*')
+            res.end(JSON.stringify({ content: '' }))
+          }
+        } catch (err) {
+          res.statusCode = 500
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ error: 'Error reading clocignore' }))
+        }
+      })
+
       server.middlewares.use('/api/analyses', (req, res, next) => {
         // Remove /api/analyses prefix and query params
         const path = req.url.split('?')[0].replace(/^\//, '')

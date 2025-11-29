@@ -61,6 +61,21 @@
           </label>
         </div>
       </section>
+
+      <section class="settings-section">
+        <h3>Filters</h3>
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            :checked="preferences.filters?.hideClocignore"
+            @change="toggleHideClocignore"
+          />
+          <span>Hide .clocignore files</span>
+        </label>
+        <p class="setting-description">
+          Exclude files matching patterns in .clocignore from visualization and stats.
+        </p>
+      </section>
     </div>
   </div>
 </template>
@@ -94,6 +109,13 @@ function setColorMode(mode) {
   }
   preferences.value.appearance.colorMode = mode
   updateURL()
+}
+
+function toggleHideClocignore(event) {
+  if (!preferences.value.filters) {
+    preferences.value.filters = {}
+  }
+  preferences.value.filters.hideClocignore = event.target.checked
 }
 </script>
 

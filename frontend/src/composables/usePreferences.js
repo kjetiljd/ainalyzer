@@ -9,6 +9,9 @@ const defaultPreferences = {
     cushionTreemap: false,
     hideFolderBorders: true,  // Only applies when cushionTreemap is true
     colorMode: 'depth'  // 'depth' | 'filetype'
+  },
+  filters: {
+    hideClocignore: true  // Hide files matching .clocignore patterns
   }
 }
 
@@ -30,7 +33,8 @@ export function usePreferences() {
     // 1. Load from localStorage
     let stored = {
       ...defaultPreferences,
-      appearance: { ...defaultPreferences.appearance }
+      appearance: { ...defaultPreferences.appearance },
+      filters: { ...defaultPreferences.filters }
     }
     const localData = localStorage.getItem(STORAGE_KEY)
     if (localData) {
@@ -42,6 +46,10 @@ export function usePreferences() {
           appearance: {
             ...defaultPreferences.appearance,
             ...(parsed.appearance || {})
+          },
+          filters: {
+            ...defaultPreferences.filters,
+            ...(parsed.filters || {})
           }
         }
       } catch (e) {
@@ -68,7 +76,8 @@ export function usePreferences() {
     // Replace all properties to trigger reactivity (deep copy)
     Object.assign(preferences.value, {
       ...defaultPreferences,
-      appearance: { ...defaultPreferences.appearance }
+      appearance: { ...defaultPreferences.appearance },
+      filters: { ...defaultPreferences.filters }
     })
   }
 
@@ -127,6 +136,10 @@ export function usePreferences() {
         appearance: {
           ...defaultPreferences.appearance,
           ...(imported.appearance || {})
+        },
+        filters: {
+          ...defaultPreferences.filters,
+          ...(imported.filters || {})
         }
       })
     } catch (e) {

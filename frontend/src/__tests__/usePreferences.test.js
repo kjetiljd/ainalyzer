@@ -58,6 +58,9 @@ describe('usePreferences', () => {
         cushionTreemap: false,
         hideFolderBorders: true,
         colorMode: 'depth'
+      },
+      filters: {
+        hideClocignore: true
       }
     })
   })
@@ -184,6 +187,9 @@ describe('usePreferences', () => {
         cushionTreemap: false,
         hideFolderBorders: true,
         colorMode: 'depth'
+      },
+      filters: {
+        hideClocignore: true
       }
     })
   })
