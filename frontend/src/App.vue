@@ -127,18 +127,15 @@ function handleDrillDown(event) {
 
   // Check if this is a file by type property
   if (node.type === 'file') {
-    const isDirectChild = currentNode.value?.children?.includes(node)
-    if (isDirectChild && node.path && rootPath.value) {
-      // Fully zoomed in - open the file
+    // If already zoomed into this file, open FileViewer
+    if (currentNode.value === node && node.path && rootPath.value) {
       openFileInEditor(node.path)
-    } else if (event.path.length > 1) {
-      // Navigate to file's parent directory
-      const parentPath = event.path.slice(0, -1)
-      const parentNode = parentPath[parentPath.length - 1]
-      navigationStack.value = parentPath
-      breadcrumbPath.value = parentPath.map(n => n.name)
-      currentNode.value = parentNode
+      return
     }
+    // Otherwise drill into the file (make it currentNode)
+    navigationStack.value = event.path
+    breadcrumbPath.value = event.path.map(n => n.name)
+    currentNode.value = node
     return
   }
 
