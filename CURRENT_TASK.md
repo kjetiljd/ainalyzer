@@ -6,23 +6,29 @@
 
 ## Active Task
 
-**Color by File Type (010)** - In Progress
-
-→ [docs/opportunities/010-color-by-filetype.md](./docs/opportunities/010-color-by-filetype.md)
-→ [PLAN.md](./PLAN.md) for TDD implementation plan
-
-**Goal:** Users can toggle treemap coloring between depth-based and file type-based modes.
-
-**Progress:**
-- [ ] Phase 1: colorUtils.js (tests + implementation)
-- [ ] Phase 2: Preferences (colorMode)
-- [ ] Phase 3: SettingsPanel (radio buttons)
-- [ ] Phase 4: Treemap integration
-- [ ] Phase 5: App wiring
+*No active task. See [PLAN.md](./PLAN.md) to pull from Next.*
 
 ---
 
 ## Recently Completed
+
+**Color by File Type (010)** - Completed 2025-11-29
+
+→ [docs/opportunities/010-color-by-filetype.md](./docs/opportunities/010-color-by-filetype.md)
+
+**Delivered:**
+- Toggle between depth-based and file type-based coloring in Settings
+- 60-color tiered palette (Classic_20 extended with darker/lighter variants)
+- Frequency-based color assignment with tier escalation
+- Colors stable across navigation within an analysis
+- 82 passing tests (30 new)
+
+**Implementation:**
+- colorUtils: `frontend/src/utils/colorUtils.js`
+- Tests: `frontend/src/__tests__/colorUtils.test.js`
+- Updated: usePreferences, SettingsPanel, Treemap, App
+
+---
 
 **Cushion Treemap + Settings Panel (008 + 009)** - Completed 2025-11-29
 

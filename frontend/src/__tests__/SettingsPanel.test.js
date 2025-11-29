@@ -113,4 +113,51 @@ describe('SettingsPanel', () => {
     const url = history.replaceState.mock.calls[0][2]
     expect(url).toContain('cushion=true')
   })
+
+  it('renders radio buttons for color mode', async () => {
+    const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+    const wrapper = mount(SettingsPanel)
+
+    const radios = wrapper.findAll('input[type="radio"][name="colorMode"]')
+    expect(radios.length).toBe(2)
+    expect(wrapper.text()).toContain('Color by depth')
+    expect(wrapper.text()).toContain('Color by file type')
+  })
+
+  it('radio reflects current colorMode preference', async () => {
+    storage['ainalyzer-preferences'] = JSON.stringify({
+      version: '1.0',
+      lastSelectedAnalysis: null,
+      appearance: { colorMode: 'filetype' }
+    })
+
+    const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+    const wrapper = mount(SettingsPanel)
+
+    const filetypeRadio = wrapper.find('input[type="radio"][value="filetype"]')
+    expect(filetypeRadio.element.checked).toBe(true)
+  })
+
+  it('selecting filetype updates preference', async () => {
+    const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+    const wrapper = mount(SettingsPanel)
+
+    const filetypeRadio = wrapper.find('input[type="radio"][value="filetype"]')
+    await filetypeRadio.setValue(true)
+
+    expect(filetypeRadio.element.checked).toBe(true)
+  })
+
+  it('updates URL when colorMode changes', async () => {
+    const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+    const wrapper = mount(SettingsPanel)
+
+    const filetypeRadio = wrapper.find('input[type="radio"][value="filetype"]')
+    await filetypeRadio.setValue(true)
+
+    expect(history.replaceState).toHaveBeenCalled()
+    const calls = history.replaceState.mock.calls
+    const lastUrl = calls[calls.length - 1][2]
+    expect(lastUrl).toContain('colorMode=filetype')
+  })
 })

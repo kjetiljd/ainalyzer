@@ -174,6 +174,7 @@ function handleBreadcrumbNavigate(index) {
           :navigationStack="navigationStack"
           :cushionMode="preferences.appearance?.cushionTreemap"
           :hideFolderBorders="preferences.appearance?.hideFolderBorders"
+          :colorMode="preferences.appearance?.colorMode || 'depth'"
           @drill-down="handleDrillDown"
           @hover="statuslineText = $event"
           @hover-end="statuslineText = ''"

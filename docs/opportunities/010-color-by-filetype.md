@@ -1,6 +1,6 @@
 # Opportunity: Color by File Type
 
-**Status:** Proposed
+**Status:** Completed
 **Last Updated:** 2025-11-29
 
 ## Desired Outcome

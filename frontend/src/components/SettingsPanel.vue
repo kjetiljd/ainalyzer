@@ -36,6 +36,30 @@
         <p class="setting-description sub-description">
           Removes stroke borders from directories, relying on cushion shading for separation.
         </p>
+
+        <div class="radio-group">
+          <span class="radio-group-label">Color mode</span>
+          <label class="radio-label">
+            <input
+              type="radio"
+              name="colorMode"
+              value="depth"
+              :checked="preferences.appearance?.colorMode === 'depth'"
+              @change="setColorMode('depth')"
+            />
+            <span>Color by depth</span>
+          </label>
+          <label class="radio-label">
+            <input
+              type="radio"
+              name="colorMode"
+              value="filetype"
+              :checked="preferences.appearance?.colorMode === 'filetype'"
+              @change="setColorMode('filetype')"
+            />
+            <span>Color by file type</span>
+          </label>
+        </div>
       </section>
     </div>
   </div>
@@ -61,6 +85,14 @@ function toggleHideFolderBorders(event) {
     preferences.value.appearance = {}
   }
   preferences.value.appearance.hideFolderBorders = event.target.checked
+  updateURL()
+}
+
+function setColorMode(mode) {
+  if (!preferences.value.appearance) {
+    preferences.value.appearance = {}
+  }
+  preferences.value.appearance.colorMode = mode
   updateURL()
 }
 </script>
@@ -170,5 +202,35 @@ function toggleHideFolderBorders(event) {
   font-size: 12px;
   color: #888;
   line-height: 1.4;
+}
+
+.radio-group {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #3e3e3e;
+}
+
+.radio-group-label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #888;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #d4d4d4;
+  margin-bottom: 8px;
+}
+
+.radio-label input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #4fc3f7;
 }
 </style>

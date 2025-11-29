@@ -4,6 +4,7 @@
 
 <script>
 import { hierarchy, treemap } from 'd3-hierarchy'
+import { assignColors, OVERFLOW_COLOR } from '../utils/colorUtils'
 
 export default {
   name: 'Treemap',
@@ -27,13 +28,37 @@ export default {
     hideFolderBorders: {
       type: Boolean,
       default: true
+    },
+    colorMode: {
+      type: String,
+      default: 'depth'  // 'depth' | 'filetype'
     }
   },
   data() {
     return {
       width: 0,
       height: 0,
-      resizeObserver: null
+      resizeObserver: null,
+      colorMap: null
+    }
+  },
+  computed: {
+    computedColorMap() {
+      if (this.colorMode !== 'filetype') return null
+
+      // Count languages across entire tree (use root data, not currentNode)
+      const counts = {}
+      const countLanguages = (node) => {
+        if (!node.children && node.language) {
+          counts[node.language] = (counts[node.language] || 0) + 1
+        }
+        if (node.children) {
+          node.children.forEach(countLanguages)
+        }
+      }
+      countLanguages(this.data)
+
+      return assignColors(counts)
     }
   },
   mounted() {
@@ -63,6 +88,9 @@ export default {
     },
     hideFolderBorders() {
       this.render()
+    },
+    colorMode() {
+      this.render()
     }
   },
   methods: {
@@ -78,7 +106,12 @@ export default {
         return '#4a4a4a'
       }
 
-      // It's a file - color by absolute depth from original root using ColorBrewer Set2
+      // If colorMode is filetype, use the computed colorMap
+      if (this.colorMode === 'filetype' && this.computedColorMap) {
+        return this.computedColorMap[node.data.language] || OVERFLOW_COLOR
+      }
+
+      // Default: color by absolute depth from original root using ColorBrewer Set2
       // navigationStack length gives depth offset from drill-down navigation
       const depthOffset = this.navigationStack.length > 0 ? this.navigationStack.length - 1 : 0
       const absoluteDepth = node.depth + depthOffset
