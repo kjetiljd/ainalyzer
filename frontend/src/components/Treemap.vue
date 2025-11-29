@@ -78,9 +78,14 @@ export default {
         return '#4a4a4a'
       }
 
-      // It's a file - color by depth using ColorBrewer Set2
+      // It's a file - color by absolute depth from original root using ColorBrewer Set2
+      // navigationStack length gives depth offset from drill-down navigation
+      const depthOffset = this.navigationStack.length > 0 ? this.navigationStack.length - 1 : 0
+      const absoluteDepth = node.depth + depthOffset
+
+      // ColorBrewer Set2 palette
       const fileColors = ['#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f']
-      return fileColors[node.depth % fileColors.length]
+      return fileColors[absoluteDepth % fileColors.length]
     },
 
     hexToRgb(hex) {
