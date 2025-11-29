@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import Treemap from '../components/Treemap.vue'
 
@@ -304,6 +304,69 @@ describe('Treemap', () => {
       const set2Colors = ['#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f']
       const usesSet2 = fileColors.some(c => set2Colors.includes(c))
       expect(usesSet2).toBe(true)
+    })
+  })
+
+  describe('context menu', () => {
+    const dataWithPaths = {
+      name: 'root',
+      children: [
+        {
+          name: 'repo1',
+          path: 'repo1',
+          type: 'directory',
+          children: [
+            { name: 'app.js', value: 100, path: 'repo1/app.js', type: 'file' }
+          ]
+        }
+      ]
+    }
+
+    it('emits contextmenu event on right-click with node data', async () => {
+      const wrapper = mount(Treemap, {
+        props: { data: dataWithPaths }
+      })
+
+      const rect = wrapper.find('rect')
+      await rect.trigger('contextmenu', { clientX: 150, clientY: 250 })
+
+      expect(wrapper.emitted()).toHaveProperty('contextmenu')
+      const emitted = wrapper.emitted('contextmenu')[0][0]
+      expect(emitted).toHaveProperty('node')
+      expect(emitted).toHaveProperty('x')
+      expect(emitted).toHaveProperty('y')
+    })
+
+    it('includes mouse coordinates in contextmenu event', async () => {
+      const wrapper = mount(Treemap, {
+        props: { data: dataWithPaths }
+      })
+
+      const rect = wrapper.find('rect')
+      await rect.trigger('contextmenu', { clientX: 150, clientY: 250 })
+
+      const emitted = wrapper.emitted('contextmenu')[0][0]
+      expect(emitted.x).toBe(150)
+      expect(emitted.y).toBe(250)
+    })
+
+    it('prevents default context menu', async () => {
+      const wrapper = mount(Treemap, {
+        props: { data: dataWithPaths }
+      })
+
+      const rect = wrapper.find('rect')
+      const event = new MouseEvent('contextmenu', {
+        clientX: 150,
+        clientY: 250,
+        bubbles: true,
+        cancelable: true
+      })
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+
+      rect.element.dispatchEvent(event)
+
+      expect(preventDefaultSpy).toHaveBeenCalled()
     })
   })
 })

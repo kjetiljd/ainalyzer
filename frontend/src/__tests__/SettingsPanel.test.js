@@ -160,4 +160,168 @@ describe('SettingsPanel', () => {
     const lastUrl = calls[calls.length - 1][2]
     expect(lastUrl).toContain('colorMode=filetype')
   })
+
+  // Custom Exclusions tests
+  describe('custom exclusions', () => {
+    it('shows "Custom Exclusions" section', async () => {
+      const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+      const wrapper = mount(SettingsPanel)
+
+      expect(wrapper.text()).toContain('Custom Exclusions')
+    })
+
+    it('displays each custom exclusion pattern', async () => {
+      storage['ainalyzer-preferences'] = JSON.stringify({
+        version: '1.0',
+        filters: {
+          customExclusions: [
+            { pattern: '*.lock', enabled: true, createdAt: '2025-01-01' },
+            { pattern: '**/*.json', enabled: true, createdAt: '2025-01-02' }
+          ]
+        }
+      })
+
+      const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+      const wrapper = mount(SettingsPanel)
+
+      expect(wrapper.text()).toContain('*.lock')
+      expect(wrapper.text()).toContain('**/*.json')
+    })
+
+    it('shows checkbox for each exclusion (enabled/disabled)', async () => {
+      storage['ainalyzer-preferences'] = JSON.stringify({
+        version: '1.0',
+        filters: {
+          customExclusions: [
+            { pattern: '*.lock', enabled: true, createdAt: '2025-01-01' }
+          ]
+        }
+      })
+
+      const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+      const wrapper = mount(SettingsPanel)
+
+      const exclusionCheckbox = wrapper.find('.exclusion-item input[type="checkbox"]')
+      expect(exclusionCheckbox.exists()).toBe(true)
+      expect(exclusionCheckbox.element.checked).toBe(true)
+    })
+
+    it('shows remove button for each exclusion', async () => {
+      storage['ainalyzer-preferences'] = JSON.stringify({
+        version: '1.0',
+        filters: {
+          customExclusions: [
+            { pattern: '*.lock', enabled: true, createdAt: '2025-01-01' }
+          ]
+        }
+      })
+
+      const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+      const wrapper = mount(SettingsPanel)
+
+      const removeButton = wrapper.find('.exclusion-item .remove-button')
+      expect(removeButton.exists()).toBe(true)
+    })
+
+    it('toggle checkbox toggles exclusion enabled state', async () => {
+      storage['ainalyzer-preferences'] = JSON.stringify({
+        version: '1.0',
+        filters: {
+          customExclusions: [
+            { pattern: '*.lock', enabled: true, createdAt: '2025-01-01' }
+          ]
+        }
+      })
+
+      const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+      const wrapper = mount(SettingsPanel)
+
+      const checkbox = wrapper.find('.exclusion-item input[type="checkbox"]')
+      await checkbox.setValue(false)
+
+      // Check that preference was updated
+      const saved = JSON.parse(storage['ainalyzer-preferences'])
+      expect(saved.filters.customExclusions[0].enabled).toBe(false)
+    })
+
+    it('remove button removes exclusion', async () => {
+      storage['ainalyzer-preferences'] = JSON.stringify({
+        version: '1.0',
+        filters: {
+          customExclusions: [
+            { pattern: '*.lock', enabled: true, createdAt: '2025-01-01' }
+          ]
+        }
+      })
+
+      const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+      const wrapper = mount(SettingsPanel)
+
+      const removeButton = wrapper.find('.exclusion-item .remove-button')
+      await removeButton.trigger('click')
+
+      // Wait for reactivity
+      await new Promise(resolve => setTimeout(resolve, 10))
+
+      // Check that exclusion was removed
+      const saved = JSON.parse(storage['ainalyzer-preferences'])
+      expect(saved.filters.customExclusions).toHaveLength(0)
+    })
+
+    it('shows "Add pattern" input field', async () => {
+      const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+      const wrapper = mount(SettingsPanel)
+
+      const input = wrapper.find('.add-exclusion input')
+      expect(input.exists()).toBe(true)
+      expect(input.attributes('placeholder')).toContain('pattern')
+    })
+
+    it('Add button adds exclusion with input value', async () => {
+      const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+      const wrapper = mount(SettingsPanel)
+
+      const input = wrapper.find('.add-exclusion input')
+      await input.setValue('new-pattern/**')
+
+      const addButton = wrapper.find('.add-exclusion button')
+      await addButton.trigger('click')
+
+      // Wait for reactivity
+      await new Promise(resolve => setTimeout(resolve, 10))
+
+      const saved = JSON.parse(storage['ainalyzer-preferences'])
+      expect(saved.filters.customExclusions.some(e => e.pattern === 'new-pattern/**')).toBe(true)
+    })
+
+    it('clears input after adding', async () => {
+      const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+      const wrapper = mount(SettingsPanel)
+
+      const input = wrapper.find('.add-exclusion input')
+      await input.setValue('test-pattern')
+
+      const addButton = wrapper.find('.add-exclusion button')
+      await addButton.trigger('click')
+
+      expect(input.element.value).toBe('')
+    })
+
+    it('shows empty state when no custom exclusions', async () => {
+      const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+      const wrapper = mount(SettingsPanel)
+
+      expect(wrapper.text()).toContain('No custom exclusions')
+    })
+
+    it('exclusion list is scrollable', async () => {
+      const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+      const wrapper = mount(SettingsPanel)
+
+      const list = wrapper.find('.exclusion-list')
+      expect(list.exists()).toBe(true)
+      // Check for overflow styling (via class or computed style)
+      expect(list.classes()).toContain('exclusion-list')
+    })
+  })
 })

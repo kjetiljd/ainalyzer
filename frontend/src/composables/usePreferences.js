@@ -11,7 +11,8 @@ const defaultPreferences = {
     colorMode: 'depth'  // 'depth' | 'filetype'
   },
   filters: {
-    hideClocignore: true  // Hide files matching .clocignore patterns
+    hideClocignore: true,  // Hide files matching .clocignore patterns
+    customExclusions: []   // [{pattern, enabled, createdAt}]
   }
 }
 
@@ -77,7 +78,10 @@ export function usePreferences() {
     Object.assign(preferences.value, {
       ...defaultPreferences,
       appearance: { ...defaultPreferences.appearance },
-      filters: { ...defaultPreferences.filters }
+      filters: {
+        ...defaultPreferences.filters,
+        customExclusions: []  // Reset array to empty
+      }
     })
   }
 
@@ -147,12 +151,48 @@ export function usePreferences() {
     }
   }
 
+  function addExclusion(pattern) {
+    if (!preferences.value.filters.customExclusions) {
+      preferences.value.filters.customExclusions = []
+    }
+    // Check for duplicate
+    const exists = preferences.value.filters.customExclusions.some(
+      e => e.pattern === pattern
+    )
+    if (!exists) {
+      preferences.value.filters.customExclusions.push({
+        pattern,
+        enabled: true,
+        createdAt: new Date().toISOString()
+      })
+    }
+  }
+
+  function removeExclusion(pattern) {
+    if (!preferences.value.filters.customExclusions) return
+    preferences.value.filters.customExclusions =
+      preferences.value.filters.customExclusions.filter(e => e.pattern !== pattern)
+  }
+
+  function toggleExclusion(pattern) {
+    if (!preferences.value.filters.customExclusions) return
+    const exclusion = preferences.value.filters.customExclusions.find(
+      e => e.pattern === pattern
+    )
+    if (exclusion) {
+      exclusion.enabled = !exclusion.enabled
+    }
+  }
+
   return {
     preferences,
     resetPreferences,
     updateURL,
     shareCurrentView,
     exportPreferences,
-    importPreferences
+    importPreferences,
+    addExclusion,
+    removeExclusion,
+    toggleExclusion
   }
 }

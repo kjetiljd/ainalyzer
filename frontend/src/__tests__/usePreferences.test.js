@@ -60,7 +60,8 @@ describe('usePreferences', () => {
         colorMode: 'depth'
       },
       filters: {
-        hideClocignore: true
+        hideClocignore: true,
+        customExclusions: []
       }
     })
   })
@@ -189,7 +190,8 @@ describe('usePreferences', () => {
         colorMode: 'depth'
       },
       filters: {
-        hideClocignore: true
+        hideClocignore: true,
+        customExclusions: []
       }
     })
   })
@@ -341,5 +343,145 @@ describe('usePreferences', () => {
     resetPreferences()
 
     expect(preferences.value.appearance.colorMode).toBe('depth')
+  })
+
+  // Custom exclusions tests
+  describe('custom exclusions', () => {
+    it('includes filters.customExclusions as empty array by default', async () => {
+      const { usePreferences } = await import('../composables/usePreferences')
+      const { preferences } = usePreferences()
+
+      expect(preferences.value.filters.customExclusions).toEqual([])
+    })
+
+    it('loads customExclusions from localStorage', async () => {
+      const stored = {
+        version: '1.0',
+        filters: {
+          customExclusions: [
+            { pattern: '*.lock', enabled: true, createdAt: '2025-01-01' }
+          ]
+        }
+      }
+      localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+
+      const { usePreferences } = await import('../composables/usePreferences')
+      const { preferences } = usePreferences()
+
+      expect(preferences.value.filters.customExclusions).toHaveLength(1)
+      expect(preferences.value.filters.customExclusions[0].pattern).toBe('*.lock')
+    })
+
+    it('addExclusion() adds pattern to customExclusions', async () => {
+      const { usePreferences } = await import('../composables/usePreferences')
+      const { preferences, addExclusion } = usePreferences()
+
+      addExclusion('*.json')
+
+      expect(preferences.value.filters.customExclusions).toHaveLength(1)
+      expect(preferences.value.filters.customExclusions[0].pattern).toBe('*.json')
+    })
+
+    it('addExclusion() does not add duplicate patterns', async () => {
+      const { usePreferences } = await import('../composables/usePreferences')
+      const { preferences, addExclusion } = usePreferences()
+
+      addExclusion('*.json')
+      addExclusion('*.json')
+
+      expect(preferences.value.filters.customExclusions).toHaveLength(1)
+    })
+
+    it('removeExclusion() removes pattern from customExclusions', async () => {
+      const { usePreferences } = await import('../composables/usePreferences')
+      const { preferences, addExclusion, removeExclusion } = usePreferences()
+
+      addExclusion('*.json')
+      addExclusion('*.lock')
+      removeExclusion('*.json')
+
+      expect(preferences.value.filters.customExclusions).toHaveLength(1)
+      expect(preferences.value.filters.customExclusions[0].pattern).toBe('*.lock')
+    })
+
+    it('toggleExclusion() toggles enabled state', async () => {
+      const { usePreferences } = await import('../composables/usePreferences')
+      const { preferences, addExclusion, toggleExclusion } = usePreferences()
+
+      addExclusion('*.json')
+      expect(preferences.value.filters.customExclusions[0].enabled).toBe(true)
+
+      toggleExclusion('*.json')
+      expect(preferences.value.filters.customExclusions[0].enabled).toBe(false)
+
+      toggleExclusion('*.json')
+      expect(preferences.value.filters.customExclusions[0].enabled).toBe(true)
+    })
+
+    it('stores exclusion as {pattern, enabled, createdAt}', async () => {
+      const { usePreferences } = await import('../composables/usePreferences')
+      const { preferences, addExclusion } = usePreferences()
+
+      addExclusion('test-pattern')
+      const exclusion = preferences.value.filters.customExclusions[0]
+
+      expect(exclusion).toHaveProperty('pattern', 'test-pattern')
+      expect(exclusion).toHaveProperty('enabled', true)
+      expect(exclusion).toHaveProperty('createdAt')
+      expect(typeof exclusion.createdAt).toBe('string')
+    })
+
+    it('new exclusions default to enabled: true', async () => {
+      const { usePreferences } = await import('../composables/usePreferences')
+      const { preferences, addExclusion } = usePreferences()
+
+      addExclusion('new-pattern')
+
+      expect(preferences.value.filters.customExclusions[0].enabled).toBe(true)
+    })
+
+    it('persists customExclusions to localStorage', async () => {
+      const { usePreferences } = await import('../composables/usePreferences')
+      const { addExclusion } = usePreferences()
+
+      addExclusion('persist-test')
+      await new Promise(resolve => setTimeout(resolve, 10))
+
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        'ainalyzer-preferences',
+        expect.stringContaining('persist-test')
+      )
+    })
+
+    it('preserves existing exclusions when adding new', async () => {
+      const stored = {
+        version: '1.0',
+        filters: {
+          customExclusions: [
+            { pattern: 'existing', enabled: true, createdAt: '2025-01-01' }
+          ]
+        }
+      }
+      localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+
+      const { usePreferences } = await import('../composables/usePreferences')
+      const { preferences, addExclusion } = usePreferences()
+
+      addExclusion('new-pattern')
+
+      expect(preferences.value.filters.customExclusions).toHaveLength(2)
+      expect(preferences.value.filters.customExclusions[0].pattern).toBe('existing')
+      expect(preferences.value.filters.customExclusions[1].pattern).toBe('new-pattern')
+    })
+
+    it('resets customExclusions to empty array', async () => {
+      const { usePreferences } = await import('../composables/usePreferences')
+      const { preferences, addExclusion, resetPreferences } = usePreferences()
+
+      addExclusion('some-pattern')
+      resetPreferences()
+
+      expect(preferences.value.filters.customExclusions).toEqual([])
+    })
   })
 })
