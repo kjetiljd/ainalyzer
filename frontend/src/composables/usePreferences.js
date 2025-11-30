@@ -282,6 +282,17 @@ export function usePreferences() {
     }
   }
 
+  function updateExclusion(oldPattern, newPattern) {
+    if (!analysisPrefs.value?.filters.customExclusions) return
+    if (!newPattern.trim()) return
+    const exclusion = analysisPrefs.value.filters.customExclusions.find(
+      e => e.pattern === oldPattern
+    )
+    if (exclusion) {
+      exclusion.pattern = newPattern.trim()
+    }
+  }
+
   return {
     preferences,
     setCurrentAnalysis,
@@ -292,6 +303,7 @@ export function usePreferences() {
     importPreferences,
     addExclusion,
     removeExclusion,
-    toggleExclusion
+    toggleExclusion,
+    updateExclusion
   }
 }
