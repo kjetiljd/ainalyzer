@@ -7,7 +7,11 @@ import fs from 'fs'
 // Path to ~/.aina/analysis directory
 const ainaAnalysisDir = join(homedir(), '.aina', 'analysis')
 
-// Vite plugin to serve aina analysis files
+// Vite plugin to serve aina analysis files (dev server)
+//
+// NOTE: API endpoint logic is duplicated in aina_lib.py (production server)
+// and here (dev server). Changes to /api/analyses, /api/file, or
+// /api/clocignore must be synced in both places.
 function ainaAnalysisPlugin() {
   return {
     name: 'aina-analysis-server',
