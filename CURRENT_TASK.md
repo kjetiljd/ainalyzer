@@ -20,11 +20,11 @@
 - [x] Validate bulk query performance (~0.3s for 9.5k files)
 - [x] Validate rename detection with --follow
 - [x] Create opportunity document (012)
-- [ ] Port `get_file_stats()` to `aina_lib.py`
-- [ ] Write tests for git stats collection
-- [ ] Integrate with `analyze_repos()`
-- [ ] Update JSON output schema
-- [ ] Test with cos and eessi-pensjon
+- [x] Port `get_file_stats()` to `aina_lib.py`
+- [x] Write tests for git stats collection (12 tests)
+- [x] Integrate with `analyze_repos()`
+- [x] Update JSON output schema
+- [x] Test with cos and eessi-pensjon
 
 ### Data to collect per file
 

@@ -3,7 +3,8 @@ import sqlite3
 import subprocess
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
+from collections import defaultdict
 
 class Database:
 
@@ -134,6 +135,154 @@ def discover_repos(path):
             dirs.clear()
 
     return sorted(repos)
+
+
+# Git statistics functions
+
+def get_file_stats(repo_path):
+    """Get commit statistics for all files in a repository.
+
+    Args:
+        repo_path: Path to git repository
+
+    Returns:
+        dict mapping file paths to stats:
+        {
+            'path/to/file.py': {
+                'commits_3m': 5,
+                'commits_1y': 23,
+                'last_commit_date': '2025-11-15T14:32:00+01:00'
+            }
+        }
+
+    Handles renames: if a file was renamed within the 1-year period,
+    uses --follow to get accurate commit counts including pre-rename history.
+    """
+    # Step 1: Bulk query with rename detection
+    result = subprocess.run(
+        ['git', 'log', '-M', '--name-status', '--format=COMMIT|%aI', '--since=1 year ago'],
+        cwd=repo_path,
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode != 0:
+        return {}
+
+    now = datetime.now(timezone.utc)
+    three_months_ago = now.timestamp() - (90 * 24 * 60 * 60)
+
+    stats = defaultdict(lambda: {
+        'commits_3m': 0,
+        'commits_1y': 0,
+        'last_commit_date': None
+    })
+
+    renamed_files = set()  # Track files that were renamed
+    current_date = None
+    current_timestamp = None
+
+    for line in result.stdout.split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+
+        if line.startswith('COMMIT|'):
+            current_date = line.split('|', 1)[1]
+            try:
+                dt = datetime.fromisoformat(current_date.replace('Z', '+00:00'))
+                current_timestamp = dt.timestamp()
+            except ValueError:
+                current_timestamp = 0
+            continue
+
+        # Parse status line: M/A/D/Rxxx followed by path(s)
+        parts = line.split('\t')
+        if len(parts) < 2:
+            continue
+
+        status = parts[0]
+
+        if status.startswith('R'):
+            # Rename: R096\told_path\tnew_path
+            if len(parts) == 3:
+                old_path, new_path = parts[1], parts[2]
+                renamed_files.add(new_path)
+                # Count for new path (current name)
+                file_path = new_path
+            else:
+                continue
+        elif status in ('M', 'A', 'D'):
+            file_path = parts[1]
+        else:
+            # Unknown status, skip
+            continue
+
+        stats[file_path]['commits_1y'] += 1
+
+        if current_timestamp and current_timestamp >= three_months_ago:
+            stats[file_path]['commits_3m'] += 1
+
+        if stats[file_path]['last_commit_date'] is None:
+            stats[file_path]['last_commit_date'] = current_date
+
+    # Step 2: For renamed files, use --follow to get accurate history
+    for file_path in renamed_files:
+        follow_stats = get_file_stats_with_follow(repo_path, file_path, three_months_ago)
+        if follow_stats:
+            stats[file_path] = follow_stats
+
+    return dict(stats)
+
+
+def get_file_stats_with_follow(repo_path, file_path, three_months_timestamp):
+    """Get accurate commit stats for a single file using --follow.
+
+    Used for renamed files to include pre-rename commit history.
+
+    Args:
+        repo_path: Path to git repository
+        file_path: Path to file within repository
+        three_months_timestamp: Unix timestamp for 3-month cutoff
+
+    Returns:
+        dict with commits_3m, commits_1y, last_commit_date, or None on error
+    """
+    result = subprocess.run(
+        ['git', 'log', '--follow', '--format=%aI', '--since=1 year ago', '--', file_path],
+        cwd=repo_path,
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode != 0 or not result.stdout.strip():
+        return None
+
+    commits_3m = 0
+    commits_1y = 0
+    last_commit_date = None
+
+    for line in result.stdout.strip().split('\n'):
+        if not line:
+            continue
+
+        commits_1y += 1
+
+        if last_commit_date is None:
+            last_commit_date = line
+
+        try:
+            dt = datetime.fromisoformat(line.replace('Z', '+00:00'))
+            if dt.timestamp() >= three_months_timestamp:
+                commits_3m += 1
+        except ValueError:
+            pass
+
+    return {
+        'commits_3m': commits_3m,
+        'commits_1y': commits_1y,
+        'last_commit_date': last_commit_date
+    }
 
 
 # CLI Command wrappers
@@ -301,13 +450,14 @@ def build_directory_tree(files, base_path):
     return tree
 
 
-def tree_to_schema(tree, name, path_prefix=''):
+def tree_to_schema(tree, name, path_prefix='', git_stats=None):
     """Convert internal tree structure to JSON schema format.
 
     Args:
         tree: Internal tree structure from build_directory_tree
         name: Name of this node
         path_prefix: Path prefix for this node
+        git_stats: Optional dict of git statistics keyed by file path
 
     Returns:
         dict: Node in JSON schema format
@@ -328,7 +478,7 @@ def tree_to_schema(tree, name, path_prefix=''):
     # Add subdirectories
     if has_dirs:
         for dirname, subtree in sorted(tree['_dirs'].items()):
-            child = tree_to_schema(subtree, dirname, node_path)
+            child = tree_to_schema(subtree, dirname, node_path, git_stats)
             if child:
                 children.append(child)
 
@@ -344,6 +494,16 @@ def tree_to_schema(tree, name, path_prefix=''):
                 'language': file['language'],
                 'extension': file['extension']
             }
+            # Add git stats if available - look up by relative path within repo
+            if git_stats:
+                # file['path'] contains the path relative to repo root
+                stats = git_stats.get(file['path'])
+                if stats:
+                    file_node['commits'] = {
+                        'last_3_months': stats['commits_3m'],
+                        'last_year': stats['commits_1y'],
+                        'last_commit_date': stats['last_commit_date']
+                    }
             children.append(file_node)
 
     node = {
@@ -410,6 +570,9 @@ def analyze_repos(analysis_set_name, analysis_set_path):
             # Build tree for this repo
             repo_tree = build_directory_tree(files, repo_path)
 
+            # Get git statistics for this repo
+            git_stats = get_file_stats(repo_path)
+
             # Determine path prefix: empty if repo IS the analysis_set_path
             # (root_path already points to repo, no need to prefix repo_name)
             is_root_repo = Path(repo_path).resolve() == path_obj.resolve()
@@ -420,7 +583,7 @@ def analyze_repos(analysis_set_name, analysis_set_path):
 
             # Add subdirectories from _dirs
             for dirname, subtree in sorted(repo_tree['_dirs'].items()):
-                child = tree_to_schema(subtree, dirname, path_prefix)
+                child = tree_to_schema(subtree, dirname, path_prefix, git_stats)
                 if child:
                     children.append(child)
 
@@ -435,6 +598,14 @@ def analyze_repos(analysis_set_name, analysis_set_path):
                     'language': file['language'],
                     'extension': file['extension']
                 }
+                # Add git stats for root-level files
+                stats = git_stats.get(file['path'])
+                if stats:
+                    file_node['commits'] = {
+                        'last_3_months': stats['commits_3m'],
+                        'last_year': stats['commits_1y'],
+                        'last_commit_date': stats['last_commit_date']
+                    }
                 children.append(file_node)
 
             # Create repo node
@@ -469,7 +640,7 @@ def analyze_repos(analysis_set_name, analysis_set_path):
     analysis_json = {
         'analysis_set': analysis_set_name,
         'root_path': str(analysis_set_path),
-        'generated_at': datetime.utcnow().isoformat() + 'Z',
+        'generated_at': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
         'stats': {
             'total_files': total_files,
             'total_lines': total_lines,
