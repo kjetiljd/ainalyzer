@@ -1,6 +1,54 @@
 # Ainalyzer
 
-Multi-repository analysis tool for code metrics, Git history, and AI-powered insights.
+Interactive treemap visualization for exploring code volume and change patterns across multiple repositories.
+
+> **Note:** Only tested on macOS.
+
+## Usage
+
+### Prerequisites
+```bash
+# Required tools
+git --version      # Git for repository analysis
+python3 --version  # Python 3.10+
+node --version     # Node.js 18+ (for frontend build)
+cloc --version     # Install: brew install cloc
+```
+
+### Setup
+
+```bash
+git clone https://github.com/kjetiljd/ainalyzer.git
+cd ainalyzer
+
+# Build frontend (one-time)
+cd frontend && npm install && npm run build && cd ..
+```
+
+### Analyze repositories
+
+```bash
+# Register a folder containing Git repos
+./aina add myproject /path/to/repos
+
+# Run analysis (generates ~/.aina/analysis/myproject.json)
+./aina analyze myproject
+
+# View results in browser
+./aina serve
+```
+
+### Commands
+
+```
+./aina add <name> <path>   Register folder as analysis set
+./aina list                List registered analysis sets
+./aina remove <name>       Remove analysis set
+./aina analyze <name>      Run analysis and generate JSON
+./aina serve [-p PORT]     Serve frontend (default: port 8080)
+```
+
+---
 
 ## Documentation Structure
 
@@ -26,25 +74,9 @@ Opportunity documentation following Opportunity Solution Tree methodology. Each 
 
 This shows dependency relationships directly in the numbering without requiring renumbering when adding new opportunities.
 
-## Quick Start
+## Architecture
 
-*Coming soon*
-
-## Architecture Overview
-
-Ainalyzer operates on folders containing Git repositories. Users manage repository cloning and organization using their preferred tools (git, meta CLI, etc.).
-
-**Components:**
-- CLI tool ("Aina"): Analysis engine and project management
-- Storage: SQLite database tracks analysis sets (folder paths)
-- Frontend: Vue.js web application (planned)
-- External tools: Code Maat, Git CLI
-
-Analysis workflow:
-1. Register a folder containing repos: `aina add <name> <path>`
-2. Run analysis: `aina analyze <name>`
-3. View interactive treemap visualizations with overlays for code volume, change frequency, and activity metrics
-
-## Project Status
-
-Planning phase. See [PLAN.md](./PLAN.md) for current work.
+- **Backend:** Python CLI (`aina`) with zero external dependencies
+- **Frontend:** Vue.js 3 + D3.js treemap visualization
+- **Storage:** SQLite for analysis sets, JSON for analysis results
+- **External tools:** cloc (line counting), Git CLI
