@@ -38,8 +38,9 @@ Each opportunity is scored on three dimensions:
 
 | # | Opportunity | Impact | Effort | Complexity | Score | Status |
 |---|-------------|--------|--------|------------|-------|--------|
+| 012 | [Git Change Statistics](#012-git-change-statistics) | 4 | 3 | 2 | 1.33 | Identified |
 | 011 | [Browser Back Button](#011-browser-back-button) | 3 | 2 | 2 | 1.50 | Identified |
-| 003 | [Exclusion Patterns](#003-exclusion-patterns) | 3 | 2 | 2 | 1.50 | Identified |
+| 003 | [Exclusion Patterns](#003-exclusion-patterns) | 3 | 2 | 2 | 1.50 | ✅ Complete |
 | 007 | [Context Stats Panel](#007-context-stats-panel) | 4 | 2 | 2 | 2.00 | ✅ Complete |
 | 004 | [Treemap Labels](#004-treemap-labels) | 4 | 3 | 3 | 1.33 | ✅ Complete |
 | 002 | [Code Visibility](#002-code-visibility) | 5 | 4 | 3 | 1.25 | ✅ Complete |
@@ -59,6 +60,26 @@ Each opportunity is scored on three dimensions:
 - High effort + low complexity = hard now, easier later (invest in foundation)
 
 ## Opportunity Details
+
+### 012: Git Change Statistics
+
+**Impact:** 4 | **Effort:** 3 | **Complexity:** 2 | **Score:** 1.33
+
+**Status:** Identified | **Parent:** 002 (Code Visibility)
+
+Add per-file commit statistics to reveal where changes are happening in the codebase.
+
+**Key Features:**
+- Commits in last 3 months and last year per file
+- Last commit date tracking
+- Rename-aware history (uses --follow for renamed files)
+- Activity overlay for treemap visualization
+
+**Spike completed:** `spikes/git-stats/` (2025-11-30)
+
+[View opportunity →](012-git-change-statistics.md)
+
+---
 
 ### 011: Browser Back Button
 

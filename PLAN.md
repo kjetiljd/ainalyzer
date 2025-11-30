@@ -8,233 +8,77 @@ This plan follows a focused approach where we work on exactly one thing at a tim
 
 ## Now
 
-**Exclusion Patterns (003)** - Phase 2: Interactive Exclusions
+**Git Change Statistics (012)** - Phase 1: Backend Data Collection
 
-Phase 1 (complete) implemented .clocignore parsing and UI filtering.
-Phase 2 adds interactive exclusion via context menu and settings management.
+Reveal where changes are happening in the codebase by adding per-file commit statistics.
 
-### Phase 2: Interactive Exclusions (TDD)
+### Phase 1: Backend Integration
 
-**Feature Overview:**
-- Right-click file → context menu with exclusion options
-- Exclusions stored in preferences (localStorage)
-- Settings panel shows all custom exclusions (scrollable)
-- Exclusions can be toggled, removed, or added manually
+**Goal:** Add git statistics to `aina analyze` output
 
-**Exclusion Options (Context Menu):**
-1. Exclude this file (`repo/path/to/file.json`)
-2. Exclude this folder (`repo/path/to/**`)
-3. Exclude files with same name in repo (`repo/**/filename.json`)
-4. Exclude files with same name in analysis (`**/filename.json`)
-5. Exclude files with same extension in repo (`repo/**/*.json`)
-6. Exclude files with same extension in analysis (`**/*.json`)
+**Data to collect per file:**
+- `commits_3m`: Number of commits in last 3 months
+- `commits_1y`: Number of commits in last year
+- `last_commit_date`: ISO 8601 timestamp of most recent commit
 
----
+**Algorithm (validated in spike):**
+1. Bulk query: `git log -M --name-status --format=COMMIT|%aI --since="1 year ago"`
+2. Parse output, count commits per file, derive 3-month from timestamps
+3. For renamed files (R status), use `--follow` for accurate history
 
-**Tests First:**
+**Implementation:**
 
-### 1. ExclusionMenu.test.js - Context menu component
+1. Port `get_file_stats()` from `spikes/git-stats/git_file_stats.py` to `aina_lib.py`
+2. Call during `analyze_repos()` after cloc processing
+3. Merge git stats into tree nodes by matching file paths
+4. Update JSON output to include `commits` field on file nodes
 
-```javascript
-describe('ExclusionMenu', () => {
-  // Rendering
-  it('renders when visible prop is true')
-  it('hides when visible prop is false')
-  it('positions at provided x,y coordinates')
-
-  // Menu options
-  it('shows "Exclude this file" with full path')
-  it('shows "Exclude this folder" for parent directory')
-  it('shows "Exclude same name in repo" option')
-  it('shows "Exclude same name everywhere" option')
-  it('shows "Exclude *.ext in repo" option')
-  it('shows "Exclude *.ext everywhere" option')
-
-  // Events
-  it('emits exclude event with pattern when option clicked')
-  it('emits close event when clicking outside')
-  it('emits close event on Escape key')
-})
-```
-
-### 2. usePreferences.test.js - Custom exclusions storage
-
-```javascript
-describe('usePreferences - exclusions', () => {
-  // Structure
-  it('includes filters.customExclusions as empty array by default')
-  it('loads customExclusions from localStorage')
-
-  // Add/remove
-  it('addExclusion() adds pattern to customExclusions')
-  it('addExclusion() does not add duplicate patterns')
-  it('removeExclusion() removes pattern from customExclusions')
-  it('toggleExclusion() toggles enabled state')
-
-  // Exclusion object shape
-  it('stores exclusion as {pattern, enabled, createdAt}')
-  it('new exclusions default to enabled: true')
-
-  // Persistence
-  it('persists customExclusions to localStorage')
-  it('preserves existing exclusions when adding new')
-})
-```
-
-### 3. clocignore.test.js - Combined filtering
-
-```javascript
-describe('filterTree with custom exclusions', () => {
-  it('combines .clocignore patterns with custom exclusions')
-  it('disabled custom exclusions are not applied')
-  it('custom exclusion can override .clocignore via negation')
-})
-```
-
-### 4. SettingsPanel.test.js - Exclusions UI
-
-```javascript
-describe('SettingsPanel - exclusions', () => {
-  // Display
-  it('shows "Custom Exclusions" section')
-  it('displays each custom exclusion pattern')
-  it('shows checkbox for each exclusion (enabled/disabled)')
-  it('shows remove button for each exclusion')
-  it('scrolls when exclusion list exceeds max height')
-
-  // Actions
-  it('toggle checkbox calls toggleExclusion')
-  it('remove button calls removeExclusion')
-  it('shows "Add pattern" input field')
-  it('Add button calls addExclusion with input value')
-  it('clears input after adding')
-  it('shows empty state when no custom exclusions')
-})
-```
-
-### 5. App.test.js - Integration
-
-```javascript
-describe('App - context menu integration', () => {
-  it('shows context menu on right-click on treemap node')
-  it('hides context menu on left-click elsewhere')
-  it('adds exclusion when menu option selected')
-  it('tree updates to hide excluded file')
-})
-```
-
----
-
-**Implementation (after tests pass red):**
-
-### 1. frontend/src/composables/usePreferences.js
-
-```javascript
-// Update defaultPreferences
-filters: {
-  hideClocignore: true,
-  customExclusions: []  // [{pattern, enabled, createdAt}]
+**JSON Schema Addition:**
+```json
+{
+  "name": "file.py",
+  "type": "file",
+  "value": 150,
+  "language": "Python",
+  "commits": {
+    "last_3_months": 5,
+    "last_year": 23,
+    "last_commit_date": "2025-11-15T14:32:00+01:00"
+  }
 }
-
-// Add helper functions
-function addExclusion(pattern) { ... }
-function removeExclusion(pattern) { ... }
-function toggleExclusion(pattern) { ... }
 ```
 
-### 2. frontend/src/components/ExclusionMenu.vue
-
-```vue
-<template>
-  <div class="exclusion-menu" :style="menuStyle" v-if="visible">
-    <div class="menu-item" @click="exclude('file')">
-      Exclude this file
-    </div>
-    <div class="menu-item" @click="exclude('folder')">
-      Exclude this folder
-    </div>
-    <div class="menu-divider" />
-    <div class="menu-item" @click="exclude('name-repo')">
-      Exclude {{ filename }} in this repo
-    </div>
-    <div class="menu-item" @click="exclude('name-all')">
-      Exclude {{ filename }} everywhere
-    </div>
-    <div class="menu-divider" />
-    <div class="menu-item" @click="exclude('ext-repo')">
-      Exclude *.{{ extension }} in this repo
-    </div>
-    <div class="menu-item" @click="exclude('ext-all')">
-      Exclude *.{{ extension }} everywhere
-    </div>
-  </div>
-</template>
-```
-
-### 3. frontend/src/components/SettingsPanel.vue (update)
-
-Add new section:
-```vue
-<section class="settings-section">
-  <h3>Custom Exclusions</h3>
-
-  <div class="exclusion-list">
-    <div v-for="excl in customExclusions" class="exclusion-item">
-      <input type="checkbox" :checked="excl.enabled" @change="toggle(excl)" />
-      <span class="pattern">{{ excl.pattern }}</span>
-      <button @click="remove(excl)">×</button>
-    </div>
-  </div>
-
-  <div class="add-exclusion">
-    <input v-model="newPattern" placeholder="Add pattern..." />
-    <button @click="add">Add</button>
-  </div>
-</section>
-```
-
-### 4. frontend/src/components/Treemap.vue (update)
-
-- Emit `contextmenu` event with node data and position
-- Prevent default context menu
-
-### 5. frontend/src/App.vue (update)
-
-- Import and render ExclusionMenu
-- Handle right-click from Treemap
-- Connect menu actions to addExclusion
-- Combine customExclusions with clocignorePatterns in filterTree
-
-### 6. frontend/src/utils/clocignore.js (update)
-
-- `getActivePatterns(clocignore, customExclusions)` - merge sources
-
----
+**Tests:**
+- `test_get_file_stats_returns_commit_counts()`
+- `test_get_file_stats_handles_renamed_files()`
+- `test_get_file_stats_empty_repo()`
+- `test_analyze_includes_commit_stats_in_output()`
 
 **Acceptance Criteria:**
-
-1. Right-click any file in treemap shows context menu
-2. Selecting exclusion option immediately hides matching files
-3. Exclusions appear in Settings panel
-4. Exclusions can be toggled on/off
-5. Exclusions can be removed
-6. Custom pattern can be added manually in Settings
-7. Exclusions persist across page reloads
-8. All tests pass
+- [ ] `aina analyze` collects commit stats for all files
+- [ ] JSON output includes commits field on file nodes
+- [ ] Renamed files show accurate pre-rename history
+- [ ] Analysis completes in <5s additional time for typical repos
+- [ ] All tests pass
 
 ---
 
 ## Next
 
-1. **Change pattern awareness** - Hidden hotspots and change frequency buried in Git history
-   - Git history overlays for treemap
-   - Integration with Code Maat for churn analysis
-   - Color-coded visualization of change hotspots
+1. **Git Change Statistics (012)** - Phase 2: Frontend Display
+   - Show commit stats in hover tooltip
+   - Show commit stats in file labels (large cells)
+   - Add to FileViewer header
 
-2. **Codebase comprehension** - Teams need AI assistance to understand unfamiliar code areas
-   - AI-powered prompt toolkit
-   - Pattern discovery and architecture insights
-   - Natural language exploration of analysis data
+2. **Git Change Statistics (012)** - Phase 3: Activity Overlay
+   - Add `colorMode: 'activity'` option to preferences
+   - Implement activity-based color scale (cool=stable, hot=active)
+   - Toggle in Settings panel
+
+3. **Browser Back Button (011)**
+   - Push state on drill-down navigation
+   - Listen for popstate events
+   - Deep linking support
 
 ---
 
@@ -245,8 +89,7 @@ Add new section:
 - Maintain 21 passing tests
 
 See [PRODUCT_BRIEF.md](./PRODUCT_BRIEF.md) for full feature roadmap including:
-- Git history analysis (Code Maat integration)
-- Metric overlay system
+- Code Maat integration (deeper churn analysis, coupling detection)
 - AI interpretation toolkit
-- Activity metrics
+- Activity metrics (contributor statistics, PR patterns)
 - Performance optimization
