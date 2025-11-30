@@ -152,18 +152,19 @@ export const ACTIVITY_PALETTE = [
   '#fde725'   // Yellow (highest activity - hot)
 ]
 
-// Depth palette: Warm earth tones (light tan → dark brown)
-// Shallow = light, Deep = dark (like soil depth)
+// Depth palette: ColorBrewer YlOrBr (Yellow-Orange-Brown) - inverted
+// Shallow (root) = dark brown, Deep (leaves) = bright yellow
+// Dark trunk, lighter leaves - tree metaphor
 export const DEPTH_PALETTE = [
-  '#f5e6d3',  // Light cream/sand (shallowest)
-  '#e8d4bc',  // Light tan
-  '#d9c2a5',  // Tan
-  '#c9ae8c',  // Medium tan
-  '#b89a73',  // Sandy brown
-  '#a5855c',  // Light brown
-  '#8c6d47',  // Medium brown
-  '#6e5536',  // Brown
-  '#4a3728'   // Dark brown (deepest)
+  '#662506',  // Dark brown (root/shallow)
+  '#993404',  // Brown
+  '#cc4c02',  // Burnt orange
+  '#ec7014',  // Dark orange
+  '#fe9929',  // Orange
+  '#fec44f',  // Gold
+  '#fee391',  // Yellow
+  '#fff7bc',  // Light yellow
+  '#ffffe5'   // Pale yellow (deepest/leaves)
 ]
 
 /**
