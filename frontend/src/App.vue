@@ -97,7 +97,13 @@ const filteredData = computed(() => {
 // Find matching node in filtered tree for stats calculation
 const filteredCurrentNode = computed(() => {
   if (!filteredData.value || !currentNode.value) return null
-  if (!preferences.value.filters?.hideClocignore || clocignorePatterns.value.length === 0) {
+
+  // Check if any filtering is active
+  const hasClocignoreFiltering = preferences.value.filters?.hideClocignore && clocignorePatterns.value.length > 0
+  const hasCustomExclusions = (preferences.value.filters?.customExclusions || []).some(e => e.enabled)
+
+  // If no filtering active, return unfiltered currentNode
+  if (!hasClocignoreFiltering && !hasCustomExclusions) {
     return currentNode.value
   }
 
