@@ -349,7 +349,7 @@ function closeContextMenu() {
           @drill-down="handleDrillDown"
           @hover="statuslineText = $event"
           @hover-end="statuslineText = ''"
-          @contextmenu="handleContextMenu"
+          @node-contextmenu="handleContextMenu"
         />
       </div>
       <Statusline :text="statuslineText" />

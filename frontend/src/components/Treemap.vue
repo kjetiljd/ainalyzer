@@ -424,7 +424,8 @@ export default {
         // Add context menu handler for exclusion
         rect.addEventListener('contextmenu', (event) => {
           event.preventDefault()
-          this.$emit('contextmenu', {
+          event.stopPropagation()
+          this.$emit('node-contextmenu', {
             node: node.data,
             x: event.clientX,
             y: event.clientY

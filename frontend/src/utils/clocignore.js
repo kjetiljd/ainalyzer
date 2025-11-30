@@ -23,12 +23,44 @@ export function parseClocignore(content) {
  * @returns {boolean} True if path matches pattern
  */
 export function matchesPattern(filePath, pattern) {
-  // Handle directory patterns with **
-  if (pattern.includes('**')) {
-    // test/fixtures/** matches test/fixtures/anything
-    const prefix = pattern.replace('/**', '')
-    // Match if path contains this directory prefix
-    return filePath.includes(prefix + '/')
+  const filename = filePath.split('/').pop()
+
+  // Handle **/filename patterns (filename anywhere, no extension glob)
+  if (pattern.startsWith('**/') && !pattern.includes('*.')) {
+    const targetFilename = pattern.slice(3) // Remove **/
+    return filename === targetFilename
+  }
+
+  // Handle **/*.ext patterns (extension matching anywhere)
+  if (pattern.startsWith('**/') && pattern.includes('*.')) {
+    const suffix = pattern.slice(3) // Remove **/
+    if (suffix.startsWith('*.')) {
+      // **/*.json - match extension anywhere
+      const ext = suffix.slice(1) // .json
+      return filePath.endsWith(ext)
+    }
+  }
+
+  // Handle repo/**/*.ext patterns (extension within specific repo)
+  if (pattern.includes('/**/*.')) {
+    // repo/**/*.json
+    const [prefix, suffix] = pattern.split('/**/')
+    const ext = suffix.slice(1) // .json from *.json
+    return filePath.startsWith(prefix + '/') && filePath.endsWith(ext)
+  }
+
+  // Handle repo/**/filename patterns (specific filename within repo)
+  if (pattern.includes('/**/') && !pattern.includes('*.')) {
+    const [prefix, suffix] = pattern.split('/**/')
+    return filePath.startsWith(prefix + '/') && filename === suffix
+  }
+
+  // Handle directory patterns with ** (e.g., test/fixtures/**)
+  // This pattern should match files that CONTAIN this path, not just start with it
+  if (pattern.endsWith('/**')) {
+    const prefix = pattern.slice(0, -3) // Remove /**
+    // Match if path contains the directory (e.g., src/__tests__/__snapshots__/file.snap contains __tests__/__snapshots__)
+    return filePath.includes(prefix + '/') || filePath.startsWith(prefix + '/') || filePath === prefix
   }
 
   // Handle *.ext patterns (extension matching)
@@ -42,7 +74,6 @@ export function matchesPattern(filePath, pattern) {
   if (pattern.startsWith('*.') && pattern.endsWith('.*')) {
     // *.generated.* should match types.generated.ts
     const middle = pattern.slice(2, -2) // "generated"
-    const filename = filePath.split('/').pop()
     const parts = filename.split('.')
     // Check if middle part exists between first and last dot
     return parts.length >= 3 && parts.slice(1, -1).includes(middle)
@@ -55,7 +86,6 @@ export function matchesPattern(filePath, pattern) {
   }
 
   // Exact filename match (anywhere in path)
-  const filename = filePath.split('/').pop()
   return filename === pattern
 }
 
