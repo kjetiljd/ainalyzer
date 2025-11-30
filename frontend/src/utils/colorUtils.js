@@ -152,6 +152,20 @@ export const ACTIVITY_PALETTE = [
   '#fde725'   // Yellow (highest activity - hot)
 ]
 
+// Depth palette: Warm earth tones (light tan → dark brown)
+// Shallow = light, Deep = dark (like soil depth)
+export const DEPTH_PALETTE = [
+  '#f5e6d3',  // Light cream/sand (shallowest)
+  '#e8d4bc',  // Light tan
+  '#d9c2a5',  // Tan
+  '#c9ae8c',  // Medium tan
+  '#b89a73',  // Sandy brown
+  '#a5855c',  // Light brown
+  '#8c6d47',  // Medium brown
+  '#6e5536',  // Brown
+  '#4a3728'   // Dark brown (deepest)
+]
+
 /**
  * Get color for a file based on its commit activity.
  * @param {number} commits - Number of commits in the time period
@@ -178,6 +192,25 @@ export function getActivityColor(commits, maxCommits) {
   // Map to buckets 1-8 (bucket 0 reserved for 0 commits)
   const index = 1 + Math.min(Math.floor(normalized * (ACTIVITY_PALETTE.length - 1)), ACTIVITY_PALETTE.length - 2)
   return ACTIVITY_PALETTE[index]
+}
+
+/**
+ * Get color for a node based on its depth in the tree.
+ * @param {number} depth - Current depth of the node
+ * @param {number} maxDepth - Maximum depth in the tree (for normalization)
+ * @returns {string} Hex color
+ */
+export function getDepthColor(depth, maxDepth) {
+  if (maxDepth <= 0) {
+    return DEPTH_PALETTE[0]
+  }
+
+  const normalized = Math.min(depth / maxDepth, 1)
+  const index = Math.min(
+    Math.floor(normalized * DEPTH_PALETTE.length),
+    DEPTH_PALETTE.length - 1
+  )
+  return DEPTH_PALETTE[index]
 }
 
 export function simpleHash(str) {
