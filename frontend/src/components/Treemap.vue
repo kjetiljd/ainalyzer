@@ -158,6 +158,14 @@ export default {
       return getDepthColor(absoluteDepth, this.maxDepth)
     },
 
+    countChanges(node) {
+      if (!node.children) {
+        return node.commits?.last_year || 0
+      }
+      return node.children.reduce((sum, child) =>
+        sum + this.countChanges(child), 0)
+    },
+
     hexToRgb(hex) {
       const h = hex.replace('#', '')
       return {
@@ -461,13 +469,14 @@ export default {
           if (node.value) {
             parts.push(`${node.value.toLocaleString()} lines`)
           }
-          if (node.data.commits) {
-            const commits = node.data.commits.last_year || 0
-            if (commits === 0) {
-              parts.push('no changes')
-            } else {
-              parts.push(`${commits} change${commits !== 1 ? 's' : ''}`)
-            }
+          // For files, show commits directly; for directories, aggregate
+          const changes = node.data.children
+            ? this.countChanges(node.data)
+            : (node.data.commits?.last_year || 0)
+          if (changes === 0) {
+            parts.push('no file changes')
+          } else {
+            parts.push(`${changes.toLocaleString()} file change${changes !== 1 ? 's' : ''}`)
           }
           const stats = parts.length > 0 ? ` (${parts.join(', ')})` : ''
 
