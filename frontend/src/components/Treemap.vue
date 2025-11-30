@@ -4,7 +4,7 @@
 
 <script>
 import { hierarchy, treemap } from 'd3-hierarchy'
-import { assignColors, OVERFLOW_COLOR } from '../utils/colorUtils'
+import { assignColors, OVERFLOW_COLOR, getActivityColor } from '../utils/colorUtils'
 
 export default {
   name: 'Treemap',
@@ -31,7 +31,7 @@ export default {
     },
     colorMode: {
       type: String,
-      default: 'depth'  // 'depth' | 'filetype'
+      default: 'depth'  // 'depth' | 'filetype' | 'activity'
     }
   },
   data() {
@@ -59,6 +59,23 @@ export default {
       countLanguages(this.data)
 
       return assignColors(counts)
+    },
+    maxCommits() {
+      if (this.colorMode !== 'activity') return 0
+
+      // Find max commits across entire tree for normalization
+      let max = 0
+      const findMax = (node) => {
+        if (!node.children && node.commits) {
+          const commits = node.commits.last_year || 0
+          if (commits > max) max = commits
+        }
+        if (node.children) {
+          node.children.forEach(findMax)
+        }
+      }
+      findMax(this.data)
+      return max
     }
   },
   mounted() {
@@ -104,6 +121,12 @@ export default {
       // If node has children, it's a directory - use neutral gray
       if (node.data.children) {
         return '#4a4a4a'
+      }
+
+      // If colorMode is activity, use commit-based coloring
+      if (this.colorMode === 'activity') {
+        const commits = node.data.commits?.last_year
+        return getActivityColor(commits, this.maxCommits)
       }
 
       // If colorMode is filetype, use the computed colorMap
@@ -182,6 +205,7 @@ export default {
       // Determine label tier
       const showMultiLine = width >= COMPACT_WIDTH && height >= COMPACT_HEIGHT && node.value
       const showLanguage = width >= FULL_WIDTH && height >= FULL_HEIGHT && node.data.language
+      const hasCommits = node.data.commits && node.data.commits.last_year !== undefined
 
       // Create group to hold multiple text elements
       const group = document.createElementNS('http://www.w3.org/2000/svg', 'g')
@@ -193,7 +217,7 @@ export default {
       const padding = 8
 
       if (showLanguage) {
-        // Three-line layout: filename + line count + language
+        // Three-line layout: filename + line count + (language or commits)
         const lineHeight = 14
         const totalHeight = lineHeight * 3
         const startY = node.y0 + (height - totalHeight) / 2
@@ -222,17 +246,22 @@ export default {
         countLine.textContent = `${node.value.toLocaleString()} lines`
         group.appendChild(countLine)
 
-        // Line 3: Language
-        const langLine = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-        langLine.setAttribute('x', centerX)
-        langLine.setAttribute('y', startY + lineHeight * 3)
-        langLine.setAttribute('text-anchor', 'middle')
-        langLine.setAttribute('fill', textColor)
-        langLine.setAttribute('font-size', '9')
-        langLine.setAttribute('opacity', '0.7')
-        langLine.style.textShadow = `0 1px 2px ${shadowColor}`
-        langLine.textContent = node.data.language
-        group.appendChild(langLine)
+        // Line 3: Commits (in activity mode) or Language
+        const line3 = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+        line3.setAttribute('x', centerX)
+        line3.setAttribute('y', startY + lineHeight * 3)
+        line3.setAttribute('text-anchor', 'middle')
+        line3.setAttribute('fill', textColor)
+        line3.setAttribute('font-size', '9')
+        line3.setAttribute('opacity', '0.7')
+        line3.style.textShadow = `0 1px 2px ${shadowColor}`
+        if (this.colorMode === 'activity' && hasCommits) {
+          const commits = node.data.commits.last_year
+          line3.textContent = `${commits} change${commits !== 1 ? 's' : ''}`
+        } else {
+          line3.textContent = node.data.language
+        }
+        group.appendChild(line3)
 
       } else if (showMultiLine) {
         // Two-line layout: filename + line count
@@ -412,9 +441,23 @@ export default {
             currentNode = currentNode.parent
           }
           const fullPath = pathParts.join(' / ')
-          const lines = node.value ? ` (${node.value.toLocaleString()} lines)` : ''
 
-          this.$emit('hover', fullPath + lines)
+          // Build stats string
+          const parts = []
+          if (node.value) {
+            parts.push(`${node.value.toLocaleString()} lines`)
+          }
+          if (node.data.commits) {
+            const commits = node.data.commits.last_year || 0
+            if (commits === 0) {
+              parts.push('no changes')
+            } else {
+              parts.push(`${commits} change${commits !== 1 ? 's' : ''}`)
+            }
+          }
+          const stats = parts.length > 0 ? ` (${parts.join(', ')})` : ''
+
+          this.$emit('hover', fullPath + stats)
         })
 
         rect.addEventListener('mouseleave', () => {

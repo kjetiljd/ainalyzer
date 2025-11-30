@@ -59,6 +59,19 @@
             />
             <span>Color by file type</span>
           </label>
+          <label class="radio-label">
+            <input
+              type="radio"
+              name="colorMode"
+              value="activity"
+              :checked="preferences.appearance?.colorMode === 'activity'"
+              @change="setColorMode('activity')"
+            />
+            <span>Color by activity</span>
+          </label>
+          <p class="setting-description radio-description">
+            Activity mode shows commit frequency: blue = stable, red = frequently changed.
+          </p>
         </div>
       </section>
 
@@ -318,6 +331,10 @@ function toggleHideClocignore(event) {
   height: 18px;
   cursor: pointer;
   accent-color: #4fc3f7;
+}
+
+.setting-description.radio-description {
+  margin: 4px 0 0 28px;
 }
 
 .exclusion-list {

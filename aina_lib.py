@@ -494,8 +494,8 @@ def tree_to_schema(tree, name, path_prefix='', git_stats=None):
                 'language': file['language'],
                 'extension': file['extension']
             }
-            # Add git stats if available - look up by relative path within repo
-            if git_stats:
+            # Add git stats - look up by relative path within repo
+            if git_stats is not None:
                 # file['path'] contains the path relative to repo root
                 stats = git_stats.get(file['path'])
                 if stats:
@@ -503,6 +503,13 @@ def tree_to_schema(tree, name, path_prefix='', git_stats=None):
                         'last_3_months': stats['commits_3m'],
                         'last_year': stats['commits_1y'],
                         'last_commit_date': stats['last_commit_date']
+                    }
+                else:
+                    # No commits in the last year
+                    file_node['commits'] = {
+                        'last_3_months': 0,
+                        'last_year': 0,
+                        'last_commit_date': None
                     }
             children.append(file_node)
 
@@ -605,6 +612,13 @@ def analyze_repos(analysis_set_name, analysis_set_path):
                         'last_3_months': stats['commits_3m'],
                         'last_year': stats['commits_1y'],
                         'last_commit_date': stats['last_commit_date']
+                    }
+                else:
+                    # No commits in the last year
+                    file_node['commits'] = {
+                        'last_3_months': 0,
+                        'last_year': 0,
+                        'last_commit_date': None
                     }
                 children.append(file_node)
 
