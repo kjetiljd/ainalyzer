@@ -231,8 +231,8 @@ describe('Treemap', () => {
         .map(r => r.attributes('fill'))
         .filter(c => c !== '#4a4a4a') // Exclude directories
 
-      // Warm earth depth palette colors
-      const depthColors = ['#f5e6d3', '#e8d4bc', '#d9c2a5', '#c9ae8c', '#b89a73', '#a5855c', '#8c6d47', '#6e5536', '#4a3728']
+      // ColorBrewer YlOrBr depth palette colors
+      const depthColors = ['#ffffe5', '#fff7bc', '#fee391', '#fec44f', '#fe9929', '#ec7014', '#cc4c02', '#993404', '#662506']
       const usesDepthColors = fileColors.some(c => depthColors.includes(c))
       expect(usesDepthColors).toBe(true)
     })
@@ -250,8 +250,8 @@ describe('Treemap', () => {
         .map(r => r.attributes('fill'))
         .filter(c => c !== '#4a4a4a' && !c.startsWith('url('))
 
-      // Should have colors from PALETTE_60 (not warm earth depth colors)
-      const depthColors = ['#f5e6d3', '#e8d4bc', '#d9c2a5', '#c9ae8c', '#b89a73', '#a5855c', '#8c6d47', '#6e5536', '#4a3728']
+      // Should have colors from PALETTE_60 (not YlOrBr depth colors)
+      const depthColors = ['#ffffe5', '#fff7bc', '#fee391', '#fec44f', '#fe9929', '#ec7014', '#cc4c02', '#993404', '#662506']
       const allNotDepth = fileColors.every(c => !depthColors.includes(c))
       expect(allNotDepth).toBe(true)
     })
@@ -295,13 +295,13 @@ describe('Treemap', () => {
         }
       })
 
-      // Should use depth coloring (warm earth palette)
+      // Should use depth coloring (ColorBrewer YlOrBr palette)
       const rects = wrapper.findAll('rect')
       const fileColors = rects
         .map(r => r.attributes('fill'))
         .filter(c => c !== '#4a4a4a')
 
-      const depthColors = ['#f5e6d3', '#e8d4bc', '#d9c2a5', '#c9ae8c', '#b89a73', '#a5855c', '#8c6d47', '#6e5536', '#4a3728']
+      const depthColors = ['#ffffe5', '#fff7bc', '#fee391', '#fec44f', '#fe9929', '#ec7014', '#cc4c02', '#993404', '#662506']
       const usesDepthColors = fileColors.some(c => depthColors.includes(c))
       expect(usesDepthColors).toBe(true)
     })
