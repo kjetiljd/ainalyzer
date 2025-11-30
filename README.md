@@ -48,6 +48,27 @@ cd frontend && npm install && npm run build && cd ..
 ./aina serve [-p PORT]     Serve frontend (default: port 8080)
 ```
 
+### Docker (alternative)
+
+No local installation required - just Docker.
+
+```bash
+# Build image
+docker build -t ainalyzer .
+
+# Analyze repos (mount your repos folder and persist data)
+docker run --rm -v /path/to/repos:/repos -v ~/.aina:/root/.aina ainalyzer \
+    ./aina add myproject /repos
+
+docker run --rm -v /path/to/repos:/repos -v ~/.aina:/root/.aina ainalyzer \
+    ./aina analyze myproject
+
+# Serve results
+docker run --rm -p 8080:8080 -v ~/.aina:/root/.aina ainalyzer
+```
+
+Open http://localhost:8080 to view.
+
 ---
 
 ## Documentation Structure

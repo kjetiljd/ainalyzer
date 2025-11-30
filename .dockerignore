@@ -1,0 +1,18 @@
+# Dependencies and build artifacts
+frontend/node_modules
+frontend/dist
+__pycache__
+*.pyc
+
+# Development files
+.git
+.gitignore
+.claude
+*.md
+docs/
+tests/
+spikes/
+
+# IDE
+.vscode
+.idea
