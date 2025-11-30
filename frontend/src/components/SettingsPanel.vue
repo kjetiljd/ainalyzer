@@ -117,6 +117,7 @@
               :value="excl.pattern"
               @blur="handleUpdateExclusion(excl.pattern, $event.target.value)"
               @keydown.enter="$event.target.blur()"
+              @wheel="scrollInput"
             />
             <button class="remove-button" @click="handleRemoveExclusion(excl.pattern)">
               &times;
@@ -170,6 +171,12 @@ function handleUpdateExclusion(oldPattern, newPattern) {
   if (newPattern.trim() && newPattern !== oldPattern) {
     updateExclusion(oldPattern, newPattern)
   }
+}
+
+function scrollInput(event) {
+  const input = event.target
+  input.scrollLeft += event.deltaX + event.deltaY
+  event.preventDefault()
 }
 
 function toggleCushion(event) {
