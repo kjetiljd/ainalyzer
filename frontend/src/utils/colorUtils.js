@@ -137,6 +137,49 @@ function generatePalette() {
 export const PALETTE_60 = generatePalette()
 export const OVERFLOW_COLOR = '#6f6f6f'  // Distinct from Classic_20 gray (#7f7f7f)
 
+// Activity palette: Viridis (perceptually uniform, colorblind-safe)
+// Dark purple/blue = stable (no recent changes), Yellow = hot (many changes)
+// 9-step viridis for good differentiation
+export const ACTIVITY_PALETTE = [
+  '#440154',  // Dark purple (0 commits - most stable)
+  '#482878',  // Purple
+  '#3e4a89',  // Blue-purple
+  '#31688e',  // Blue
+  '#26838f',  // Teal
+  '#1f9e89',  // Green-teal
+  '#35b779',  // Green
+  '#6ece58',  // Light green
+  '#fde725'   // Yellow (highest activity - hot)
+]
+
+/**
+ * Get color for a file based on its commit activity.
+ * @param {number} commits - Number of commits in the time period
+ * @param {number} maxCommits - Maximum commits across all files (for normalization)
+ * @returns {string} Hex color
+ */
+export function getActivityColor(commits, maxCommits) {
+  // No commits or missing data = darkest (most stable) - bucket 0
+  if (commits === undefined || commits === null || commits === 0) {
+    return ACTIVITY_PALETTE[0]
+  }
+
+  // No active files to compare against
+  if (maxCommits <= 1) {
+    return ACTIVITY_PALETTE[1]  // Has activity but nothing to compare
+  }
+
+  // Scale only active files (1+ commits) across remaining buckets (1-8)
+  // log(1) = 0, log(maxCommits) = max
+  const logMax = Math.log(maxCommits)
+  const logValue = Math.log(commits)
+  const normalized = logMax > 0 ? logValue / logMax : 0
+
+  // Map to buckets 1-8 (bucket 0 reserved for 0 commits)
+  const index = 1 + Math.min(Math.floor(normalized * (ACTIVITY_PALETTE.length - 1)), ACTIVITY_PALETTE.length - 2)
+  return ACTIVITY_PALETTE[index]
+}
+
 export function simpleHash(str) {
   let hash = 0
   for (let i = 0; i < str.length; i++) {
