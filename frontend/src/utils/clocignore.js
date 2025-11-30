@@ -1,6 +1,7 @@
 /**
  * .clocignore file parsing and pattern matching utilities
  */
+import picomatch from 'picomatch-browser'
 
 /**
  * Parse .clocignore file content into array of patterns
@@ -18,75 +19,30 @@ export function parseClocignore(content) {
 
 /**
  * Check if a file path matches a glob pattern
+ * Uses micromatch for proper gitignore-style glob matching
  * @param {string} filePath - File path to check
  * @param {string} pattern - Glob pattern
  * @returns {boolean} True if path matches pattern
  */
 export function matchesPattern(filePath, pattern) {
-  const filename = filePath.split('/').pop()
+  // Normalize pattern: remove leading slash if present
+  let normalizedPattern = pattern.startsWith('/') ? pattern.slice(1) : pattern
 
-  // Handle **/filename patterns (filename anywhere, no extension glob)
-  if (pattern.startsWith('**/') && !pattern.includes('*.')) {
-    const targetFilename = pattern.slice(3) // Remove **/
-    return filename === targetFilename
-  }
-
-  // Handle **/*.ext patterns (extension matching anywhere)
-  if (pattern.startsWith('**/') && pattern.includes('*.')) {
-    const suffix = pattern.slice(3) // Remove **/
-    if (suffix.startsWith('*.')) {
-      // **/*.json - match extension anywhere
-      const ext = suffix.slice(1) // .json
-      return filePath.endsWith(ext)
+  // For patterns without path separators (e.g., "package-lock.json", "*.lock"),
+  // match against the filename only OR match anywhere with **/ prefix
+  if (!normalizedPattern.includes('/')) {
+    const filename = filePath.split('/').pop()
+    // Try matching filename directly
+    if (picomatch.isMatch(filename, normalizedPattern)) {
+      return true
     }
+    // Also try matching full path (for patterns that should work anywhere)
+    return picomatch.isMatch(filePath, '**/' + normalizedPattern)
   }
 
-  // Handle repo/**/*.ext patterns (extension within specific repo)
-  if (pattern.includes('/**/*.')) {
-    // repo/**/*.json
-    const [prefix, suffix] = pattern.split('/**/')
-    const ext = suffix.slice(1) // .json from *.json
-    return filePath.startsWith(prefix + '/') && filePath.endsWith(ext)
-  }
-
-  // Handle repo/**/filename patterns (specific filename within repo)
-  if (pattern.includes('/**/') && !pattern.includes('*.')) {
-    const [prefix, suffix] = pattern.split('/**/')
-    return filePath.startsWith(prefix + '/') && filename === suffix
-  }
-
-  // Handle directory patterns with ** (e.g., test/fixtures/**)
-  // This pattern should match files that CONTAIN this path, not just start with it
-  if (pattern.endsWith('/**')) {
-    const prefix = pattern.slice(0, -3) // Remove /**
-    // Match if path contains the directory (e.g., src/__tests__/__snapshots__/file.snap contains __tests__/__snapshots__)
-    return filePath.includes(prefix + '/') || filePath.startsWith(prefix + '/') || filePath === prefix
-  }
-
-  // Handle *.ext patterns (extension matching)
-  if (pattern.startsWith('*.') && pattern.indexOf('*', 1) === -1) {
-    // Simple extension: *.lock, *.json
-    const ext = pattern.slice(1) // .lock, .json
-    return filePath.endsWith(ext)
-  }
-
-  // Handle *.something.* patterns (e.g., *.generated.*)
-  if (pattern.startsWith('*.') && pattern.endsWith('.*')) {
-    // *.generated.* should match types.generated.ts
-    const middle = pattern.slice(2, -2) // "generated"
-    const parts = filename.split('.')
-    // Check if middle part exists between first and last dot
-    return parts.length >= 3 && parts.slice(1, -1).includes(middle)
-  }
-
-  // If pattern contains /, it's a path pattern - match exactly or as suffix
-  if (pattern.includes('/')) {
-    // Exact path match or path ends with pattern
-    return filePath === pattern || filePath.endsWith('/' + pattern)
-  }
-
-  // Exact filename match (anywhere in path)
-  return filename === pattern
+  // For patterns with path separators, match against full path
+  // picomatch handles **, *, etc. natively
+  return picomatch.isMatch(filePath, normalizedPattern, { contains: true })
 }
 
 /**
