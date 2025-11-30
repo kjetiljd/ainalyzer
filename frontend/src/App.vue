@@ -240,7 +240,8 @@ function handleDrillDown(event) {
   // Check if this is a file by type property
   if (node.type === 'file') {
     // If already zoomed into this file, open FileViewer
-    if (currentNode.value === node && node.path && rootPath.value) {
+    // Compare by path since filtering creates new node objects
+    if (currentNode.value?.path === node.path && node.path && rootPath.value) {
       openFileInEditor(node.path)
       return
     }
@@ -252,7 +253,9 @@ function handleDrillDown(event) {
   }
 
   // If clicking the same directory we're already at, ignore it
-  if (currentNode.value === node) {
+  // Compare by path since filtering creates new node objects
+  // Only skip if both have paths and they match (undefined paths should still navigate)
+  if (node.path && currentNode.value?.path === node.path) {
     return
   }
 
