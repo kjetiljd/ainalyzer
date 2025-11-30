@@ -4,7 +4,7 @@
 
 <script>
 import { hierarchy, treemap } from 'd3-hierarchy'
-import { assignColors, OVERFLOW_COLOR, getActivityColor } from '../utils/colorUtils'
+import { assignColors, OVERFLOW_COLOR, getActivityColor, getDepthColor } from '../utils/colorUtils'
 
 export default {
   name: 'Treemap',
@@ -76,6 +76,22 @@ export default {
       }
       findMax(this.data)
       return max
+    },
+    maxDepth() {
+      if (this.colorMode !== 'depth') return 0
+
+      // Find max depth across entire tree for normalization
+      let max = 0
+      const findMax = (node, depth) => {
+        if (depth > max) max = depth
+        if (node.children) {
+          node.children.forEach(child => findMax(child, depth + 1))
+        }
+      }
+      findMax(this.data, 0)
+      // Add navigation offset for drill-down
+      const depthOffset = this.navigationStack.length > 0 ? this.navigationStack.length - 1 : 0
+      return max + depthOffset
     }
   },
   mounted() {
@@ -134,14 +150,12 @@ export default {
         return this.computedColorMap[node.data.language] || OVERFLOW_COLOR
       }
 
-      // Default: color by absolute depth from original root using ColorBrewer Set2
+      // Default: color by absolute depth using warm earth scale
       // navigationStack length gives depth offset from drill-down navigation
       const depthOffset = this.navigationStack.length > 0 ? this.navigationStack.length - 1 : 0
       const absoluteDepth = node.depth + depthOffset
 
-      // ColorBrewer Set2 palette
-      const fileColors = ['#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f']
-      return fileColors[absoluteDepth % fileColors.length]
+      return getDepthColor(absoluteDepth, this.maxDepth)
     },
 
     hexToRgb(hex) {

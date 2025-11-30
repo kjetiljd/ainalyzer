@@ -225,16 +225,16 @@ describe('Treemap', () => {
         }
       })
 
-      // Files should have ColorBrewer colors based on depth
+      // Files should have warm earth colors based on depth
       const rects = wrapper.findAll('rect')
       const fileColors = rects
         .map(r => r.attributes('fill'))
         .filter(c => c !== '#4a4a4a') // Exclude directories
 
-      // ColorBrewer Set2 palette colors
-      const set2Colors = ['#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f']
-      const usesSet2 = fileColors.some(c => set2Colors.includes(c))
-      expect(usesSet2).toBe(true)
+      // Warm earth depth palette colors
+      const depthColors = ['#f5e6d3', '#e8d4bc', '#d9c2a5', '#c9ae8c', '#b89a73', '#a5855c', '#8c6d47', '#6e5536', '#4a3728']
+      const usesDepthColors = fileColors.some(c => depthColors.includes(c))
+      expect(usesDepthColors).toBe(true)
     })
 
     it('uses file type coloring when colorMode is filetype', () => {
@@ -250,10 +250,10 @@ describe('Treemap', () => {
         .map(r => r.attributes('fill'))
         .filter(c => c !== '#4a4a4a' && !c.startsWith('url('))
 
-      // Should have colors from PALETTE_60 (not ColorBrewer Set2)
-      const set2Colors = ['#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f']
-      const allNotSet2 = fileColors.every(c => !set2Colors.includes(c))
-      expect(allNotSet2).toBe(true)
+      // Should have colors from PALETTE_60 (not warm earth depth colors)
+      const depthColors = ['#f5e6d3', '#e8d4bc', '#d9c2a5', '#c9ae8c', '#b89a73', '#a5855c', '#8c6d47', '#6e5536', '#4a3728']
+      const allNotDepth = fileColors.every(c => !depthColors.includes(c))
+      expect(allNotDepth).toBe(true)
     })
 
     it('assigns same color to files with same language', () => {
@@ -295,15 +295,15 @@ describe('Treemap', () => {
         }
       })
 
-      // Should use depth coloring (ColorBrewer Set2)
+      // Should use depth coloring (warm earth palette)
       const rects = wrapper.findAll('rect')
       const fileColors = rects
         .map(r => r.attributes('fill'))
         .filter(c => c !== '#4a4a4a')
 
-      const set2Colors = ['#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f']
-      const usesSet2 = fileColors.some(c => set2Colors.includes(c))
-      expect(usesSet2).toBe(true)
+      const depthColors = ['#f5e6d3', '#e8d4bc', '#d9c2a5', '#c9ae8c', '#b89a73', '#a5855c', '#8c6d47', '#6e5536', '#4a3728']
+      const usesDepthColors = fileColors.some(c => depthColors.includes(c))
+      expect(usesDepthColors).toBe(true)
     })
   })
 
