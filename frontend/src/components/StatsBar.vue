@@ -11,6 +11,10 @@
     <span class="stat-item">
       <strong>{{ dirCount }}</strong> directories
     </span>
+    <span class="stat-separator">•</span>
+    <span class="stat-item">
+      <strong>{{ totalChanges.toLocaleString() }}</strong> file changes
+    </span>
   </div>
 </template>
 
@@ -32,6 +36,9 @@ export default {
     },
     dirCount() {
       return this.countDirectories(this.currentNode)
+    },
+    totalChanges() {
+      return this.countChanges(this.currentNode)
     }
   },
   methods: {
@@ -53,6 +60,14 @@ export default {
       if (!node.children) return 0
       return 1 + node.children.reduce((sum, child) =>
         sum + this.countDirectories(child), 0)
+    },
+    countChanges(node) {
+      if (!node) return 0
+      if (!node.children) {
+        return node.commits?.last_year || 0
+      }
+      return node.children.reduce((sum, child) =>
+        sum + this.countChanges(child), 0)
     }
   }
 }
