@@ -254,10 +254,15 @@ export function usePreferences() {
     if (!analysisPrefs.value.filters.customExclusions) {
       analysisPrefs.value.filters.customExclusions = []
     }
-    const exists = analysisPrefs.value.filters.customExclusions.some(
+    const existing = analysisPrefs.value.filters.customExclusions.find(
       e => e.pattern === pattern
     )
-    if (!exists) {
+    if (existing) {
+      // If pattern exists but is disabled, enable it
+      if (!existing.enabled) {
+        existing.enabled = true
+      }
+    } else {
       analysisPrefs.value.filters.customExclusions.push({
         pattern,
         enabled: true,

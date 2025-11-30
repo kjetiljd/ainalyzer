@@ -210,10 +210,10 @@ export default {
       // Thresholds for different label tiers
       const MIN_WIDTH = 60
       const MIN_HEIGHT = 30
-      const COMPACT_WIDTH = 100
-      const COMPACT_HEIGHT = 50
-      const FULL_WIDTH = 150
-      const FULL_HEIGHT = 80
+      const COMPACT_WIDTH = 80
+      const COMPACT_HEIGHT = 40
+      const FULL_WIDTH = 80
+      const FULL_HEIGHT = 60
 
       if (width < MIN_WIDTH || height < MIN_HEIGHT) {
         return null

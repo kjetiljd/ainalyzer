@@ -50,7 +50,7 @@
             <span>Change activity</span>
           </label>
           <p class="setting-description radio-description">
-            Shows commit frequency. Blue = stable, red = frequently changed.
+            Shows file change frequency. Purple = stable, yellow = frequently changed.
           </p>
         </div>
       </section>
