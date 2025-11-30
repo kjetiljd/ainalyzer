@@ -202,8 +202,10 @@ describe('SettingsPanel', () => {
       const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
       const wrapper = mount(SettingsPanel)
 
-      expect(wrapper.text()).toContain('*.lock')
-      expect(wrapper.text()).toContain('**/*.json')
+      const inputs = wrapper.findAll('.exclusion-item .pattern-input')
+      expect(inputs.length).toBe(2)
+      expect(inputs[0].element.value).toBe('*.lock')
+      expect(inputs[1].element.value).toBe('**/*.json')
     })
 
     it('shows checkbox for each exclusion (enabled/disabled)', async () => {
@@ -223,6 +225,50 @@ describe('SettingsPanel', () => {
       const exclusionCheckbox = wrapper.find('.exclusion-item input[type="checkbox"]')
       expect(exclusionCheckbox.exists()).toBe(true)
       expect(exclusionCheckbox.element.checked).toBe(true)
+    })
+
+    it('shows editable input for pattern', async () => {
+      storage['ainalyzer-test-analysis'] = JSON.stringify({
+        version: '1.0',
+        filters: {
+          customExclusions: [
+            { pattern: '*.lock', enabled: true, createdAt: '2025-01-01' }
+          ]
+        }
+      })
+
+      await initPreferencesWithAnalysis()
+      const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+      const wrapper = mount(SettingsPanel)
+
+      const patternInput = wrapper.find('.exclusion-item .pattern-input')
+      expect(patternInput.exists()).toBe(true)
+      expect(patternInput.element.value).toBe('*.lock')
+    })
+
+    it('updates pattern on blur', async () => {
+      storage['ainalyzer-test-analysis'] = JSON.stringify({
+        version: '1.0',
+        filters: {
+          customExclusions: [
+            { pattern: '*.lock', enabled: true, createdAt: '2025-01-01' }
+          ]
+        }
+      })
+
+      await initPreferencesWithAnalysis()
+      const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+      const wrapper = mount(SettingsPanel)
+
+      const patternInput = wrapper.find('.exclusion-item .pattern-input')
+      await patternInput.setValue('*.new-pattern')
+      await patternInput.trigger('blur')
+
+      // Wait for reactivity
+      await new Promise(resolve => setTimeout(resolve, 10))
+
+      const saved = JSON.parse(storage['ainalyzer-test-analysis'])
+      expect(saved.filters.customExclusions[0].pattern).toBe('*.new-pattern')
     })
 
     it('shows remove button for each exclusion', async () => {

@@ -1,6 +1,6 @@
 <template>
   <div v-if="visible" class="exclusion-backdrop" @click="$emit('close')" @keydown.escape="$emit('close')">
-    <div class="exclusion-menu" :style="menuStyle" @click.stop>
+    <div ref="menuRef" class="exclusion-menu" :style="menuStyle" @click.stop>
       <div class="menu-item" @click="exclude('file')">
         Exclude this file
       </div>
@@ -26,7 +26,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
 
 const props = defineProps({
   visible: {
@@ -49,9 +49,44 @@ const props = defineProps({
 
 const emit = defineEmits(['exclude', 'close'])
 
+const menuRef = ref(null)
+const adjustedX = ref(0)
+const adjustedY = ref(0)
+
+// Adjust position when menu becomes visible or position changes
+watch([() => props.visible, () => props.x, () => props.y], async ([visible]) => {
+  if (!visible) return
+
+  // Start with requested position
+  adjustedX.value = props.x
+  adjustedY.value = props.y
+
+  // Wait for DOM update to measure menu
+  await nextTick()
+
+  if (!menuRef.value) return
+
+  const rect = menuRef.value.getBoundingClientRect()
+  const padding = 8
+
+  // Clamp to viewport boundaries
+  if (adjustedX.value + rect.width > window.innerWidth - padding) {
+    adjustedX.value = window.innerWidth - rect.width - padding
+  }
+  if (adjustedY.value + rect.height > window.innerHeight - padding) {
+    adjustedY.value = window.innerHeight - rect.height - padding
+  }
+  if (adjustedX.value < padding) {
+    adjustedX.value = padding
+  }
+  if (adjustedY.value < padding) {
+    adjustedY.value = padding
+  }
+}, { immediate: true })
+
 const menuStyle = computed(() => ({
-  left: `${props.x}px`,
-  top: `${props.y}px`
+  left: `${adjustedX.value}px`,
+  top: `${adjustedY.value}px`
 }))
 
 const filename = computed(() => {

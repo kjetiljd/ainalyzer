@@ -90,7 +90,13 @@
               :checked="excl.enabled"
               @change="handleToggleExclusion(excl.pattern)"
             />
-            <span class="pattern">{{ excl.pattern }}</span>
+            <input
+              type="text"
+              class="pattern-input"
+              :value="excl.pattern"
+              @blur="handleUpdateExclusion(excl.pattern, $event.target.value)"
+              @keydown.enter="$event.target.blur()"
+            />
             <button class="remove-button" @click="handleRemoveExclusion(excl.pattern)">
               &times;
             </button>
@@ -116,7 +122,7 @@ import { usePreferences } from '../composables/usePreferences'
 
 defineEmits(['close'])
 
-const { preferences, updateURL, addExclusion, removeExclusion, toggleExclusion } = usePreferences()
+const { preferences, updateURL, addExclusion, removeExclusion, toggleExclusion, updateExclusion } = usePreferences()
 
 const newPattern = ref('')
 
@@ -137,6 +143,12 @@ function handleRemoveExclusion(pattern) {
 
 function handleToggleExclusion(pattern) {
   toggleExclusion(pattern)
+}
+
+function handleUpdateExclusion(oldPattern, newPattern) {
+  if (newPattern.trim() && newPattern !== oldPattern) {
+    updateExclusion(oldPattern, newPattern)
+  }
 }
 
 function toggleCushion(event) {
@@ -337,14 +349,27 @@ function toggleHideClocignore(event) {
   flex-shrink: 0;
 }
 
-.exclusion-item .pattern {
+.exclusion-item .pattern-input {
   flex: 1;
   font-size: 13px;
   font-family: monospace;
   color: #d4d4d4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 4px 6px;
+  min-width: 0;
+}
+
+.exclusion-item .pattern-input:hover {
+  background: #1e1e1e;
+  border-color: #3e3e3e;
+}
+
+.exclusion-item .pattern-input:focus {
+  background: #1e1e1e;
+  border-color: #4fc3f7;
+  outline: none;
 }
 
 .exclusion-item .remove-button {
