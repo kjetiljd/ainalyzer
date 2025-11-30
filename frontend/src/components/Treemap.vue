@@ -81,6 +81,7 @@ export default {
       if (this.colorMode !== 'depth') return 0
 
       // Find max depth across entire tree for normalization
+      // No offset needed here - absoluteDepth already applies offset
       let max = 0
       const findMax = (node, depth) => {
         if (depth > max) max = depth
@@ -89,9 +90,7 @@ export default {
         }
       }
       findMax(this.data, 0)
-      // Add navigation offset for drill-down
-      const depthOffset = this.navigationStack.length > 0 ? this.navigationStack.length - 1 : 0
-      return max + depthOffset
+      return max
     }
   },
   mounted() {

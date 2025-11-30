@@ -28,10 +28,10 @@ cd frontend && npm install && npm run build && cd ..
 ### Analyze repositories
 
 ```bash
-# Register a folder containing Git repos
-./aina add myproject /path/to/repos
+# First time: provide path (registers and analyzes)
+./aina analyze myproject /path/to/repos
 
-# Run analysis (generates ~/.aina/analysis/myproject.json)
+# Re-analyze (uses stored path)
 ./aina analyze myproject
 
 # View results in browser
@@ -41,11 +41,10 @@ cd frontend && npm install && npm run build && cd ..
 ### Commands
 
 ```
-./aina add <name> <path>   Register folder as analysis set
-./aina list                List registered analysis sets
-./aina remove <name>       Remove analysis set
-./aina analyze <name>      Run analysis and generate JSON
-./aina serve [-p PORT]     Serve frontend (default: port 8080)
+./aina analyze <name> [path]   Analyze repos (path required first time)
+./aina list                    List registered analysis sets
+./aina remove <name>           Remove analysis set
+./aina serve [-p PORT]         Serve frontend (default: port 8080)
 ```
 
 ### Docker (alternative)
@@ -58,13 +57,10 @@ docker build -t ainalyzer .
 
 # Analyze repos (mount your repos folder and persist data)
 docker run --rm -v /path/to/repos:/repos -v ~/.aina:/root/.aina ainalyzer \
-    ./aina add myproject /repos
+    ./aina analyze myproject /repos
 
-docker run --rm -v /path/to/repos:/repos -v ~/.aina:/root/.aina ainalyzer \
-    ./aina analyze myproject
-
-# Serve results
-docker run --rm -p 8080:8080 -v ~/.aina:/root/.aina ainalyzer
+# Serve results (mount repos for file viewer and clocignore support)
+docker run --rm -p 8080:8080 -v /path/to/repos:/repos -v ~/.aina:/root/.aina ainalyzer
 ```
 
 Open http://localhost:8080 to view.
