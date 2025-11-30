@@ -49,10 +49,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 # Run the CLI tool
 ./aina --help
-./aina add <name> <path>      # Register analysis set
+./aina analyze <name> [path]  # Analyze repos (path required first time)
 ./aina list                   # List all analysis sets
 ./aina remove <name>          # Remove analysis set
-./aina analyze <name>         # Run analysis (future - in development)
+./aina serve                  # Serve frontend at localhost:8080
 
 # Run tests
 python3 -m unittest discover tests/
@@ -111,14 +111,13 @@ Refer to ADRs in `docs/adr/` for full context:
 
 **Analysis Workflow:**
 ```
-1. User: aina add my-set /path/to/repos     → Register analysis set in SQLite
-2. User: aina analyze my-set                → Run analysis
+1. User: aina analyze my-set /path/to/repos → Register (if new) + run analysis
    ├─ discover_repos() finds all Git repos
    ├─ For each repo: cloc --json --by-file  → Get line counts
    ├─ For each file: git log --              → Get commit stats
    ├─ Build hierarchical tree structure
    └─ Write ~/.aina/analysis/my-set.json
-3. User: open frontend/dist/index.html      → Load JSON and visualize
+2. User: aina serve                         → Serve frontend and view in browser
 ```
 
 **JSON Schema:** See `docs/json-schema.md` for complete specification

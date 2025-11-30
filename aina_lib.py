@@ -724,26 +724,53 @@ def generate_analysis_index():
         return False
 
 
-def cmd_analyze(name, db_path):
+def cmd_analyze(name, path, db_path):
     """CLI command: Analyze an analysis set and generate JSON.
 
+    First time: path is required, registers the analysis set.
+    Subsequent times: path is optional, uses stored path.
+    If path provided differs from stored path, errors.
+
     Args:
-        name: Name of the analysis set to analyze
+        name: Name for the analysis set
+        path: Path to folder (required first time, optional after)
         db_path: Path to SQLite database
 
     Returns:
         bool: True if successful, False on error
     """
     try:
-        # Get analysis set from database
         database = Database(db_path)
         analysis_set = database.get_analysis_set(name)
 
-        if not analysis_set:
-            print(f"Error: Analysis set '{name}' not found")
-            return False
-
-        analysis_set_path = analysis_set['path']
+        if analysis_set:
+            # Existing analysis set
+            stored_path = analysis_set['path']
+            if path and Path(path).resolve() != Path(stored_path).resolve():
+                print(f"Error: Path mismatch for '{name}'")
+                print(f"  Stored: {stored_path}")
+                print(f"  Given:  {path}")
+                print(f"Use 'aina remove {name}' first to change the path.")
+                return False
+            analysis_set_path = stored_path
+        else:
+            # New analysis set - path required
+            if not path:
+                print(f"Error: Analysis set '{name}' not found.")
+                print(f"Provide a path to create it: aina analyze {name} /path/to/repos")
+                return False
+            # Validate path exists
+            if not Path(path).exists():
+                print(f"Error: Path does not exist: {path}")
+                return False
+            # Register new analysis set
+            try:
+                database.add_analysis_set(name, path)
+                print(f"Registered '{name}' -> {path}")
+            except sqlite3.IntegrityError:
+                print(f"Error: Analysis set '{name}' already exists")
+                return False
+            analysis_set_path = path
 
         print(f"Analyzing '{name}' at {analysis_set_path}")
 
@@ -900,6 +927,16 @@ def create_request_handler(frontend_dir, analysis_dir):
                 root_path = Path(analysis_json['root_path'])
 
                 all_patterns = []
+
+                # If root_path doesn't exist (e.g., Docker serve without repos mounted),
+                # return empty content gracefully
+                if not root_path.exists():
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json')
+                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({'content': ''}).encode())
+                    return
 
                 def add_patterns_from(file_path, prefix=''):
                     if file_path.exists():
