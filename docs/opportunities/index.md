@@ -38,7 +38,7 @@ Each opportunity is scored on three dimensions:
 
 | # | Opportunity | Impact | Effort | Complexity | Score | Status |
 |---|-------------|--------|--------|------------|-------|--------|
-| 012 | [Git Change Statistics](#012-git-change-statistics) | 4 | 3 | 2 | 1.33 | Identified |
+| 012 | [Git Change Statistics](#012-git-change-statistics) | 4 | 3 | 2 | 1.33 | ✅ Complete |
 | 011 | [Browser Back Button](#011-browser-back-button) | 3 | 2 | 2 | 1.50 | Identified |
 | 003 | [Exclusion Patterns](#003-exclusion-patterns) | 3 | 2 | 2 | 1.50 | ✅ Complete |
 | 007 | [Context Stats Panel](#007-context-stats-panel) | 4 | 2 | 2 | 2.00 | ✅ Complete |

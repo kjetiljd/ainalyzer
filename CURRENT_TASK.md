@@ -2,49 +2,40 @@
 
 > **Purpose:** This file points to the opportunity we're currently working on and tracks its status. Keep this file updated as work progresses.
 
-**Last Updated:** 2025-11-30
+**Last Updated:** 2025-12-01
 
 ## Active Task
 
-**Git Change Statistics (012)** - Phase 1: Backend Data Collection
+None - ready for next task.
 
-> [docs/opportunities/012-git-change-statistics.md](./docs/opportunities/012-git-change-statistics.md)
-
-**Goal:** Add per-file commit statistics to `aina analyze` output to reveal where changes are happening.
-
-**Spike completed:** `spikes/git-stats/` - validated algorithm and performance
-
-### Progress
-
-- [x] Research git statistics approaches (spike)
-- [x] Validate bulk query performance (~0.3s for 9.5k files)
-- [x] Validate rename detection with --follow
-- [x] Create opportunity document (012)
-- [x] Port `get_file_stats()` to `aina_lib.py`
-- [x] Write tests for git stats collection (12 tests)
-- [x] Integrate with `analyze_repos()`
-- [x] Update JSON output schema
-- [x] Test with cos and eessi-pensjon
-
-### Data to collect per file
-
-```json
-{
-  "commits": {
-    "last_3_months": 5,
-    "last_year": 23,
-    "last_commit_date": "2025-11-15T14:32:00+01:00"
-  }
-}
-```
-
-### Reference Implementation
-
-See `spikes/git-stats/git_file_stats.py` for the validated algorithm.
+**Candidates:**
+- Browser Back Button (011) - Push state on drill-down, deep linking
 
 ---
 
 ## Recently Completed
+
+**Git Change Statistics (012)** - Complete 2025-12-01
+
+> [docs/opportunities/012-git-change-statistics.md](./docs/opportunities/012-git-change-statistics.md)
+
+**Delivered (Phase 1 + Phase 2):**
+- Per-file commit statistics in `aina analyze` output
+- Bulk git log query with rename detection (--follow for renamed files)
+- commits field on all file nodes: `{last_3_months, last_year, last_commit_date}`
+- Files with no changes get 0 values (not omitted)
+- Activity color mode with Viridis palette (purple=stable, yellow=hot)
+- Log scale excluding zeros for better color distribution
+- Commit count shown in large cell labels (activity mode)
+- Status bar shows "X lines, Y changes" on hover
+- 33 backend tests, 185 frontend tests
+
+**Implementation:**
+- Backend: `get_file_stats()`, `get_file_stats_with_follow()` in `aina_lib.py`
+- Frontend: `getActivityColor()` in `colorUtils.js`, activity mode in Treemap.vue
+- Settings: Color mode radio buttons (depth/filetype/activity)
+
+---
 
 **Exclusion Patterns (003)** - Complete 2025-11-30
 
@@ -59,16 +50,7 @@ See `spikes/git-stats/git_file_stats.py` for the validated algorithm.
 - Settings panel with scrollable exclusion list (toggle/remove/add)
 - Patterns editable inline (click to edit, blur to save)
 - Combined filtering of .clocignore + custom exclusions
-- picomatch-browser for proper gitignore-style glob matching (`**/test/resources/**/*.json` etc.)
-- 185 passing frontend tests
-
-**Implementation:**
-- Pattern utilities: `frontend/src/utils/clocignore.js` (picomatch-browser)
-- ExclusionMenu: `frontend/src/components/ExclusionMenu.vue` (viewport-aware positioning)
-- API endpoint: `/api/clocignore` in `frontend/vite.config.js`
-- Preferences: `filters.hideClocignore`, `filters.customExclusions`
-- Helpers: `addExclusion`, `removeExclusion`, `toggleExclusion`, `updateExclusion`
-- Integration: Context menu + combined pattern filtering in App.vue
+- picomatch-browser for proper gitignore-style glob matching
 
 ---
 
@@ -81,19 +63,6 @@ See `spikes/git-stats/git_file_stats.py` for the validated algorithm.
 - API endpoint `/api/file` with path validation (prevents directory traversal)
 - Double-click to open: first click zooms to file, second click opens viewer
 - Full breadcrumb path display in viewer header
-- 83 passing tests
-
----
-
-**Color by File Type (010)** - Completed 2025-11-29
-
-> [docs/opportunities/archive/010-color-by-filetype.md](./docs/opportunities/archive/010-color-by-filetype.md)
-
-**Delivered:**
-- Toggle between depth-based and file type-based coloring in Settings
-- 60-color tiered palette (Classic_20 extended with darker/lighter variants)
-- Frequency-based color assignment with tier escalation
-- Colors stable across navigation within an analysis
 
 ---
 
