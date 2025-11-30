@@ -322,7 +322,7 @@ describe('Treemap', () => {
       ]
     }
 
-    it('emits contextmenu event on right-click with node data', async () => {
+    it('emits node-contextmenu event on right-click with node data', async () => {
       const wrapper = mount(Treemap, {
         props: { data: dataWithPaths }
       })
@@ -330,14 +330,14 @@ describe('Treemap', () => {
       const rect = wrapper.find('rect')
       await rect.trigger('contextmenu', { clientX: 150, clientY: 250 })
 
-      expect(wrapper.emitted()).toHaveProperty('contextmenu')
-      const emitted = wrapper.emitted('contextmenu')[0][0]
+      expect(wrapper.emitted()).toHaveProperty('node-contextmenu')
+      const emitted = wrapper.emitted('node-contextmenu')[0][0]
       expect(emitted).toHaveProperty('node')
       expect(emitted).toHaveProperty('x')
       expect(emitted).toHaveProperty('y')
     })
 
-    it('includes mouse coordinates in contextmenu event', async () => {
+    it('includes mouse coordinates in node-contextmenu event', async () => {
       const wrapper = mount(Treemap, {
         props: { data: dataWithPaths }
       })
@@ -345,7 +345,7 @@ describe('Treemap', () => {
       const rect = wrapper.find('rect')
       await rect.trigger('contextmenu', { clientX: 150, clientY: 250 })
 
-      const emitted = wrapper.emitted('contextmenu')[0][0]
+      const emitted = wrapper.emitted('node-contextmenu')[0][0]
       expect(emitted.x).toBe(150)
       expect(emitted.y).toBe(250)
     })

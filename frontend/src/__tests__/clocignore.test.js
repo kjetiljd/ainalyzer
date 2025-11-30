@@ -116,6 +116,66 @@ describe('matchesPattern', () => {
       expect(matchesPattern('types.ts', '*.generated.*')).toBe(false)
     })
   })
+
+  describe('double-star extension patterns', () => {
+    it('matches **/*.json anywhere in path', () => {
+      expect(matchesPattern('repo/src/data.json', '**/*.json')).toBe(true)
+    })
+
+    it('matches **/*.json in nested path', () => {
+      expect(matchesPattern('repo/deep/nested/file.json', '**/*.json')).toBe(true)
+    })
+
+    it('matches **/*.json at root level', () => {
+      expect(matchesPattern('data.json', '**/*.json')).toBe(true)
+    })
+
+    it('does not match wrong extension with **/*.ext', () => {
+      expect(matchesPattern('repo/src/app.js', '**/*.json')).toBe(false)
+    })
+  })
+
+  describe('repo-scoped patterns', () => {
+    it('matches repo/**/*.json for files in that repo', () => {
+      expect(matchesPattern('repo1/src/data.json', 'repo1/**/*.json')).toBe(true)
+    })
+
+    it('does not match repo/**/*.json for files in other repos', () => {
+      expect(matchesPattern('repo2/src/data.json', 'repo1/**/*.json')).toBe(false)
+    })
+
+    it('matches repo/**/filename for specific file in repo', () => {
+      expect(matchesPattern('repo1/deep/nested/config.json', 'repo1/**/config.json')).toBe(true)
+    })
+
+    it('does not match repo/**/filename in other repos', () => {
+      expect(matchesPattern('repo2/config.json', 'repo1/**/config.json')).toBe(false)
+    })
+  })
+
+  describe('filename anywhere patterns', () => {
+    it('matches **/filename anywhere', () => {
+      expect(matchesPattern('repo/src/config.json', '**/config.json')).toBe(true)
+    })
+
+    it('matches **/filename at root level', () => {
+      expect(matchesPattern('config.json', '**/config.json')).toBe(true)
+    })
+
+    it('does not match different filename with **/filename', () => {
+      expect(matchesPattern('repo/src/other.json', '**/config.json')).toBe(false)
+    })
+  })
+
+  describe('exact path patterns', () => {
+    it('matches exact file path', () => {
+      expect(matchesPattern('repo1/src/app.js', 'repo1/src/app.js')).toBe(true)
+    })
+
+    it('does not match different path', () => {
+      expect(matchesPattern('repo1/lib/app.js', 'repo1/src/app.js')).toBe(false)
+    })
+  })
 })
 
 describe('filterTree', () => {
