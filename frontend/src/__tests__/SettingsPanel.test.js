@@ -38,7 +38,15 @@ describe('SettingsPanel', () => {
     vi.clearAllMocks()
   })
 
+  // Helper to initialize preferences with a current analysis
+  async function initPreferencesWithAnalysis(analysisName = 'test-analysis') {
+    const { usePreferences } = await import('../composables/usePreferences')
+    const { setCurrentAnalysis } = usePreferences()
+    setCurrentAnalysis(analysisName)
+  }
+
   it('renders checkbox for cushion treemap', async () => {
+    await initPreferencesWithAnalysis()
     const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
     const wrapper = mount(SettingsPanel)
 
@@ -48,12 +56,12 @@ describe('SettingsPanel', () => {
   })
 
   it('checkbox reflects current preference value', async () => {
-    storage['ainalyzer-preferences'] = JSON.stringify({
+    storage['ainalyzer-test-analysis'] = JSON.stringify({
       version: '1.0',
-      lastSelectedAnalysis: null,
       appearance: { cushionTreemap: true }
     })
 
+    await initPreferencesWithAnalysis()
     const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
     const wrapper = mount(SettingsPanel)
 
@@ -62,6 +70,7 @@ describe('SettingsPanel', () => {
   })
 
   it('emits close when backdrop is clicked', async () => {
+    await initPreferencesWithAnalysis()
     const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
     const wrapper = mount(SettingsPanel)
 
@@ -72,6 +81,7 @@ describe('SettingsPanel', () => {
   })
 
   it('emits close when X button is clicked', async () => {
+    await initPreferencesWithAnalysis()
     const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
     const wrapper = mount(SettingsPanel)
 
@@ -82,6 +92,7 @@ describe('SettingsPanel', () => {
   })
 
   it('does not emit close when panel content is clicked', async () => {
+    await initPreferencesWithAnalysis()
     const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
     const wrapper = mount(SettingsPanel)
 
@@ -91,6 +102,7 @@ describe('SettingsPanel', () => {
   })
 
   it('toggles preference when checkbox is clicked', async () => {
+    await initPreferencesWithAnalysis()
     const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
     const wrapper = mount(SettingsPanel)
 
@@ -103,6 +115,7 @@ describe('SettingsPanel', () => {
   })
 
   it('updates URL when preference changes', async () => {
+    await initPreferencesWithAnalysis()
     const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
     const wrapper = mount(SettingsPanel)
 
@@ -115,6 +128,7 @@ describe('SettingsPanel', () => {
   })
 
   it('renders radio buttons for color mode', async () => {
+    await initPreferencesWithAnalysis()
     const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
     const wrapper = mount(SettingsPanel)
 
@@ -125,12 +139,12 @@ describe('SettingsPanel', () => {
   })
 
   it('radio reflects current colorMode preference', async () => {
-    storage['ainalyzer-preferences'] = JSON.stringify({
+    storage['ainalyzer-test-analysis'] = JSON.stringify({
       version: '1.0',
-      lastSelectedAnalysis: null,
       appearance: { colorMode: 'filetype' }
     })
 
+    await initPreferencesWithAnalysis()
     const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
     const wrapper = mount(SettingsPanel)
 
@@ -139,6 +153,7 @@ describe('SettingsPanel', () => {
   })
 
   it('selecting filetype updates preference', async () => {
+    await initPreferencesWithAnalysis()
     const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
     const wrapper = mount(SettingsPanel)
 
@@ -149,6 +164,7 @@ describe('SettingsPanel', () => {
   })
 
   it('updates URL when colorMode changes', async () => {
+    await initPreferencesWithAnalysis()
     const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
     const wrapper = mount(SettingsPanel)
 
@@ -164,6 +180,7 @@ describe('SettingsPanel', () => {
   // Custom Exclusions tests
   describe('custom exclusions', () => {
     it('shows "Custom Exclusions" section', async () => {
+      await initPreferencesWithAnalysis()
       const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
       const wrapper = mount(SettingsPanel)
 
@@ -171,7 +188,7 @@ describe('SettingsPanel', () => {
     })
 
     it('displays each custom exclusion pattern', async () => {
-      storage['ainalyzer-preferences'] = JSON.stringify({
+      storage['ainalyzer-test-analysis'] = JSON.stringify({
         version: '1.0',
         filters: {
           customExclusions: [
@@ -181,6 +198,7 @@ describe('SettingsPanel', () => {
         }
       })
 
+      await initPreferencesWithAnalysis()
       const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
       const wrapper = mount(SettingsPanel)
 
@@ -189,7 +207,7 @@ describe('SettingsPanel', () => {
     })
 
     it('shows checkbox for each exclusion (enabled/disabled)', async () => {
-      storage['ainalyzer-preferences'] = JSON.stringify({
+      storage['ainalyzer-test-analysis'] = JSON.stringify({
         version: '1.0',
         filters: {
           customExclusions: [
@@ -198,6 +216,7 @@ describe('SettingsPanel', () => {
         }
       })
 
+      await initPreferencesWithAnalysis()
       const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
       const wrapper = mount(SettingsPanel)
 
@@ -207,7 +226,7 @@ describe('SettingsPanel', () => {
     })
 
     it('shows remove button for each exclusion', async () => {
-      storage['ainalyzer-preferences'] = JSON.stringify({
+      storage['ainalyzer-test-analysis'] = JSON.stringify({
         version: '1.0',
         filters: {
           customExclusions: [
@@ -216,6 +235,7 @@ describe('SettingsPanel', () => {
         }
       })
 
+      await initPreferencesWithAnalysis()
       const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
       const wrapper = mount(SettingsPanel)
 
@@ -224,7 +244,7 @@ describe('SettingsPanel', () => {
     })
 
     it('toggle checkbox toggles exclusion enabled state', async () => {
-      storage['ainalyzer-preferences'] = JSON.stringify({
+      storage['ainalyzer-test-analysis'] = JSON.stringify({
         version: '1.0',
         filters: {
           customExclusions: [
@@ -233,19 +253,23 @@ describe('SettingsPanel', () => {
         }
       })
 
+      await initPreferencesWithAnalysis()
       const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
       const wrapper = mount(SettingsPanel)
 
       const checkbox = wrapper.find('.exclusion-item input[type="checkbox"]')
       await checkbox.setValue(false)
 
+      // Wait for reactivity
+      await new Promise(resolve => setTimeout(resolve, 10))
+
       // Check that preference was updated
-      const saved = JSON.parse(storage['ainalyzer-preferences'])
+      const saved = JSON.parse(storage['ainalyzer-test-analysis'])
       expect(saved.filters.customExclusions[0].enabled).toBe(false)
     })
 
     it('remove button removes exclusion', async () => {
-      storage['ainalyzer-preferences'] = JSON.stringify({
+      storage['ainalyzer-test-analysis'] = JSON.stringify({
         version: '1.0',
         filters: {
           customExclusions: [
@@ -254,6 +278,7 @@ describe('SettingsPanel', () => {
         }
       })
 
+      await initPreferencesWithAnalysis()
       const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
       const wrapper = mount(SettingsPanel)
 
@@ -264,11 +289,12 @@ describe('SettingsPanel', () => {
       await new Promise(resolve => setTimeout(resolve, 10))
 
       // Check that exclusion was removed
-      const saved = JSON.parse(storage['ainalyzer-preferences'])
+      const saved = JSON.parse(storage['ainalyzer-test-analysis'])
       expect(saved.filters.customExclusions).toHaveLength(0)
     })
 
     it('shows "Add pattern" input field', async () => {
+      await initPreferencesWithAnalysis()
       const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
       const wrapper = mount(SettingsPanel)
 
@@ -278,6 +304,7 @@ describe('SettingsPanel', () => {
     })
 
     it('Add button adds exclusion with input value', async () => {
+      await initPreferencesWithAnalysis()
       const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
       const wrapper = mount(SettingsPanel)
 
@@ -290,11 +317,12 @@ describe('SettingsPanel', () => {
       // Wait for reactivity
       await new Promise(resolve => setTimeout(resolve, 10))
 
-      const saved = JSON.parse(storage['ainalyzer-preferences'])
+      const saved = JSON.parse(storage['ainalyzer-test-analysis'])
       expect(saved.filters.customExclusions.some(e => e.pattern === 'new-pattern/**')).toBe(true)
     })
 
     it('clears input after adding', async () => {
+      await initPreferencesWithAnalysis()
       const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
       const wrapper = mount(SettingsPanel)
 
@@ -308,6 +336,7 @@ describe('SettingsPanel', () => {
     })
 
     it('shows empty state when no custom exclusions', async () => {
+      await initPreferencesWithAnalysis()
       const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
       const wrapper = mount(SettingsPanel)
 
@@ -315,6 +344,7 @@ describe('SettingsPanel', () => {
     })
 
     it('exclusion list is scrollable', async () => {
+      await initPreferencesWithAnalysis()
       const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
       const wrapper = mount(SettingsPanel)
 

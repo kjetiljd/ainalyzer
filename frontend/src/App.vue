@@ -11,7 +11,7 @@ import { usePreferences } from './composables/usePreferences'
 import { parseClocignore, filterTree } from './utils/clocignore'
 
 // Preferences
-const { preferences, updateURL, addExclusion } = usePreferences()
+const { preferences, updateURL, addExclusion, setCurrentAnalysis } = usePreferences()
 const showSettings = ref(false)
 
 // Context menu state
@@ -217,13 +217,14 @@ async function loadClocignore(analysisName) {
 // Watch for selection changes
 watch(selectedAnalysis, (newValue) => {
   if (newValue) {
-    loadAnalysis(newValue)
-    // Persist selection by name
+    // Find analysis name and set current analysis for preferences
     const analysis = analyses.value.find(a => a.filename === newValue)
     if (analysis) {
+      setCurrentAnalysis(analysis.name)
       preferences.value.lastSelectedAnalysis = analysis.name
       updateURL()
     }
+    loadAnalysis(newValue)
   }
 })
 
