@@ -11,6 +11,51 @@
       </header>
 
       <section class="settings-section">
+        <h3>Analysis</h3>
+        <div class="radio-group top-radio-group">
+          <label class="radio-label">
+            <input
+              type="radio"
+              name="colorMode"
+              value="depth"
+              :checked="preferences.appearance?.colorMode === 'depth'"
+              @change="setColorMode('depth')"
+            />
+            <span>Code size</span>
+          </label>
+          <p class="setting-description radio-description">
+            Shows lines of code. Color indicates directory depth.
+          </p>
+          <label class="radio-label">
+            <input
+              type="radio"
+              name="colorMode"
+              value="filetype"
+              :checked="preferences.appearance?.colorMode === 'filetype'"
+              @change="setColorMode('filetype')"
+            />
+            <span>File types</span>
+          </label>
+          <p class="setting-description radio-description">
+            Shows lines of code. Color indicates programming language.
+          </p>
+          <label class="radio-label">
+            <input
+              type="radio"
+              name="colorMode"
+              value="activity"
+              :checked="preferences.appearance?.colorMode === 'activity'"
+              @change="setColorMode('activity')"
+            />
+            <span>Change activity</span>
+          </label>
+          <p class="setting-description radio-description">
+            Shows commit frequency. Blue = stable, red = frequently changed.
+          </p>
+        </div>
+      </section>
+
+      <section class="settings-section">
         <h3>Appearance</h3>
         <label class="checkbox-label">
           <input
@@ -36,43 +81,6 @@
         <p class="setting-description sub-description">
           Removes stroke borders from directories, relying on cushion shading for separation.
         </p>
-
-        <div class="radio-group">
-          <span class="radio-group-label">Color mode</span>
-          <label class="radio-label">
-            <input
-              type="radio"
-              name="colorMode"
-              value="depth"
-              :checked="preferences.appearance?.colorMode === 'depth'"
-              @change="setColorMode('depth')"
-            />
-            <span>Color by depth</span>
-          </label>
-          <label class="radio-label">
-            <input
-              type="radio"
-              name="colorMode"
-              value="filetype"
-              :checked="preferences.appearance?.colorMode === 'filetype'"
-              @change="setColorMode('filetype')"
-            />
-            <span>Color by file type</span>
-          </label>
-          <label class="radio-label">
-            <input
-              type="radio"
-              name="colorMode"
-              value="activity"
-              :checked="preferences.appearance?.colorMode === 'activity'"
-              @change="setColorMode('activity')"
-            />
-            <span>Color by activity</span>
-          </label>
-          <p class="setting-description radio-description">
-            Activity mode shows commit frequency: blue = stable, red = frequently changed.
-          </p>
-        </div>
       </section>
 
       <section class="settings-section">
@@ -307,6 +315,12 @@ function toggleHideClocignore(event) {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid #3e3e3e;
+}
+
+.radio-group.top-radio-group {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
 .radio-group-label {
