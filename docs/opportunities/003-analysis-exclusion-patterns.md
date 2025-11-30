@@ -1,7 +1,7 @@
 # Opportunity: Analysis Exclusion Patterns
 
 **Status:** Complete (Phase 1 + Phase 2)
-**Last Updated:** 2025-11-29
+**Last Updated:** 2025-11-30
 **Parent:** 002 (Code Visibility)
 
 ## Desired Outcome
@@ -297,14 +297,20 @@ Commits:
 
 **Phase 2: Interactive Exclusions** ✅ COMPLETE
 - Right-click context menu with 6 exclusion options
-- Exclusions stored in preferences (localStorage)
+- Context menu stays within viewport boundaries
+- Exclusions stored in preferences (localStorage, scoped per analysis)
 - Settings panel with scrollable exclusion list
+- Patterns are editable inline (click to edit, blur to save)
 - Toggle enable/disable, remove, add manual patterns
 - Combined filtering with .clocignore patterns
-- 158 passing tests
+- picomatch-browser for proper gitignore-style glob matching
+- 185 passing tests
 
 Commits:
 - `85e4a99` Add interactive exclusion via context menu (003 Phase 2)
+- `5a786d5` Scope preferences per analysis set
+- `65a6bb5` Use picomatch-browser for gitignore-style glob matching
+- `b9d2028` Improve exclusion menu positioning and pattern editing
 
 **Phase 3: Backend .clocignore Support (Optional)**
 1. Add `get_files_with_exclusions()` using git pathspec

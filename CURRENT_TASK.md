@@ -2,7 +2,7 @@
 
 > **Purpose:** This file points to the opportunity we're currently working on and tracks its status. Keep this file updated as work progresses.
 
-**Last Updated:** 2025-11-29
+**Last Updated:** 2025-11-30
 
 ## Active Task
 
@@ -12,7 +12,7 @@ None - Ready for next opportunity
 
 ## Recently Completed
 
-**Exclusion Patterns (003)** - Complete 2025-11-29
+**Exclusion Patterns (003)** - Complete 2025-11-30
 
 → [docs/opportunities/003-analysis-exclusion-patterns.md](./docs/opportunities/003-analysis-exclusion-patterns.md)
 
@@ -20,18 +20,20 @@ None - Ready for next opportunity
 - Parse .clocignore patterns from analysis root and all repo subdirectories
 - Client-side tree filtering via Vue computed property
 - Settings toggle "Hide .clocignore files" (default: on)
-- Right-click context menu with 6 exclusion options
-- Custom exclusions stored in preferences (localStorage)
+- Right-click context menu with 6 exclusion options (stays within viewport)
+- Custom exclusions stored in preferences (localStorage, scoped per analysis)
 - Settings panel with scrollable exclusion list (toggle/remove/add)
+- Patterns editable inline (click to edit, blur to save)
 - Combined filtering of .clocignore + custom exclusions
-- 158 passing frontend tests
+- picomatch-browser for proper gitignore-style glob matching (`**/test/resources/**/*.json` etc.)
+- 185 passing frontend tests
 
 **Implementation:**
-- Pattern utilities: `frontend/src/utils/clocignore.js`
-- ExclusionMenu: `frontend/src/components/ExclusionMenu.vue`
+- Pattern utilities: `frontend/src/utils/clocignore.js` (picomatch-browser)
+- ExclusionMenu: `frontend/src/components/ExclusionMenu.vue` (viewport-aware positioning)
 - API endpoint: `/api/clocignore` in `frontend/vite.config.js`
 - Preferences: `filters.hideClocignore`, `filters.customExclusions`
-- Helpers: `addExclusion`, `removeExclusion`, `toggleExclusion`
+- Helpers: `addExclusion`, `removeExclusion`, `toggleExclusion`, `updateExclusion`
 - Integration: Context menu + combined pattern filtering in App.vue
 
 ---
