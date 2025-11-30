@@ -49,10 +49,10 @@ describe('usePreferences', () => {
 
   it('returns default preferences on first load', async () => {
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences } = usePreferences()
+    const { preferences, setCurrentAnalysis } = usePreferences()
+    setCurrentAnalysis('test-analysis')
 
     expect(preferences.value).toEqual({
-      version: '1.0',
       lastSelectedAnalysis: null,
       appearance: {
         cushionTreemap: false,
@@ -67,11 +67,8 @@ describe('usePreferences', () => {
   })
 
   it('loads lastSelectedAnalysis from localStorage', async () => {
-    const stored = {
-      version: '1.0',
-      lastSelectedAnalysis: 'my-project'
-    }
-    localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+    const stored = { lastSelectedAnalysis: 'my-project' }
+    localStorage.setItem('ainalyzer-global', JSON.stringify(stored))
 
     const { usePreferences } = await import('../composables/usePreferences')
     const { preferences } = usePreferences()
@@ -80,11 +77,8 @@ describe('usePreferences', () => {
   })
 
   it('overrides localStorage with URL param', async () => {
-    const stored = {
-      version: '1.0',
-      lastSelectedAnalysis: 'old-project'
-    }
-    localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+    const stored = { lastSelectedAnalysis: 'old-project' }
+    localStorage.setItem('ainalyzer-global', JSON.stringify(stored))
     global.location.search = '?analysis=new-project'
 
     const { usePreferences } = await import('../composables/usePreferences')
@@ -93,33 +87,48 @@ describe('usePreferences', () => {
     expect(preferences.value.lastSelectedAnalysis).toBe('new-project')
   })
 
-  it('persists changes to localStorage', async () => {
+  it('persists global changes to localStorage', async () => {
     const { usePreferences } = await import('../composables/usePreferences')
     const { preferences } = usePreferences()
 
-    // Need to wait for watch to trigger
     preferences.value.lastSelectedAnalysis = 'test-project'
     await new Promise(resolve => setTimeout(resolve, 10))
 
     expect(localStorage.setItem).toHaveBeenCalledWith(
-      'ainalyzer-preferences',
+      'ainalyzer-global',
       expect.stringContaining('test-project')
     )
   })
 
-  it('resets preferences to defaults', async () => {
+  it('persists analysis-specific changes to localStorage', async () => {
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences, resetPreferences } = usePreferences()
-    preferences.value.lastSelectedAnalysis = 'some-project'
+    const { preferences, setCurrentAnalysis } = usePreferences()
+    setCurrentAnalysis('my-analysis')
+
+    preferences.value.appearance.cushionTreemap = true
+    await new Promise(resolve => setTimeout(resolve, 10))
+
+    expect(localStorage.setItem).toHaveBeenCalledWith(
+      'ainalyzer-my-analysis',
+      expect.stringContaining('cushionTreemap')
+    )
+  })
+
+  it('resets analysis preferences to defaults', async () => {
+    const { usePreferences } = await import('../composables/usePreferences')
+    const { preferences, setCurrentAnalysis, resetPreferences } = usePreferences()
+    setCurrentAnalysis('test-analysis')
+    preferences.value.appearance.cushionTreemap = true
 
     resetPreferences()
 
-    expect(preferences.value.lastSelectedAnalysis).toBe(null)
+    expect(preferences.value.appearance.cushionTreemap).toBe(false)
   })
 
   it('updates URL with current preferences', async () => {
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences, updateURL } = usePreferences()
+    const { preferences, setCurrentAnalysis, updateURL } = usePreferences()
+    setCurrentAnalysis('my-project')
     preferences.value.lastSelectedAnalysis = 'my-project'
 
     updateURL()
@@ -133,7 +142,8 @@ describe('usePreferences', () => {
 
   it('shares current view by copying URL to clipboard', async () => {
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences, shareCurrentView } = usePreferences()
+    const { preferences, setCurrentAnalysis, shareCurrentView } = usePreferences()
+    setCurrentAnalysis('shared-project')
     preferences.value.lastSelectedAnalysis = 'shared-project'
 
     const url = await shareCurrentView()
@@ -144,26 +154,31 @@ describe('usePreferences', () => {
 
   it('exports preferences as JSON', async () => {
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences, exportPreferences } = usePreferences()
+    const { preferences, setCurrentAnalysis, exportPreferences } = usePreferences()
+    setCurrentAnalysis('export-test')
     preferences.value.lastSelectedAnalysis = 'export-test'
 
     const exported = exportPreferences()
     const parsed = JSON.parse(exported)
 
-    expect(parsed.lastSelectedAnalysis).toBe('export-test')
+    expect(parsed.global.lastSelectedAnalysis).toBe('export-test')
+    expect(parsed.analysisName).toBe('export-test')
   })
 
   it('imports preferences from JSON', async () => {
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences, importPreferences } = usePreferences()
+    const { preferences, setCurrentAnalysis, importPreferences } = usePreferences()
+    setCurrentAnalysis('test-analysis')
     const json = JSON.stringify({
-      version: '1.0',
-      lastSelectedAnalysis: 'imported-project'
+      analysis: {
+        version: '1.0',
+        appearance: { cushionTreemap: true }
+      }
     })
 
     importPreferences(json)
 
-    expect(preferences.value.lastSelectedAnalysis).toBe('imported-project')
+    expect(preferences.value.appearance.cushionTreemap).toBe(true)
   })
 
   it('throws error on invalid JSON import', async () => {
@@ -176,30 +191,21 @@ describe('usePreferences', () => {
   })
 
   it('handles corrupted localStorage gracefully', async () => {
-    localStorage.setItem('ainalyzer-preferences', 'corrupted json{')
+    localStorage.setItem('ainalyzer-global', 'corrupted json{')
 
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences } = usePreferences()
+    const { preferences, setCurrentAnalysis } = usePreferences()
+    setCurrentAnalysis('test-analysis')
 
-    expect(preferences.value).toEqual({
-      version: '1.0',
-      lastSelectedAnalysis: null,
-      appearance: {
-        cushionTreemap: false,
-        hideFolderBorders: true,
-        colorMode: 'depth'
-      },
-      filters: {
-        hideClocignore: true,
-        customExclusions: []
-      }
-    })
+    expect(preferences.value.lastSelectedAnalysis).toBe(null)
+    expect(preferences.value.appearance.cushionTreemap).toBe(false)
   })
 
   it('only includes non-default values in URL', async () => {
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences, updateURL } = usePreferences()
-    preferences.value.lastSelectedAnalysis = null  // Same as default
+    const { preferences, setCurrentAnalysis, updateURL } = usePreferences()
+    setCurrentAnalysis('test-analysis')
+    preferences.value.lastSelectedAnalysis = null
 
     updateURL()
 
@@ -210,13 +216,13 @@ describe('usePreferences', () => {
   it('loads cushionTreemap from localStorage', async () => {
     const stored = {
       version: '1.0',
-      lastSelectedAnalysis: null,
       appearance: { cushionTreemap: true }
     }
-    localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+    localStorage.setItem('ainalyzer-my-analysis', JSON.stringify(stored))
 
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences } = usePreferences()
+    const { preferences, setCurrentAnalysis } = usePreferences()
+    setCurrentAnalysis('my-analysis')
 
     expect(preferences.value.appearance.cushionTreemap).toBe(true)
   })
@@ -224,21 +230,22 @@ describe('usePreferences', () => {
   it('overrides cushionTreemap with URL param', async () => {
     const stored = {
       version: '1.0',
-      lastSelectedAnalysis: null,
       appearance: { cushionTreemap: false }
     }
-    localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+    localStorage.setItem('ainalyzer-my-analysis', JSON.stringify(stored))
     global.location.search = '?cushion=true'
 
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences } = usePreferences()
+    const { preferences, setCurrentAnalysis } = usePreferences()
+    setCurrentAnalysis('my-analysis')
 
     expect(preferences.value.appearance.cushionTreemap).toBe(true)
   })
 
   it('includes cushion in URL when enabled', async () => {
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences, updateURL } = usePreferences()
+    const { preferences, setCurrentAnalysis, updateURL } = usePreferences()
+    setCurrentAnalysis('test-analysis')
     preferences.value.appearance.cushionTreemap = true
 
     updateURL()
@@ -248,15 +255,12 @@ describe('usePreferences', () => {
   })
 
   it('preserves appearance defaults when loading partial preferences', async () => {
-    const stored = {
-      version: '1.0',
-      lastSelectedAnalysis: 'my-project'
-      // No appearance object
-    }
-    localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+    const stored = { lastSelectedAnalysis: 'my-project' }
+    localStorage.setItem('ainalyzer-global', JSON.stringify(stored))
 
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences } = usePreferences()
+    const { preferences, setCurrentAnalysis } = usePreferences()
+    setCurrentAnalysis('my-project')
 
     expect(preferences.value.appearance.cushionTreemap).toBe(false)
     expect(preferences.value.appearance.hideFolderBorders).toBe(true)
@@ -264,7 +268,8 @@ describe('usePreferences', () => {
 
   it('resets appearance preferences to defaults', async () => {
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences, resetPreferences } = usePreferences()
+    const { preferences, setCurrentAnalysis, resetPreferences } = usePreferences()
+    setCurrentAnalysis('test-analysis')
     preferences.value.appearance.cushionTreemap = true
     preferences.value.appearance.hideFolderBorders = false
 
@@ -277,20 +282,21 @@ describe('usePreferences', () => {
   it('loads hideFolderBorders from localStorage', async () => {
     const stored = {
       version: '1.0',
-      lastSelectedAnalysis: null,
       appearance: { cushionTreemap: true, hideFolderBorders: false }
     }
-    localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+    localStorage.setItem('ainalyzer-my-analysis', JSON.stringify(stored))
 
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences } = usePreferences()
+    const { preferences, setCurrentAnalysis } = usePreferences()
+    setCurrentAnalysis('my-analysis')
 
     expect(preferences.value.appearance.hideFolderBorders).toBe(false)
   })
 
   it('default colorMode is depth', async () => {
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences } = usePreferences()
+    const { preferences, setCurrentAnalysis } = usePreferences()
+    setCurrentAnalysis('test-analysis')
 
     expect(preferences.value.appearance.colorMode).toBe('depth')
   })
@@ -298,13 +304,13 @@ describe('usePreferences', () => {
   it('loads colorMode from localStorage', async () => {
     const stored = {
       version: '1.0',
-      lastSelectedAnalysis: null,
       appearance: { colorMode: 'filetype' }
     }
-    localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+    localStorage.setItem('ainalyzer-my-analysis', JSON.stringify(stored))
 
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences } = usePreferences()
+    const { preferences, setCurrentAnalysis } = usePreferences()
+    setCurrentAnalysis('my-analysis')
 
     expect(preferences.value.appearance.colorMode).toBe('filetype')
   })
@@ -312,21 +318,22 @@ describe('usePreferences', () => {
   it('overrides colorMode with URL param', async () => {
     const stored = {
       version: '1.0',
-      lastSelectedAnalysis: null,
       appearance: { colorMode: 'depth' }
     }
-    localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+    localStorage.setItem('ainalyzer-my-analysis', JSON.stringify(stored))
     global.location.search = '?colorMode=filetype'
 
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences } = usePreferences()
+    const { preferences, setCurrentAnalysis } = usePreferences()
+    setCurrentAnalysis('my-analysis')
 
     expect(preferences.value.appearance.colorMode).toBe('filetype')
   })
 
   it('includes colorMode in URL when not default', async () => {
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences, updateURL } = usePreferences()
+    const { preferences, setCurrentAnalysis, updateURL } = usePreferences()
+    setCurrentAnalysis('test-analysis')
     preferences.value.appearance.colorMode = 'filetype'
 
     updateURL()
@@ -337,7 +344,8 @@ describe('usePreferences', () => {
 
   it('resets colorMode to default', async () => {
     const { usePreferences } = await import('../composables/usePreferences')
-    const { preferences, resetPreferences } = usePreferences()
+    const { preferences, setCurrentAnalysis, resetPreferences } = usePreferences()
+    setCurrentAnalysis('test-analysis')
     preferences.value.appearance.colorMode = 'filetype'
 
     resetPreferences()
@@ -349,7 +357,8 @@ describe('usePreferences', () => {
   describe('custom exclusions', () => {
     it('includes filters.customExclusions as empty array by default', async () => {
       const { usePreferences } = await import('../composables/usePreferences')
-      const { preferences } = usePreferences()
+      const { preferences, setCurrentAnalysis } = usePreferences()
+      setCurrentAnalysis('test-analysis')
 
       expect(preferences.value.filters.customExclusions).toEqual([])
     })
@@ -363,10 +372,11 @@ describe('usePreferences', () => {
           ]
         }
       }
-      localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+      localStorage.setItem('ainalyzer-my-analysis', JSON.stringify(stored))
 
       const { usePreferences } = await import('../composables/usePreferences')
-      const { preferences } = usePreferences()
+      const { preferences, setCurrentAnalysis } = usePreferences()
+      setCurrentAnalysis('my-analysis')
 
       expect(preferences.value.filters.customExclusions).toHaveLength(1)
       expect(preferences.value.filters.customExclusions[0].pattern).toBe('*.lock')
@@ -374,7 +384,8 @@ describe('usePreferences', () => {
 
     it('addExclusion() adds pattern to customExclusions', async () => {
       const { usePreferences } = await import('../composables/usePreferences')
-      const { preferences, addExclusion } = usePreferences()
+      const { preferences, setCurrentAnalysis, addExclusion } = usePreferences()
+      setCurrentAnalysis('test-analysis')
 
       addExclusion('*.json')
 
@@ -384,7 +395,8 @@ describe('usePreferences', () => {
 
     it('addExclusion() does not add duplicate patterns', async () => {
       const { usePreferences } = await import('../composables/usePreferences')
-      const { preferences, addExclusion } = usePreferences()
+      const { preferences, setCurrentAnalysis, addExclusion } = usePreferences()
+      setCurrentAnalysis('test-analysis')
 
       addExclusion('*.json')
       addExclusion('*.json')
@@ -394,7 +406,8 @@ describe('usePreferences', () => {
 
     it('removeExclusion() removes pattern from customExclusions', async () => {
       const { usePreferences } = await import('../composables/usePreferences')
-      const { preferences, addExclusion, removeExclusion } = usePreferences()
+      const { preferences, setCurrentAnalysis, addExclusion, removeExclusion } = usePreferences()
+      setCurrentAnalysis('test-analysis')
 
       addExclusion('*.json')
       addExclusion('*.lock')
@@ -406,7 +419,8 @@ describe('usePreferences', () => {
 
     it('toggleExclusion() toggles enabled state', async () => {
       const { usePreferences } = await import('../composables/usePreferences')
-      const { preferences, addExclusion, toggleExclusion } = usePreferences()
+      const { preferences, setCurrentAnalysis, addExclusion, toggleExclusion } = usePreferences()
+      setCurrentAnalysis('test-analysis')
 
       addExclusion('*.json')
       expect(preferences.value.filters.customExclusions[0].enabled).toBe(true)
@@ -420,7 +434,8 @@ describe('usePreferences', () => {
 
     it('stores exclusion as {pattern, enabled, createdAt}', async () => {
       const { usePreferences } = await import('../composables/usePreferences')
-      const { preferences, addExclusion } = usePreferences()
+      const { preferences, setCurrentAnalysis, addExclusion } = usePreferences()
+      setCurrentAnalysis('test-analysis')
 
       addExclusion('test-pattern')
       const exclusion = preferences.value.filters.customExclusions[0]
@@ -433,7 +448,8 @@ describe('usePreferences', () => {
 
     it('new exclusions default to enabled: true', async () => {
       const { usePreferences } = await import('../composables/usePreferences')
-      const { preferences, addExclusion } = usePreferences()
+      const { preferences, setCurrentAnalysis, addExclusion } = usePreferences()
+      setCurrentAnalysis('test-analysis')
 
       addExclusion('new-pattern')
 
@@ -442,13 +458,14 @@ describe('usePreferences', () => {
 
     it('persists customExclusions to localStorage', async () => {
       const { usePreferences } = await import('../composables/usePreferences')
-      const { addExclusion } = usePreferences()
+      const { setCurrentAnalysis, addExclusion } = usePreferences()
+      setCurrentAnalysis('persist-analysis')
 
       addExclusion('persist-test')
       await new Promise(resolve => setTimeout(resolve, 10))
 
       expect(localStorage.setItem).toHaveBeenCalledWith(
-        'ainalyzer-preferences',
+        'ainalyzer-persist-analysis',
         expect.stringContaining('persist-test')
       )
     })
@@ -462,10 +479,11 @@ describe('usePreferences', () => {
           ]
         }
       }
-      localStorage.setItem('ainalyzer-preferences', JSON.stringify(stored))
+      localStorage.setItem('ainalyzer-my-analysis', JSON.stringify(stored))
 
       const { usePreferences } = await import('../composables/usePreferences')
-      const { preferences, addExclusion } = usePreferences()
+      const { preferences, setCurrentAnalysis, addExclusion } = usePreferences()
+      setCurrentAnalysis('my-analysis')
 
       addExclusion('new-pattern')
 
@@ -476,12 +494,56 @@ describe('usePreferences', () => {
 
     it('resets customExclusions to empty array', async () => {
       const { usePreferences } = await import('../composables/usePreferences')
-      const { preferences, addExclusion, resetPreferences } = usePreferences()
+      const { preferences, setCurrentAnalysis, addExclusion, resetPreferences } = usePreferences()
+      setCurrentAnalysis('test-analysis')
 
       addExclusion('some-pattern')
       resetPreferences()
 
       expect(preferences.value.filters.customExclusions).toEqual([])
+    })
+  })
+
+  describe('per-analysis isolation', () => {
+    it('different analyses have separate preferences', async () => {
+      const stored1 = {
+        version: '1.0',
+        appearance: { colorMode: 'filetype' }
+      }
+      const stored2 = {
+        version: '1.0',
+        appearance: { colorMode: 'depth' }
+      }
+      localStorage.setItem('ainalyzer-analysis-1', JSON.stringify(stored1))
+      localStorage.setItem('ainalyzer-analysis-2', JSON.stringify(stored2))
+
+      const { usePreferences } = await import('../composables/usePreferences')
+      const { preferences, setCurrentAnalysis } = usePreferences()
+
+      setCurrentAnalysis('analysis-1')
+      expect(preferences.value.appearance.colorMode).toBe('filetype')
+
+      setCurrentAnalysis('analysis-2')
+      expect(preferences.value.appearance.colorMode).toBe('depth')
+    })
+
+    it('exclusions do not leak between analyses', async () => {
+      const stored1 = {
+        version: '1.0',
+        filters: {
+          customExclusions: [{ pattern: '*.lock', enabled: true, createdAt: '2025-01-01' }]
+        }
+      }
+      localStorage.setItem('ainalyzer-analysis-1', JSON.stringify(stored1))
+
+      const { usePreferences } = await import('../composables/usePreferences')
+      const { preferences, setCurrentAnalysis } = usePreferences()
+
+      setCurrentAnalysis('analysis-1')
+      expect(preferences.value.filters.customExclusions).toHaveLength(1)
+
+      setCurrentAnalysis('analysis-2')
+      expect(preferences.value.filters.customExclusions).toHaveLength(0)
     })
   })
 })

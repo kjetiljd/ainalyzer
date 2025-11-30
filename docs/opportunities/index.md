@@ -2,7 +2,7 @@
 
 **Purpose:** Catalog and prioritize feature opportunities using Impact/Effort scoring.
 
-**Last Updated:** 2025-11-29
+**Last Updated:** 2025-11-30
 
 ## Prioritization Framework
 
@@ -38,6 +38,7 @@ Each opportunity is scored on three dimensions:
 
 | # | Opportunity | Impact | Effort | Complexity | Score | Status |
 |---|-------------|--------|--------|------------|-------|--------|
+| 011 | [Browser Back Button](#011-browser-back-button) | 3 | 2 | 2 | 1.50 | Identified |
 | 003 | [Exclusion Patterns](#003-exclusion-patterns) | 3 | 2 | 2 | 1.50 | Identified |
 | 007 | [Context Stats Panel](#007-context-stats-panel) | 4 | 2 | 2 | 2.00 | ✅ Complete |
 | 004 | [Treemap Labels](#004-treemap-labels) | 4 | 3 | 3 | 1.33 | ✅ Complete |
@@ -58,6 +59,24 @@ Each opportunity is scored on three dimensions:
 - High effort + low complexity = hard now, easier later (invest in foundation)
 
 ## Opportunity Details
+
+### 011: Browser Back Button
+
+**Impact:** 3 | **Effort:** 2 | **Complexity:** 2 | **Score:** 1.50
+
+**Status:** Identified | **Parent:** 002 (Code Visibility)
+
+Enable browser back/forward buttons to navigate treemap drill-down history using the History API.
+
+**Key Features:**
+- Push state on drill-down navigation
+- Listen for popstate events
+- Restore navigation from URL path parameter
+- Deep linking support
+
+[View opportunity →](011-browser-back-button.md)
+
+---
 
 ### 007: Context Stats Panel
 
