@@ -226,7 +226,7 @@ Teams can see where code lives across repositories at a glance.
 - Analysis selector dropdown
 - Zero manual steps - complete automation
 
-[View opportunity →](002-code-visibility.md)
+[View opportunity →](archive/002-code-visibility.md)
 
 ---
 
