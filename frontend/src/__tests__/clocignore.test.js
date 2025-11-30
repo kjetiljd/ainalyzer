@@ -167,6 +167,45 @@ describe('matchesPattern', () => {
     })
   })
 
+  describe('complex double-star patterns', () => {
+    it('matches **/test/resources/**/*.json for nested test resources', () => {
+      expect(matchesPattern('repo/test/resources/data.json', '**/test/resources/**/*.json')).toBe(true)
+    })
+
+    it('matches **/test/resources/**/*.json for deeply nested files', () => {
+      expect(matchesPattern('repo/test/resources/nested/deep/file.json', '**/test/resources/**/*.json')).toBe(true)
+    })
+
+    it('matches **/test/resources/**/*.json at root level', () => {
+      expect(matchesPattern('test/resources/data.json', '**/test/resources/**/*.json')).toBe(true)
+    })
+
+    it('does not match **/test/resources/**/*.json for wrong extension', () => {
+      expect(matchesPattern('repo/test/resources/data.xml', '**/test/resources/**/*.json')).toBe(false)
+    })
+
+    it('does not match **/test/resources/**/*.json for different path', () => {
+      expect(matchesPattern('repo/src/resources/data.json', '**/test/resources/**/*.json')).toBe(false)
+    })
+
+    it('matches test/resources/**/*.json without leading **/', () => {
+      expect(matchesPattern('repo/test/resources/data.json', 'test/resources/**/*.json')).toBe(true)
+    })
+
+    it('matches /**/test/resources/**/*.json with leading slash', () => {
+      expect(matchesPattern('repo/test/resources/data.json', '/**/test/resources/**/*.json')).toBe(true)
+    })
+
+    it('matches **/test/resources/json/* for files in json subdir', () => {
+      expect(matchesPattern('repo/test/resources/json/data.json', '**/test/resources/json/*')).toBe(true)
+    })
+
+    it('matches **/test/resources/json/* for nested subdirs (gitignore behavior)', () => {
+      // In gitignore, trailing * matches anything including nested paths
+      expect(matchesPattern('repo/test/resources/json/nested/data.json', '**/test/resources/json/*')).toBe(true)
+    })
+  })
+
   describe('exact path patterns', () => {
     it('matches exact file path', () => {
       expect(matchesPattern('repo1/src/app.js', 'repo1/src/app.js')).toBe(true)
