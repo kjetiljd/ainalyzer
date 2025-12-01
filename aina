@@ -4,7 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from aina_lib import cmd_list, cmd_remove, cmd_analyze, cmd_serve
+from aina_lib import cmd_list, cmd_remove, cmd_analyze, cmd_show
 
 
 def get_default_db_path():
@@ -50,18 +50,18 @@ def main():
     )
     remove_parser.add_argument('name', help='Name of the analysis set to remove')
 
-    # Serve command
-    serve_parser = subparsers.add_parser(
-        'serve',
-        help='Serve the frontend and analysis data'
+    # Show command
+    show_parser = subparsers.add_parser(
+        'show',
+        help='Start web server and open browser to view analyses'
     )
-    serve_parser.add_argument(
+    show_parser.add_argument(
         '--port', '-p',
         type=int,
         default=8080,
         help='Port to serve on (default: 8080)'
     )
-    serve_parser.add_argument(
+    show_parser.add_argument(
         '--no-browser',
         action='store_true',
         help='Do not open browser automatically'
@@ -80,8 +80,8 @@ def main():
     elif args.command == 'remove':
         success = cmd_remove(args.name, args.db)
         sys.exit(0 if success else 1)
-    elif args.command == 'serve':
-        success = cmd_serve(port=args.port, no_browser=args.no_browser)
+    elif args.command == 'show':
+        success = cmd_show(port=args.port, no_browser=args.no_browser)
         sys.exit(0 if success else 1)
     else:
         parser.print_help()

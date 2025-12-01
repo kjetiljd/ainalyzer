@@ -979,8 +979,8 @@ def create_request_handler(frontend_dir, analysis_dir):
     return AinaRequestHandler
 
 
-def cmd_serve(port=8080, no_browser=False):
-    """CLI command: Serve the frontend and analysis data.
+def cmd_show(port=8080, no_browser=False):
+    """CLI command: Start web server and open browser to view analyses.
 
     Args:
         port: Port to serve on (default 8080)

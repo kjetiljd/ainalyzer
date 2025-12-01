@@ -52,7 +52,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./aina analyze <name> [path]  # Analyze repos (path required first time)
 ./aina list                   # List all analysis sets
 ./aina remove <name>          # Remove analysis set
-./aina serve                  # Serve frontend at localhost:8080
+./aina show                   # Open browser at localhost:8080
 
 # Run tests
 python3 -m unittest discover tests/
@@ -106,7 +106,7 @@ Refer to ADRs in `docs/adr/` for full context:
    ├─ For each file: git log --              → Get commit stats
    ├─ Build hierarchical tree structure
    └─ Write ~/.aina/analysis/my-set.json
-2. User: aina serve                         → Serve frontend and view in browser
+2. User: aina show                          → Open browser to view results
 ```
 
 **JSON Schema:** See `docs/json-schema.md` for complete specification
