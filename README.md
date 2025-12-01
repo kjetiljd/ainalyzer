@@ -53,7 +53,7 @@ Re-analyze (uses stored path):
 ```
 View results in browser:
 ```bash
-./aina serve
+./aina show
 ```
 
 > Replace `<myproject>` with any name you choose (e.g., `backend`, `mobile-apps`).
@@ -65,7 +65,7 @@ View results in browser:
 ./aina analyze <name> [path]   Analyze repos (path required first time)
 ./aina list                    List registered analysis sets
 ./aina remove <name>           Remove analysis set
-./aina serve [-p PORT]         Serve frontend (default: port 8080)
+./aina show [-p PORT]          Open in browser (default: port 8080)
 ```
 
 ### Docker (alternative)
