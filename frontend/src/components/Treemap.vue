@@ -267,7 +267,7 @@ export default {
         countLine.textContent = `${node.value.toLocaleString()} lines`
         group.appendChild(countLine)
 
-        // Line 3: Commits (in activity mode) or Language
+        // Line 3: Commits (always shown if available, else language)
         const line3 = document.createElementNS('http://www.w3.org/2000/svg', 'text')
         line3.setAttribute('x', centerX)
         line3.setAttribute('y', startY + lineHeight * 3)
@@ -276,7 +276,7 @@ export default {
         line3.setAttribute('font-size', '9')
         line3.setAttribute('opacity', '0.7')
         line3.style.textShadow = `0 1px 2px ${shadowColor}`
-        if (this.colorMode === 'activity' && hasCommits) {
+        if (hasCommits) {
           const commits = node.data.commits.last_year
           line3.textContent = `${commits} change${commits !== 1 ? 's' : ''}`
         } else {
