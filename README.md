@@ -9,36 +9,55 @@ Point the tool at a local folder containing one or more Git repositories. Analys
 ## Usage
 
 ### Prerequisites
+
+Verify required tools are installed:
+
 ```bash
-# Required tools
-git --version      # Git for repository analysis
-python3 --version  # Python 3.10+
-node --version     # Node.js 18+ (for frontend build)
-cloc --version     # Install: brew install cloc
+git --version
+python3 --version
+node --version
+cloc --version
 ```
 
+| Tool | Minimum | Install |
+|------|---------|---------|
+| Git | any | - |
+| Python | 3.10+ | - |
+| Node.js | 18+ | - |
+| cloc | any | `brew install cloc` |
+
 ### Setup
+
+Clone: 
 
 ```bash
 git clone https://github.com/kjetiljd/ainalyzer.git
 cd ainalyzer
+```
 
-# Build frontend (one-time)
+Build the frontend (one-time operation)
+```bash
 cd frontend && npm install && npm run build && cd ..
 ```
 
 ### Analyze repositories
 
+First time: provide name and path:
 ```bash
-# First time: provide path (registers and analyzes)
-./aina analyze myproject /path/to/repos
 
-# Re-analyze (uses stored path)
-./aina analyze myproject
-
-# View results in browser
+./aina analyze <myproject> </path/to/repos>
+```
+Re-analyze (uses stored path):
+```bash
+./aina analyze <myproject>
+```
+View results in browser:
+```bash
 ./aina serve
 ```
+
+> Replace `<myproject>` with any name you choose (e.g., `backend`, `mobile-apps`).
+> Replace `</path/to/repos>` with the actual path to your repositories folder (either a repository or a folder with multiple repositories).
 
 ### Commands
 
