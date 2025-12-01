@@ -67,33 +67,4 @@ Open http://localhost:8080 to view.
 
 ---
 
-## Documentation Structure
-
-This project follows a structured approach to documentation:
-
-### [PRODUCT_BRIEF.md](./PRODUCT_BRIEF.md)
-Complete product vision, strategy, and technical architecture. Defines the problem space, target users, features, success metrics, and implementation roadmap.
-
-### [PLAN.md](./PLAN.md)
-Current development plan using Now/Next/Later format. Always shows exactly one active task in "Now," upcoming work in "Next," and references the product brief for "Later."
-
-### [docs/adr/](./docs/adr/)
-Architecture Decision Records (ADRs) using Michael Nygard format. Documents significant architectural and technical decisions with context, rationale, and consequences. Numbered sequentially (0001, 0002, etc.).
-
-### [docs/opportunities/](./docs/opportunities/)
-Opportunity documentation following Opportunity Solution Tree methodology. Each opportunity describes a problem/need (opportunity space), desired outcomes, potential solutions, and assumption tests.
-
-**Numbering system:** Uses Zettelkasten-style branching (Luhmann's Folgezettel) to show relationships. Child opportunities branch from parents using alternating numbers and letters:
-- `001` = top-level opportunity
-- `001a` = builds on/depends on 001
-- `001b` = another branch from 001
-- `001a1` = deeper branch from 001a
-
-This shows dependency relationships directly in the numbering without requiring renumbering when adding new opportunities.
-
-## Architecture
-
-- **Backend:** Python CLI (`aina`) with zero external dependencies
-- **Frontend:** Vue.js 3 + D3.js treemap visualization
-- **Storage:** SQLite for analysis sets, JSON for analysis results
-- **External tools:** cloc (line counting), Git CLI
+For development, see [DEVELOPMENT.md](./DEVELOPMENT.md).

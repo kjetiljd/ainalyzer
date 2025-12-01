@@ -17,7 +17,7 @@ None - ready for next task.
 
 **Git Change Statistics (012)** - Complete 2025-12-01
 
-> [docs/opportunities/012-git-change-statistics.md](./docs/opportunities/012-git-change-statistics.md)
+> [012-git-change-statistics.md](../opportunities/012-git-change-statistics.md)
 
 **Delivered (Phase 1 + Phase 2):**
 - Per-file commit statistics in `aina analyze` output
@@ -39,7 +39,7 @@ None - ready for next task.
 
 **Exclusion Patterns (003)** - Complete 2025-11-30
 
-> [docs/opportunities/003-analysis-exclusion-patterns.md](./docs/opportunities/003-analysis-exclusion-patterns.md)
+> [003-analysis-exclusion-patterns.md](../opportunities/003-analysis-exclusion-patterns.md)
 
 **Delivered (Phase 1 + Phase 2):**
 - Parse .clocignore patterns from analysis root and all repo subdirectories
@@ -56,7 +56,7 @@ None - ready for next task.
 
 **Code Viewing (006)** - Completed 2025-11-29
 
-> [docs/opportunities/archive/006-code-viewing.md](./docs/opportunities/archive/006-code-viewing.md)
+> [006-code-viewing.md](../opportunities/archive/006-code-viewing.md)
 
 **Delivered:**
 - FileViewer modal with syntax highlighting (highlight.js)
@@ -66,4 +66,4 @@ None - ready for next task.
 
 ---
 
-For broader context, see [PLAN.md](./PLAN.md) and [PRODUCT_BRIEF.md](./PRODUCT_BRIEF.md).
+For broader context, see [PLAN.md](PLAN.md) and [PRODUCT_BRIEF.md](PRODUCT_BRIEF.md).

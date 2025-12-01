@@ -30,16 +30,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   │   └── App.vue
 │   ├── package.json
 │   └── vite.config.js
-├── spikes/                # Proof-of-concept experiments
-│   ├── treemap-d3/        # D3 treemap prototype (validated)
-│   └── cloc-integration/  # cloc parsing spike (validated)
 ├── docs/
+│   ├── project/           # Product and planning documentation
+│   │   ├── PRODUCT_BRIEF.md   # Complete product vision and strategy
+│   │   ├── PLAN.md            # Now/Next/Later roadmap
+│   │   └── CURRENT_TASK.md    # Active work tracking
 │   ├── adr/               # Architecture Decision Records (numbered 0001, 0002...)
 │   ├── opportunities/     # Opportunity docs (Zettelkasten numbering: 001, 001a, 001a1...)
 │   └── json-schema.md     # Analysis JSON format specification
-├── PRODUCT_BRIEF.md       # Complete product vision and strategy
-├── CURRENT_TASK.md        # Active work tracking
-└── README.md              # Project overview
+├── DEVELOPMENT.md         # Development guide
+└── README.md              # User guide
 ```
 
 ## Common Commands
@@ -83,17 +83,6 @@ npm run build                  # Output: dist/
 
 # Preview production build
 npm run preview
-```
-
-### cloc Integration
-
-```bash
-# Generate cloc JSON output (for analysis)
-cloc --json --by-file <repo-path> > output.json
-
-# Example from spikes
-cd spikes/cloc-integration
-./parse_cloc.py                # Parse cloc output and generate tree structure
 ```
 
 ## Key Architecture Decisions
@@ -156,10 +145,11 @@ CREATE TABLE analysis_sets (
 
 This project uses a structured documentation approach:
 
-1. **PRODUCT_BRIEF.md** - Complete product vision, never outdated
-2. **CURRENT_TASK.md** - Points to active opportunity, tracks progress
-3. **docs/adr/** - Permanent architectural decisions (never modified after acceptance)
-4. **docs/opportunities/** - Opportunity Solution Tree methodology
+1. **docs/project/PRODUCT_BRIEF.md** - Complete product vision, never outdated
+2. **docs/project/CURRENT_TASK.md** - Points to active opportunity, tracks progress
+3. **docs/project/PLAN.md** - Now/Next/Later roadmap
+4. **docs/adr/** - Permanent architectural decisions (never modified after acceptance)
+5. **docs/opportunities/** - Opportunity Solution Tree methodology
    - Zettelkasten numbering: 001, 001a, 001b, 001a1 (shows dependencies)
    - Archive completed opportunities to `docs/opportunities/archive/`
 
@@ -191,16 +181,4 @@ This project uses a structured documentation approach:
 
 ## Current Status
 
-**Completed:**
-- Analysis set registration (001) - CLI tool with add/list/remove commands
-- Spikes validated: D3 treemap, cloc integration, JSON schema
-
-**In Progress:**
-- Code visibility (002) - Backend implementation of `aina analyze` command
-
-**Next:**
-- Complete `aina analyze` implementation
-- Build Vue frontend with treemap visualization
-- Git history overlays (change frequency, hotspots)
-
-See CURRENT_TASK.md for detailed status.
+See [docs/project/CURRENT_TASK.md](docs/project/CURRENT_TASK.md) for detailed status and [docs/project/PLAN.md](docs/project/PLAN.md) for roadmap.

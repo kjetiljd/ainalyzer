@@ -38,6 +38,7 @@ Each opportunity is scored on three dimensions:
 
 | # | Opportunity | Impact | Effort | Complexity | Score | Status |
 |---|-------------|--------|--------|------------|-------|--------|
+| 013 | [Analysis Report](#013-analysis-report) | 3 | 2 | 2 | 1.50 | Identified |
 | 012 | [Git Change Statistics](#012-git-change-statistics) | 4 | 3 | 2 | 1.33 | ✅ Complete |
 | 011 | [Browser Back Button](#011-browser-back-button) | 3 | 2 | 2 | 1.50 | Identified |
 | 003 | [Exclusion Patterns](#003-exclusion-patterns) | 3 | 2 | 2 | 1.50 | ✅ Complete |
@@ -61,11 +62,29 @@ Each opportunity is scored on three dimensions:
 
 ## Opportunity Details
 
+### 013: Analysis Report
+
+**Impact:** 3 | **Effort:** 2 | **Complexity:** 2 | **Score:** 1.50
+
+**Status:** Identified | **Parent:** 002 (Code Visibility)
+
+Generate a shareable Markdown report from the web UI with analysis statistics.
+
+**Key Features:**
+- Metadata (analysis name, date, root path)
+- Configuration (repos, .clocignore patterns, custom exclusions)
+- Repository summary table (lines, files, unchanged files %)
+- Aggregate statistics
+
+[View opportunity →](013-analysis-report.md)
+
+---
+
 ### 012: Git Change Statistics
 
 **Impact:** 4 | **Effort:** 3 | **Complexity:** 2 | **Score:** 1.33
 
-**Status:** Identified | **Parent:** 002 (Code Visibility)
+**Status:** ✅ Complete | **Parent:** 002 (Code Visibility)
 
 Add per-file commit statistics to reveal where changes are happening in the codebase.
 
@@ -326,8 +345,8 @@ Identified → Next → In Progress → Complete → Archive
 ```
 
 **Identified:** Documented in opportunity file, scored here
-**Next:** Listed in PLAN.md "Next" section
-**In Progress:** Active task in CURRENT_TASK.md
+**Next:** Listed in [PLAN.md](../project/PLAN.md) "Next" section
+**In Progress:** Active task in [CURRENT_TASK.md](../project/CURRENT_TASK.md)
 **Complete:** Marked complete in opportunity doc + CURRENT_TASK.md
 **Archive:** Moved to `docs/opportunities/archive/` when outdated
 
