@@ -23,25 +23,10 @@ python3 -m unittest discover tests/
 cd frontend && npm test
 ```
 
-## Documentation Structure
+## Documentation
 
-### [docs/project/](./docs/project/)
-Product and planning documentation:
-- **PRODUCT_BRIEF.md** - Complete product vision and strategy
-- **PLAN.md** - Now/Next/Later development roadmap
-- **CURRENT_TASK.md** - Active work tracking
-
-### [docs/adr/](./docs/adr/)
-Architecture Decision Records (ADRs) using Michael Nygard format. Documents significant architectural and technical decisions with context, rationale, and consequences. Numbered sequentially (0001, 0002, etc.).
-
-### [docs/opportunities/](./docs/opportunities/)
-Opportunity documentation following Opportunity Solution Tree methodology. Each opportunity describes a problem/need (opportunity space), desired outcomes, potential solutions, and assumption tests.
-
-**Numbering system:** Uses Zettelkasten-style branching (Luhmann's Folgezettel) to show relationships:
-- `001` = top-level opportunity
-- `001a` = builds on/depends on 001
-- `001b` = another branch from 001
-- `001a1` = deeper branch from 001a
+- **[docs/adr/](./docs/adr/)** - Architecture Decision Records (Michael Nygard format)
+- **[docs/json-schema.md](./docs/json-schema.md)** - Analysis JSON format specification
 
 ## Architecture
 

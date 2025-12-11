@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with code in this repository.
 
 ## Project Overview
 
@@ -31,12 +31,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── package.json
 │   └── vite.config.js
 ├── docs/
-│   ├── project/           # Product and planning documentation
-│   │   ├── PRODUCT_BRIEF.md   # Complete product vision and strategy
-│   │   ├── PLAN.md            # Now/Next/Later roadmap
-│   │   └── CURRENT_TASK.md    # Active work tracking
 │   ├── adr/               # Architecture Decision Records (numbered 0001, 0002...)
-│   ├── opportunities/     # Opportunity docs (Zettelkasten numbering: 001, 001a, 001a1...)
 │   └── json-schema.md     # Analysis JSON format specification
 ├── DEVELOPMENT.md         # Development guide
 └── README.md              # User guide
@@ -133,25 +128,12 @@ CREATE TABLE analysis_sets (
 - Use `unittest` framework (standard library - no dependencies)
 - All tests in `tests/` directory
 - Use temporary files/databases for isolation
-- 21 tests currently (all passing)
 - Run full suite before committing
 
 **Frontend Tests:**
 - Vitest + Vue Test Utils
 - Happy-dom for DOM environment
 - Component tests in `src/__tests__/`
-
-## Documentation Philosophy
-
-This project uses a structured documentation approach:
-
-1. **docs/project/PRODUCT_BRIEF.md** - Complete product vision, never outdated
-2. **docs/project/CURRENT_TASK.md** - Points to active opportunity, tracks progress
-3. **docs/project/PLAN.md** - Now/Next/Later roadmap
-4. **docs/adr/** - Permanent architectural decisions (never modified after acceptance)
-5. **docs/opportunities/** - Opportunity Solution Tree methodology
-   - Zettelkasten numbering: 001, 001a, 001b, 001a1 (shows dependencies)
-   - Archive completed opportunities to `docs/opportunities/archive/`
 
 ## Development Notes
 
@@ -178,7 +160,3 @@ This project uses a structured documentation approach:
 - Calculate commit age from ISO 8601 timestamps
 - Filter by time ranges: `--since="3 months ago"`
 - Use `--` to scope queries to specific files
-
-## Current Status
-
-See [docs/project/CURRENT_TASK.md](docs/project/CURRENT_TASK.md) for detailed status and [docs/project/PLAN.md](docs/project/PLAN.md) for roadmap.
