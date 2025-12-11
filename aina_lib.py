@@ -9,6 +9,7 @@ import webbrowser
 from pathlib import Path
 from datetime import datetime, timezone
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class Database:
 
@@ -139,6 +140,236 @@ def discover_repos(path):
             dirs.clear()
 
     return sorted(repos)
+
+
+# Git staleness detection functions
+
+def get_repo_staleness_info(repo_path):
+    """Check repository staleness and remote status.
+
+    Args:
+        repo_path: Path to git repository
+
+    Returns:
+        dict with:
+            'repo': repository name
+            'branch': current local branch name
+            'last_commit_date': ISO 8601 date of last commit
+            'last_commit_age_days': days since last commit
+            'remote_status': 'behind', 'up_to_date', 'no_remote', 'fetch_failed'
+            'commits_behind': number of commits behind (if known)
+            'default_branch': detected default branch name (main/master/etc)
+            'error': error message if fetch failed
+    """
+    repo_name = Path(repo_path).name
+    info = {
+        'repo': repo_name,
+        'branch': None,
+        'last_commit_date': None,
+        'last_commit_age_days': None,
+        'remote_status': 'unknown',
+        'commits_behind': None,
+        'default_branch': None,
+        'error': None
+    }
+
+    # Get current branch
+    result = subprocess.run(
+        ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+        cwd=repo_path,
+        capture_output=True,
+        text=True
+    )
+    if result.returncode == 0:
+        info['branch'] = result.stdout.strip()
+
+    # Get last commit date
+    result = subprocess.run(
+        ['git', 'log', '-1', '--format=%aI'],
+        cwd=repo_path,
+        capture_output=True,
+        text=True
+    )
+    if result.returncode == 0 and result.stdout.strip():
+        info['last_commit_date'] = result.stdout.strip()
+        try:
+            dt = datetime.fromisoformat(info['last_commit_date'].replace('Z', '+00:00'))
+            age_days = (datetime.now(timezone.utc) - dt).days
+            info['last_commit_age_days'] = age_days
+        except ValueError:
+            pass
+
+    # Check if remote exists
+    result = subprocess.run(
+        ['git', 'remote'],
+        cwd=repo_path,
+        capture_output=True,
+        text=True
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        info['remote_status'] = 'no_remote'
+        return info
+
+    # Try to detect default branch from remote HEAD
+    result = subprocess.run(
+        ['git', 'symbolic-ref', 'refs/remotes/origin/HEAD'],
+        cwd=repo_path,
+        capture_output=True,
+        text=True
+    )
+    if result.returncode == 0:
+        # Extract branch name from refs/remotes/origin/main
+        ref = result.stdout.strip()
+        if ref.startswith('refs/remotes/origin/'):
+            info['default_branch'] = ref.replace('refs/remotes/origin/', '')
+
+    # If symbolic-ref failed, check for common branch names
+    if not info['default_branch']:
+        for branch_name in ['main', 'master', 'trunk', 'dev']:
+            check = subprocess.run(
+                ['git', 'rev-parse', '--verify', f'refs/remotes/origin/{branch_name}'],
+                cwd=repo_path,
+                capture_output=True,
+                text=True
+            )
+            if check.returncode == 0:
+                info['default_branch'] = branch_name
+                break
+
+    # Try git fetch --dry-run to check for updates
+    result = subprocess.run(
+        ['git', 'fetch', '--dry-run'],
+        cwd=repo_path,
+        capture_output=True,
+        text=True,
+        timeout=30
+    )
+
+    if result.returncode != 0:
+        # Fetch failed (credentials, network, etc)
+        info['remote_status'] = 'fetch_failed'
+        stderr = result.stderr.strip()
+        if stderr:
+            info['error'] = stderr.split('\n')[0]  # First line of error
+        return info
+
+    # Check if fetch output indicates updates available
+    # git fetch --dry-run outputs to stderr when there are updates
+    fetch_output = result.stderr.strip()
+    if fetch_output and 'From' in fetch_output:
+        info['remote_status'] = 'behind'
+        # Try to count commits behind - compare local branch to its remote tracking branch
+        if info['branch']:
+            # First try the same branch name on origin
+            count_result = subprocess.run(
+                ['git', 'rev-list', '--count', f'{info["branch"]}..origin/{info["branch"]}'],
+                cwd=repo_path,
+                capture_output=True,
+                text=True
+            )
+            if count_result.returncode == 0 and count_result.stdout.strip():
+                try:
+                    info['commits_behind'] = int(count_result.stdout.strip())
+                except ValueError:
+                    pass
+            # If that failed and we have a different default branch, try that
+            elif info['default_branch'] and info['default_branch'] != info['branch']:
+                count_result = subprocess.run(
+                    ['git', 'rev-list', '--count', f'{info["branch"]}..origin/{info["default_branch"]}'],
+                    cwd=repo_path,
+                    capture_output=True,
+                    text=True
+                )
+                if count_result.returncode == 0 and count_result.stdout.strip():
+                    try:
+                        info['commits_behind'] = int(count_result.stdout.strip())
+                    except ValueError:
+                        pass
+    else:
+        info['remote_status'] = 'up_to_date'
+
+    return info
+
+
+def format_staleness_warning(staleness_infos):
+    """Format staleness info into a table.
+
+    Args:
+        staleness_infos: List of dicts from get_repo_staleness_info
+
+    Returns:
+        str: Formatted table, or empty string if no repos
+    """
+    if not staleness_infos:
+        return ''
+
+    # Build rows with formatted data
+    rows = []
+    errors = []  # Collect errors to show after table
+
+    for info in staleness_infos:
+        repo = info['repo']
+        branch = info['branch'] or '(detached)'
+        last_date = info['last_commit_date']
+        age_days = info['last_commit_age_days']
+        status = info['remote_status']
+
+        # Format age string
+        if age_days is not None:
+            if age_days == 0:
+                age_str = 'today'
+            elif age_days == 1:
+                age_str = '1 day'
+            else:
+                age_str = f'{age_days} days'
+        else:
+            age_str = '?'
+
+        # Format date (just the date portion)
+        date_str = last_date[:10] if last_date else 'unknown'
+
+        # Status label
+        if status == 'behind':
+            status_str = '[  BEHIND  ]'
+        elif status == 'fetch_failed':
+            status_str = '[FETCH FAIL]'
+            if info.get('error'):
+                errors.append(f"  {repo}: {info['error']}")
+        elif status == 'no_remote':
+            status_str = '[ NO REMOTE]'
+        else:
+            status_str = '[UP TO DATE]'
+
+        rows.append((status_str, repo, branch, date_str, age_str))
+
+    # Calculate column widths
+    col_widths = [
+        max(len(row[0]) for row in rows),
+        max(len(row[1]) for row in rows),
+        max(len(row[2]) for row in rows),
+        max(len(row[3]) for row in rows),
+        max(len(row[4]) for row in rows),
+    ]
+
+    # Format table with header
+    lines = []
+
+    # Header
+    header = f"  {'STATUS':<{col_widths[0]}}  {'REPOSITORY':<{col_widths[1]}}  {'BRANCH':<{col_widths[2]}}  {'LAST LOCAL COMMIT':<{col_widths[3] + col_widths[4] + 4}}"
+    lines.append(header)
+    lines.append('  ' + '-' * (len(header) - 2))
+
+    for row in rows:
+        line = f"  {row[0]}  {row[1]:<{col_widths[1]}}  {row[2]:<{col_widths[2]}}  {row[3]}  ({row[4]:>{col_widths[4]}})"
+        lines.append(line)
+
+    # Add errors at the end
+    if errors:
+        lines.append('')
+        lines.append('  Fetch errors:')
+        lines.extend(errors)
+
+    return '\n'.join(lines)
 
 
 # Git statistics functions
@@ -553,6 +784,31 @@ def analyze_repos(analysis_set_name, analysis_set_path):
         raise ValueError(f"No Git repositories found in: {analysis_set_path}")
 
     print(f"Found {len(repos)} repositories")
+
+    # Check repository staleness (parallel for speed)
+    print("\nChecking repository status...")
+    staleness_infos = []
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(get_repo_staleness_info, repo_path): repo_path for repo_path in repos}
+        for future in as_completed(futures):
+            staleness_infos.append(future.result())
+    # Sort by repo name for consistent output
+    staleness_infos.sort(key=lambda x: x['repo'])
+
+    # Display staleness information
+    warning = format_staleness_warning(staleness_infos)
+    if warning:
+        print("\nRepository status:")
+        print(warning)
+        print()
+
+    # Check if any repos are behind and prompt user
+    behind_count = sum(1 for info in staleness_infos if info['remote_status'] == 'behind')
+    if behind_count > 0:
+        print(f">>> {behind_count} repositor{'ies are' if behind_count > 1 else 'y is'} behind remote.")
+        print(">>> Consider running 'git pull' before analyzing.")
+        print()
+        input(">>> Press Enter to continue, or Ctrl-C to abort... ")
 
     # Aggregate statistics
     total_files = 0

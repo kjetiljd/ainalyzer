@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from aina_lib import get_file_stats, get_file_stats_with_follow
+from aina_lib import get_file_stats, get_file_stats_with_follow, get_repo_staleness_info, format_staleness_warning
 
 
 class GitRepoTestCase(unittest.TestCase):
@@ -274,6 +274,207 @@ class TestAnalyzeReposWithGitStats(GitRepoTestCase):
         self.assertIsNotNone(test_node)
         self.assertEqual(test_node['commits']['last_year'], 3)
         self.assertEqual(test_node['commits']['last_3_months'], 3)
+
+
+class TestGetRepoStalenessInfo(GitRepoTestCase):
+    """Test get_repo_staleness_info function."""
+
+    def test_returns_repo_name(self):
+        """Returns the repository name."""
+        self.create_file('test.py', 'content')
+        self.commit('Initial')
+
+        info = get_repo_staleness_info(self.repo_path)
+
+        self.assertEqual(info['repo'], Path(self.repo_path).name)
+
+    def test_returns_current_branch(self):
+        """Returns current branch name."""
+        self.create_file('test.py', 'content')
+        self.commit('Initial')
+
+        info = get_repo_staleness_info(self.repo_path)
+
+        # Default branch after git init is usually 'master' or 'main'
+        self.assertIn(info['branch'], ['master', 'main'])
+
+    def test_returns_last_commit_date(self):
+        """Returns last commit date in ISO format."""
+        self.create_file('test.py', 'content')
+        self.commit('Initial')
+
+        info = get_repo_staleness_info(self.repo_path)
+
+        self.assertIsNotNone(info['last_commit_date'])
+        self.assertIn('T', info['last_commit_date'])
+
+    def test_returns_commit_age_days(self):
+        """Returns age of last commit in days."""
+        self.create_file('test.py', 'content')
+        self.commit('Initial')
+
+        info = get_repo_staleness_info(self.repo_path)
+
+        self.assertIsNotNone(info['last_commit_age_days'])
+        self.assertEqual(info['last_commit_age_days'], 0)  # Just committed
+
+    def test_returns_no_remote_status_when_no_remote(self):
+        """Returns no_remote status when repo has no remote."""
+        self.create_file('test.py', 'content')
+        self.commit('Initial')
+
+        info = get_repo_staleness_info(self.repo_path)
+
+        self.assertEqual(info['remote_status'], 'no_remote')
+
+    def test_handles_repo_with_no_commits(self):
+        """Handles repo with no commits gracefully."""
+        # New repo, no commits
+        info = get_repo_staleness_info(self.repo_path)
+
+        self.assertIsNone(info['last_commit_date'])
+        self.assertIsNone(info['last_commit_age_days'])
+
+
+class TestFormatStalenessWarning(unittest.TestCase):
+    """Test format_staleness_warning function."""
+
+    def test_formats_basic_info(self):
+        """Formats repo name, branch, and date."""
+        infos = [{
+            'repo': 'my-repo',
+            'branch': 'main',
+            'last_commit_date': '2025-12-01T10:00:00+01:00',
+            'last_commit_age_days': 10,
+            'remote_status': 'up_to_date',
+            'commits_behind': None,
+            'default_branch': 'main',
+            'error': None
+        }]
+
+        result = format_staleness_warning(infos)
+
+        self.assertIn('my-repo', result)
+        self.assertIn('main', result)
+        self.assertIn('2025-12-01', result)
+        self.assertIn('10 days', result)
+
+    def test_formats_today(self):
+        """Shows 'today' for 0 days ago."""
+        infos = [{
+            'repo': 'repo',
+            'branch': 'main',
+            'last_commit_date': '2025-12-11T10:00:00+01:00',
+            'last_commit_age_days': 0,
+            'remote_status': 'up_to_date',
+            'commits_behind': None,
+            'default_branch': None,
+            'error': None
+        }]
+
+        result = format_staleness_warning(infos)
+
+        self.assertIn('today', result)
+
+    def test_formats_singular_day(self):
+        """Shows '1 day' for singular."""
+        infos = [{
+            'repo': 'repo',
+            'branch': 'main',
+            'last_commit_date': '2025-12-10T10:00:00+01:00',
+            'last_commit_age_days': 1,
+            'remote_status': 'up_to_date',
+            'commits_behind': None,
+            'default_branch': None,
+            'error': None
+        }]
+
+        result = format_staleness_warning(infos)
+
+        self.assertIn('1 day', result)
+
+    def test_shows_behind_status(self):
+        """Shows BEHIND prefix when behind remote."""
+        infos = [{
+            'repo': 'repo',
+            'branch': 'main',
+            'last_commit_date': '2025-12-01T10:00:00+01:00',
+            'last_commit_age_days': 10,
+            'remote_status': 'behind',
+            'commits_behind': 5,
+            'default_branch': 'main',
+            'error': None
+        }]
+
+        result = format_staleness_warning(infos)
+
+        self.assertIn('[  BEHIND  ]', result)
+
+    def test_shows_fetch_failed(self):
+        """Shows FETCH FAILED prefix and error when fetch failed."""
+        infos = [{
+            'repo': 'repo',
+            'branch': 'main',
+            'last_commit_date': '2025-12-01T10:00:00+01:00',
+            'last_commit_age_days': 10,
+            'remote_status': 'fetch_failed',
+            'commits_behind': None,
+            'default_branch': None,
+            'error': 'Authentication failed'
+        }]
+
+        result = format_staleness_warning(infos)
+
+        self.assertIn('[FETCH FAIL]', result)
+        self.assertIn('Authentication failed', result)
+
+    def test_shows_no_remote(self):
+        """Shows NO REMOTE prefix when no remote configured."""
+        infos = [{
+            'repo': 'repo',
+            'branch': 'main',
+            'last_commit_date': '2025-12-01T10:00:00+01:00',
+            'last_commit_age_days': 10,
+            'remote_status': 'no_remote',
+            'commits_behind': None,
+            'default_branch': None,
+            'error': None
+        }]
+
+        result = format_staleness_warning(infos)
+
+        self.assertIn('[ NO REMOTE]', result)
+
+    def test_formats_multiple_repos(self):
+        """Formats multiple repositories."""
+        infos = [
+            {
+                'repo': 'repo-a',
+                'branch': 'main',
+                'last_commit_date': '2025-12-01T10:00:00+01:00',
+                'last_commit_age_days': 10,
+                'remote_status': 'up_to_date',
+                'commits_behind': None,
+                'default_branch': None,
+                'error': None
+            },
+            {
+                'repo': 'repo-b',
+                'branch': 'develop',
+                'last_commit_date': '2025-11-01T10:00:00+01:00',
+                'last_commit_age_days': 40,
+                'remote_status': 'behind',
+                'commits_behind': 12,
+                'default_branch': 'main',
+                'error': None
+            }
+        ]
+
+        result = format_staleness_warning(infos)
+
+        self.assertIn('repo-a', result)
+        self.assertIn('repo-b', result)
+        self.assertIn('[  BEHIND  ]', result)
 
 
 if __name__ == '__main__':
