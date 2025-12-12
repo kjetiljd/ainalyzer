@@ -15,11 +15,7 @@ cloc --version     # Install: brew install cloc
 # Backend
 ./aina --help
 
-# Frontend development (requires backend running)
-# Terminal 1: Start API server
-./aina show --port 8081 --no-browser
-
-# Terminal 2: Start frontend dev server
+# Frontend development
 cd frontend && npm install && npm run dev
 
 # Run tests
