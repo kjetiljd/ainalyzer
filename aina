@@ -4,7 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from aina_lib import cmd_list, cmd_remove, cmd_analyze, cmd_show
+from aina_lib import cmd_list, cmd_remove, cmd_analyze, cmd_show  # noqa: E402
 
 
 def get_default_db_path():
