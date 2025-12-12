@@ -120,3 +120,16 @@ export function findMaxInTree(node, getValue, depth = 0) {
 
   return max
 }
+
+/**
+ * Aggregate values across tree using sum.
+ *
+ * @param {Object} node - Tree node
+ * @param {Function} leafValue - Extract value from leaf node
+ * @returns {number} Sum of all leaf values
+ */
+export function aggregateTree(node, leafValue) {
+  if (!node) return 0
+  if (!node.children) return leafValue(node)
+  return node.children.reduce((sum, child) => sum + aggregateTree(child, leafValue), 0)
+}

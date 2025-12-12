@@ -4,7 +4,8 @@ import {
   useTreeStats,
   findNodeByPath,
   countLeafValues,
-  findMaxInTree
+  findMaxInTree,
+  aggregateTree
 } from '../composables/useTreeStats'
 
 describe('useTreeStats', () => {
@@ -171,6 +172,29 @@ describe('useTreeStats', () => {
       const flat = { name: 'file', value: 42 }
       const max = findMaxInTree(flat, n => n.value || 0)
       expect(max).toBe(42)
+    })
+  })
+
+  describe('aggregateTree', () => {
+    it('sums commit counts', () => {
+      const sum = aggregateTree(sampleTree, n => n.commits?.last_year || 0)
+      expect(sum).toBe(17) // 5 + 10 + 2
+    })
+
+    it('sums values', () => {
+      const sum = aggregateTree(sampleTree, n => n.value || 0)
+      expect(sum).toBe(350)
+    })
+
+    it('handles null root', () => {
+      const sum = aggregateTree(null, n => n.value || 0)
+      expect(sum).toBe(0)
+    })
+
+    it('handles leaf node', () => {
+      const leaf = { name: 'file', value: 100, commits: { last_year: 5 } }
+      const sum = aggregateTree(leaf, n => n.commits?.last_year || 0)
+      expect(sum).toBe(5)
     })
   })
 })

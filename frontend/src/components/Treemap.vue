@@ -5,6 +5,7 @@
 <script>
 import { hierarchy, treemap } from 'd3-hierarchy'
 import { assignColors, OVERFLOW_COLOR, getActivityColor, getDepthColor } from '../utils/colorUtils'
+import { countLeafValues, findMaxInTree, aggregateTree } from '../composables/useTreeStats'
 
 export default {
   name: 'Treemap',
@@ -47,50 +48,16 @@ export default {
       if (this.colorMode !== 'filetype') return null
 
       // Count languages across entire tree (use root data, not currentNode)
-      const counts = {}
-      const countLanguages = (node) => {
-        if (!node.children && node.language) {
-          counts[node.language] = (counts[node.language] || 0) + 1
-        }
-        if (node.children) {
-          node.children.forEach(countLanguages)
-        }
-      }
-      countLanguages(this.data)
-
+      const counts = countLeafValues(this.data, n => n.language)
       return assignColors(counts)
     },
     maxCommits() {
       if (this.colorMode !== 'activity') return 0
-
-      // Find max commits across entire tree for normalization
-      let max = 0
-      const findMax = (node) => {
-        if (!node.children && node.commits) {
-          const commits = node.commits.last_year || 0
-          if (commits > max) max = commits
-        }
-        if (node.children) {
-          node.children.forEach(findMax)
-        }
-      }
-      findMax(this.data)
-      return max
+      return findMaxInTree(this.data, n => n.commits?.last_year || 0)
     },
     maxDepth() {
       if (this.colorMode !== 'depth') return 0
-
-      // Find max depth across entire tree for normalization
-      // No offset needed here - absoluteDepth already applies offset
-      let max = 0
-      const findMax = (node, depth) => {
-        if (depth > max) max = depth
-        if (node.children) {
-          node.children.forEach(child => findMax(child, depth + 1))
-        }
-      }
-      findMax(this.data, 0)
-      return max
+      return findMaxInTree(this.data, (n, depth) => depth)
     }
   },
   mounted() {
@@ -158,11 +125,7 @@ export default {
     },
 
     countChanges(node) {
-      if (!node.children) {
-        return node.commits?.last_year || 0
-      }
-      return node.children.reduce((sum, child) =>
-        sum + this.countChanges(child), 0)
+      return aggregateTree(node, n => n.commits?.last_year || 0)
     },
 
     hexToRgb(hex) {
