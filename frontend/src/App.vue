@@ -8,6 +8,7 @@ import SettingsPanel from './components/SettingsPanel.vue'
 import FileViewer from './components/FileViewer.vue'
 import ExclusionMenu from './components/ExclusionMenu.vue'
 import { usePreferences } from './composables/usePreferences'
+import { findNodeByPath } from './composables/useTreeStats'
 import { parseClocignore, filterTree } from './utils/clocignore'
 
 // Preferences
@@ -111,18 +112,7 @@ const filteredCurrentNode = computed(() => {
   const path = currentNode.value.path
   if (!path) return filteredData.value
 
-  function findNode(node, targetPath) {
-    if (node.path === targetPath) return node
-    if (node.children) {
-      for (const child of node.children) {
-        const found = findNode(child, targetPath)
-        if (found) return found
-      }
-    }
-    return null
-  }
-
-  return findNode(filteredData.value, path) || filteredData.value
+  return findNodeByPath(filteredData.value, path) || filteredData.value
 })
 
 // Load list of available analyses
