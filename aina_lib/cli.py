@@ -133,7 +133,13 @@ def cmd_analyze(name, path, db_path):
 
         print(f"Analyzing '{name}' at {analysis_set_path}")
 
-        analysis_json = analyze_repos(name, analysis_set_path)
+        def handle_staleness(staleness_infos, behind_count):
+            print(f">>> {behind_count} repositor{'ies are' if behind_count > 1 else 'y is'} behind remote.")
+            print(">>> Consider running 'git pull' before analyzing.")
+            print()
+            input(">>> Press Enter to continue, or Ctrl-C to abort... ")
+
+        analysis_json = analyze_repos(name, analysis_set_path, on_staleness_warning=handle_staleness)
 
         output_dir = Path.home() / '.aina' / 'analysis'
         output_dir.mkdir(parents=True, exist_ok=True)

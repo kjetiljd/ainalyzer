@@ -284,11 +284,6 @@ def analyze_repos(analysis_set_name, analysis_set_path, on_staleness_warning=Non
     if behind_count > 0:
         if on_staleness_warning:
             on_staleness_warning(staleness_infos, behind_count)
-        else:
-            print(f">>> {behind_count} repositor{'ies are' if behind_count > 1 else 'y is'} behind remote.")
-            print(">>> Consider running 'git pull' before analyzing.")
-            print()
-            input(">>> Press Enter to continue, or Ctrl-C to abort... ")
 
     # Aggregate statistics
     total_files = 0
