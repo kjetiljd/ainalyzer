@@ -142,7 +142,7 @@
 import { ref, computed } from 'vue'
 import { usePreferences } from '../composables/usePreferences'
 
-defineEmits(['close'])
+const emit = defineEmits(['close'])
 
 const { preferences, updateURL, addExclusion, removeExclusion, toggleExclusion, updateExclusion } = usePreferences()
 

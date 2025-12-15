@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="exclusion-backdrop" @click="$emit('close')" @keydown.escape="$emit('close')">
+  <div v-if="visible" class="exclusion-backdrop" @click="$emit('close')">
     <div ref="menuRef" class="exclusion-menu" :style="menuStyle" @click.stop>
       <div class="menu-item" @click="exclude('file')">
         Exclude this file

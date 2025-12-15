@@ -86,7 +86,6 @@ export default {
     }
   },
   async mounted() {
-    window.addEventListener('keydown', this.handleKeydown)
     await this.loadFile()
     this.$nextTick(() => {
       if (this.$refs.codeBlock && this.content) {
@@ -94,15 +93,7 @@ export default {
       }
     })
   },
-  beforeUnmount() {
-    window.removeEventListener('keydown', this.handleKeydown)
-  },
   methods: {
-    handleKeydown(e) {
-      if (e.key === 'Escape') {
-        this.$emit('close')
-      }
-    },
     async loadFile() {
       try {
         const params = new URLSearchParams({

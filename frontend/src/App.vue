@@ -1,19 +1,44 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
-import Treemap from './components/Treemap.vue'
-import Breadcrumb from './components/Breadcrumb.vue'
-import StatsBar from './components/StatsBar.vue'
-import Statusline from './components/Statusline.vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import TreemapExplorer from './components/TreemapExplorer.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 import FileViewer from './components/FileViewer.vue'
 import ExclusionMenu from './components/ExclusionMenu.vue'
 import { usePreferences } from './composables/usePreferences'
-import { findNodeByPath } from './composables/useTreeStats'
 import { parseClocignore, filterTree } from './utils/clocignore'
 
 // Preferences
 const { preferences, updateURL, addExclusion, setCurrentAnalysis } = usePreferences()
 const showSettings = ref(false)
+
+// Centralized Escape key handler - App owns all overlay state
+function handleEscape(e) {
+  if (e.key !== 'Escape') return
+
+  // Priority order: close topmost overlay first
+  if (viewingFile.value) {
+    viewingFile.value = null
+  } else if (showSettings.value) {
+    showSettings.value = false
+  } else if (contextMenu.value.visible) {
+    contextMenu.value.visible = false
+  } else if (navigationStack.value.length > 1) {
+    // No overlays open - navigate up in treemap
+    navigationStack.value = navigationStack.value.slice(0, -1)
+  } else {
+    return // Nothing to do
+  }
+
+  e.preventDefault()
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleEscape)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleEscape)
+})
 
 // Context menu state
 const contextMenu = ref({
@@ -36,30 +61,12 @@ const error = ref(null)
 
 // Navigation state
 const navigationStack = ref([])
-const breadcrumbPath = ref([])
-const statuslineText = ref('')
-const currentNode = ref(null)
 
 // File viewer state
 const viewingFile = ref(null)
 
 // Clocignore patterns
 const clocignorePatterns = ref([])
-
-// Combine .clocignore patterns with enabled custom exclusions
-const allExclusionPatterns = computed(() => {
-  const patterns = [...clocignorePatterns.value]
-
-  // Add enabled custom exclusions
-  const customExclusions = preferences.value.filters?.customExclusions || []
-  for (const excl of customExclusions) {
-    if (excl.enabled) {
-      patterns.push(excl.pattern)
-    }
-  }
-
-  return patterns
-})
 
 // Filtered tree (computed based on preferences)
 const filteredData = computed(() => {
@@ -95,25 +102,10 @@ const filteredData = computed(() => {
   return filterTree(data.value, patterns)
 })
 
-// Find matching node in filtered tree for stats calculation
-const filteredCurrentNode = computed(() => {
-  if (!filteredData.value || !currentNode.value) return null
-
-  // Check if any filtering is active
-  const hasClocignoreFiltering = preferences.value.filters?.hideClocignore && clocignorePatterns.value.length > 0
-  const hasCustomExclusions = (preferences.value.filters?.customExclusions || []).some(e => e.enabled)
-
-  // If no filtering active, return unfiltered currentNode
-  if (!hasClocignoreFiltering && !hasCustomExclusions) {
-    return currentNode.value
-  }
-
-  // Navigate to matching node in filtered tree using path
-  const path = currentNode.value.path
-  if (!path) return filteredData.value
-
-  return findNodeByPath(filteredData.value, path) || filteredData.value
-})
+// Breadcrumb path for FileViewer display
+const breadcrumbPath = computed(() =>
+  navigationStack.value.map(n => n.name)
+)
 
 // Load list of available analyses
 async function loadAnalysesList() {
@@ -172,8 +164,6 @@ async function loadAnalysis(filename) {
     // Extract tree for visualization
     data.value = json.tree
     navigationStack.value = [json.tree]
-    breadcrumbPath.value = [json.tree.name]
-    currentNode.value = json.tree
     loading.value = false
 
     console.log('Loaded analysis:', json.analysis_set)
@@ -223,52 +213,14 @@ onMounted(async () => {
   await loadAnalysesList()
 })
 
-
-// Handle drill-down - use full path from event
-function handleDrillDown(event) {
-  const node = event.node
-
-  // Check if this is a file by type property
-  if (node.type === 'file') {
-    // If already zoomed into this file, open FileViewer
-    // Compare by path since filtering creates new node objects
-    if (currentNode.value?.path === node.path && node.path && rootPath.value) {
-      openFileInEditor(node.path)
-      return
-    }
-    // Otherwise drill into the file (make it currentNode)
-    navigationStack.value = event.path
-    breadcrumbPath.value = event.path.map(n => n.name)
-    currentNode.value = node
-    return
+// Handle file open from TreemapExplorer
+function handleFileOpen(path) {
+  if (rootPath.value) {
+    viewingFile.value = path
   }
-
-  // If clicking the same directory we're already at, ignore it
-  // Compare by path since filtering creates new node objects
-  // Only skip if both have paths and they match (undefined paths should still navigate)
-  if (node.path && currentNode.value?.path === node.path) {
-    return
-  }
-
-  // Navigate to directory
-  navigationStack.value = event.path
-  breadcrumbPath.value = event.path.map(n => n.name)
-  currentNode.value = node
 }
 
-// Open file viewer
-function openFileInEditor(relativePath) {
-  viewingFile.value = relativePath
-}
-
-// Handle breadcrumb navigation
-function handleBreadcrumbNavigate(index) {
-  navigationStack.value = navigationStack.value.slice(0, index + 1)
-  breadcrumbPath.value = breadcrumbPath.value.slice(0, index + 1)
-  currentNode.value = navigationStack.value[index]
-}
-
-// Handle context menu from treemap
+// Handle context menu from TreemapExplorer
 function handleContextMenu(event) {
   contextMenu.value = {
     visible: true,
@@ -335,25 +287,14 @@ function closeContextMenu() {
     <div v-if="loading" class="loading">Loading analysis data...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
 
-    <template v-else-if="filteredData">
-      <Breadcrumb :path="breadcrumbPath" @navigate="handleBreadcrumbNavigate" />
-      <StatsBar :currentNode="filteredCurrentNode" />
-      <div class="treemap-container">
-        <Treemap
-          :data="filteredData"
-          :currentNode="filteredCurrentNode"
-          :navigationStack="navigationStack"
-          :cushionMode="preferences.appearance?.cushionTreemap"
-          :hideFolderBorders="preferences.appearance?.hideFolderBorders"
-          :colorMode="preferences.appearance?.colorMode || 'depth'"
-          @drill-down="handleDrillDown"
-          @hover="statuslineText = $event"
-          @hover-end="statuslineText = ''"
-          @node-contextmenu="handleContextMenu"
-        />
-      </div>
-      <Statusline :text="statuslineText" />
-    </template>
+    <TreemapExplorer
+      v-else-if="filteredData"
+      :data="filteredData"
+      v-model:navigationStack="navigationStack"
+      :preferences="preferences"
+      @file-open="handleFileOpen"
+      @contextmenu="handleContextMenu"
+    />
   </div>
 </template>
 
