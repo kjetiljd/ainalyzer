@@ -240,11 +240,34 @@ function findSlot(language, usedSlots, saltRound = 0) {
   return findSlot(language, usedSlots, saltRound + 1)
 }
 
+// Color mode registry - single source of truth for all mode configuration
+export const COLOR_MODES = {
+  depth: {
+    key: 'depth',
+    label: 'Code size',
+    description: 'Shows lines of code. Color indicates directory depth.',
+    borderColor: '#009688'  // Teal - contrasts with yellow-orange-brown
+  },
+  activity: {
+    key: 'activity',
+    label: 'Change activity',
+    description: 'Shows file change frequency in last year.',
+    borderColor: '#ff7043'  // Coral - contrasts with viridis purple-yellow
+  },
+  filetype: {
+    key: 'filetype',
+    label: 'File types',
+    description: 'Shows lines of code. Color indicates language.',
+    borderColor: '#ffffff'  // White - stands out against mixed colors
+  }
+}
+
 // Repository border colors per color mode (for contrast)
+// Legacy accessor - prefer COLOR_MODES[mode].borderColor
 export const REPO_BORDER_COLORS = {
-  depth: '#009688',    // Teal - contrasts with yellow-orange-brown
-  activity: '#ff7043', // Coral - contrasts with viridis purple-yellow
-  filetype: '#ffffff'  // White - stands out against mixed colors
+  depth: COLOR_MODES.depth.borderColor,
+  activity: COLOR_MODES.activity.borderColor,
+  filetype: COLOR_MODES.filetype.borderColor
 }
 
 export function assignColors(languageCounts) {
