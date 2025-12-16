@@ -13,45 +13,21 @@
       <section class="settings-section">
         <h3>Analysis</h3>
         <div class="radio-group top-radio-group">
-          <label class="radio-label">
-            <input
-              type="radio"
-              name="colorMode"
-              value="depth"
-              :checked="preferences.appearance?.colorMode === 'depth'"
-              @change="setColorMode('depth')"
-            />
-            <span>Code size</span>
-          </label>
-          <p class="setting-description radio-description">
-            Shows lines of code. Color indicates directory depth.
-          </p>
-          <label class="radio-label">
-            <input
-              type="radio"
-              name="colorMode"
-              value="filetype"
-              :checked="preferences.appearance?.colorMode === 'filetype'"
-              @change="setColorMode('filetype')"
-            />
-            <span>File types</span>
-          </label>
-          <p class="setting-description radio-description">
-            Shows lines of code. Color indicates programming language.
-          </p>
-          <label class="radio-label">
-            <input
-              type="radio"
-              name="colorMode"
-              value="activity"
-              :checked="preferences.appearance?.colorMode === 'activity'"
-              @change="setColorMode('activity')"
-            />
-            <span>Change activity</span>
-          </label>
-          <p class="setting-description radio-description">
-            Shows file change frequency. Purple = stable, yellow = frequently changed.
-          </p>
+          <template v-for="mode in colorModesList" :key="mode.key">
+            <label class="radio-label">
+              <input
+                type="radio"
+                name="colorMode"
+                :value="mode.key"
+                :checked="(preferences.appearance?.colorMode || 'depth') === mode.key"
+                @change="setColorMode(mode.key)"
+              />
+              <span>{{ mode.label }}</span>
+            </label>
+            <p class="setting-description radio-description">
+              {{ mode.description }}
+            </p>
+          </template>
         </div>
       </section>
 
@@ -153,6 +129,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { usePreferences } from '../composables/usePreferences'
+import { COLOR_MODES } from '../utils/colorUtils'
 
 const emit = defineEmits(['close'])
 
@@ -162,6 +139,11 @@ const newPattern = ref('')
 
 const customExclusions = computed(() => {
   return preferences.value.filters?.customExclusions || []
+})
+
+// Ordered list of color modes for radio buttons
+const colorModesList = computed(() => {
+  return ['depth', 'filetype', 'activity'].map(key => COLOR_MODES[key])
 })
 
 function handleAddExclusion() {
