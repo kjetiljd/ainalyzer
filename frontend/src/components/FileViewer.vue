@@ -3,6 +3,9 @@
     <div class="file-viewer">
       <div class="file-viewer-header">
         <span class="file-path">{{ displayPath || path }}</span>
+        <span v-if="truncated" class="truncation-indicator">
+          Showing {{ displayedLines.toLocaleString() }} of {{ totalLines.toLocaleString() }} lines
+        </span>
         <button class="close-button" @click="$emit('close')">&times;</button>
       </div>
       <div class="file-viewer-content">
@@ -75,7 +78,10 @@ export default {
     return {
       content: '',
       loading: true,
-      error: null
+      error: null,
+      truncated: false,
+      totalLines: 0,
+      displayedLines: 0
     }
   },
   computed: {
@@ -109,6 +115,9 @@ export default {
         }
 
         this.content = data.content
+        this.truncated = data.truncated || false
+        this.totalLines = data.totalLines || 0
+        this.displayedLines = data.displayedLines || 0
       } catch (e) {
         this.error = e.message
       } finally {
@@ -161,6 +170,13 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.truncation-indicator {
+  font-size: 12px;
+  color: #888;
+  margin-left: 16px;
+  flex-shrink: 0;
 }
 
 .close-button {

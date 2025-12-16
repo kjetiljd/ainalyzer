@@ -62,7 +62,9 @@ def create_request_handler(frontend_dir, analysis_dir):
                 self.send_error(500, f'Error reading file: {e}')
 
         def handle_file(self, query):
-            """Serve file content with path validation."""
+            """Serve file content with path validation and truncation for large files."""
+            MAX_LINES = 10000
+
             file_path = query.get('path', [None])[0]
             root_path = query.get('root', [None])[0]
 
@@ -82,12 +84,29 @@ def create_request_handler(frontend_dir, analysis_dir):
                 return
 
             try:
-                content = resolved_file.read_text()
+                with resolved_file.open('r') as f:
+                    lines = []
+                    total_lines = 0
+                    for line in f:
+                        total_lines += 1
+                        if len(lines) < MAX_LINES:
+                            lines.append(line)
+
+                content = ''.join(lines)
+                truncated = total_lines > MAX_LINES
+                response = {
+                    'content': content,
+                    'path': file_path,
+                    'truncated': truncated,
+                    'totalLines': total_lines,
+                    'displayedLines': len(lines)
+                }
+
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
-                self.wfile.write(json.dumps({'content': content, 'path': file_path}).encode())
+                self.wfile.write(json.dumps(response).encode())
             except Exception as e:
                 self.send_json_error(500, f'Error reading file: {e}')
 
