@@ -128,7 +128,7 @@ describe('TreemapExplorer', () => {
 
     expect(statusline.props('text')).toBe('')
 
-    await treemap.vm.$emit('hover', 'root / folder1 / file1.js (100 lines)')
+    await treemap.vm.$emit('hover', { text: 'root / folder1 / file1.js (100 lines)', isRepo: false })
     expect(statusline.props('text')).toBe('root / folder1 / file1.js (100 lines)')
 
     await treemap.vm.$emit('hover-end')

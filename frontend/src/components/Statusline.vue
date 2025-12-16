@@ -1,5 +1,5 @@
 <template>
-  <div class="statusline" :class="{ active: text }">
+  <div class="statusline" :class="{ active: text }" :style="repoStyle">
     {{ displayText }}
   </div>
 </template>
@@ -11,11 +11,22 @@ export default {
     text: {
       type: String,
       default: ''
+    },
+    isRepo: {
+      type: Boolean,
+      default: false
+    },
+    repoColor: {
+      type: String,
+      default: '#e67e22'
     }
   },
   computed: {
     displayText() {
       return this.text || 'Hover over a file or directory to see its path'
+    },
+    repoStyle() {
+      return this.isRepo ? { color: this.repoColor } : {}
     }
   }
 }

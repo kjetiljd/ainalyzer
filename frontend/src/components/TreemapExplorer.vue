@@ -16,6 +16,7 @@ const emit = defineEmits(['update:navigationStack', 'file-open', 'contextmenu'])
 
 // Internal state
 const statuslineText = ref('')
+const statuslineIsRepo = ref(false)
 
 // Computed from navigationStack
 const breadcrumbPath = computed(() => props.navigationStack.map(n => n.name))
@@ -59,6 +60,28 @@ function handleBreadcrumbNavigate(index) {
   const newStack = props.navigationStack.slice(0, index + 1)
   emit('update:navigationStack', newStack)
 }
+
+// Handle hover events from Treemap
+function handleHover(event) {
+  statuslineText.value = event.text
+  statuslineIsRepo.value = event.isRepo
+}
+
+function handleHoverEnd() {
+  statuslineText.value = ''
+  statuslineIsRepo.value = false
+}
+
+// Repo border color depends on color scheme
+const REPO_BORDER_COLORS = {
+  depth: '#009688',    // Teal
+  activity: '#ff7043', // Coral
+  filetype: '#ffffff'  // White
+}
+const repoColor = computed(() => {
+  const colorMode = props.preferences.appearance?.colorMode || 'depth'
+  return REPO_BORDER_COLORS[colorMode] || '#e67e22'
+})
 </script>
 
 <template>
@@ -72,14 +95,15 @@ function handleBreadcrumbNavigate(index) {
         :navigationStack="navigationStack"
         :cushionMode="preferences.appearance?.cushionTreemap"
         :hideFolderBorders="preferences.appearance?.hideFolderBorders"
+        :showRepoBorders="preferences.appearance?.showRepoBorders"
         :colorMode="preferences.appearance?.colorMode || 'depth'"
         @drill-down="handleDrillDown"
-        @hover="statuslineText = $event"
-        @hover-end="statuslineText = ''"
+        @hover="handleHover"
+        @hover-end="handleHoverEnd"
         @node-contextmenu="$emit('contextmenu', $event)"
       />
     </div>
-    <Statusline :text="statuslineText" />
+    <Statusline :text="statuslineText" :isRepo="statuslineIsRepo" :repoColor="repoColor" />
   </div>
 </template>
 

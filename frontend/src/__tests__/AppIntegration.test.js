@@ -163,7 +163,7 @@ describe('App Integration', () => {
     expect(statusline.props('text')).toBe('')
 
     // Emit hover event with path
-    await treemap.vm.$emit('hover', 'ainalyzer-demo / backend-api / src / auth.py (1234 lines)')
+    await treemap.vm.$emit('hover', { text: 'ainalyzer-demo / backend-api / src / auth.py (1234 lines)', isRepo: false })
 
     // Statusline should update
     expect(statusline.props('text')).toBe('ainalyzer-demo / backend-api / src / auth.py (1234 lines)')

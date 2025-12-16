@@ -11,6 +11,7 @@ const defaultAnalysisPrefs = {
   appearance: {
     cushionTreemap: false,
     hideFolderBorders: true,
+    showRepoBorders: true,
     colorMode: 'depth'
   },
   filters: {

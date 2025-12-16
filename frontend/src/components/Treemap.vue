@@ -30,6 +30,10 @@ export default {
       type: Boolean,
       default: true
     },
+    showRepoBorders: {
+      type: Boolean,
+      default: true
+    },
     colorMode: {
       type: String,
       default: 'depth'  // 'depth' | 'filetype' | 'activity'
@@ -86,6 +90,9 @@ export default {
       this.render()
     },
     hideFolderBorders() {
+      this.render()
+    },
+    showRepoBorders() {
       this.render()
     },
     colorMode() {
@@ -314,13 +321,25 @@ export default {
 
       // Create treemap layout
       // In cushion mode with hidden borders, remove all padding since shading provides separation
+      // Exception: add padding around repo nodes if showRepoBorders is enabled
       const useCushionPadding = this.cushionMode && this.hideFolderBorders
       const layout = treemap()
         .size([this.width, this.height])
 
       if (useCushionPadding) {
-        // No padding - cells tile perfectly, cushion shading provides separation
-        layout.padding(0)
+        if (this.showRepoBorders) {
+          // Per-node padding: only add padding inside repository nodes
+          const repoPadding = node => node.data.type === 'repository' ? 4 : 0
+          layout
+            .paddingOuter(0)
+            .paddingTop(repoPadding)
+            .paddingBottom(repoPadding)
+            .paddingLeft(repoPadding)
+            .paddingRight(repoPadding)
+        } else {
+          // No padding - cells tile perfectly, cushion shading provides separation
+          layout.padding(0)
+        }
       } else {
         // Standard padding for bordered mode
         layout.paddingOuter(3).paddingInner(1)
@@ -344,11 +363,15 @@ export default {
         const width = node.x1 - node.x0
         const height = node.y1 - node.y0
         const isFolder = node.data.children && node.data.children.length > 0
+        const isRepoRoot = node.data.type === 'repository'
 
         // In cushion mode with hidden borders, skip rendering parent nodes (directories)
         // Only render leaf nodes - the cushion shading provides visual hierarchy
+        // Exception: render repo roots if showRepoBorders is enabled (per-node padding creates space for border)
         if (this.cushionMode && this.hideFolderBorders && isFolder) {
-          return // Skip directory rectangles
+          if (!(isRepoRoot && this.showRepoBorders)) {
+            return // Skip directory rectangles
+          }
         }
 
         const baseColor = this.getNodeColor(node)
@@ -388,13 +411,35 @@ export default {
         rect.setAttribute('y', node.y0)
         rect.setAttribute('width', width)
         rect.setAttribute('height', height)
-        rect.setAttribute('fill', fillValue)
-        // Determine stroke based on cushion mode and folder border settings
-        // Note: isFolder already defined above for early return check
+
+        // In cushion mode with hidden folder borders, repo roots rendered for border only need transparent fill
+        const isRepoBorderOnly = this.cushionMode && this.hideFolderBorders && isRepoRoot && this.showRepoBorders
+        rect.setAttribute('fill', isRepoBorderOnly ? 'none' : fillValue)
+
+        // Determine stroke based on node type and settings
         const shouldHideBorder = this.cushionMode && this.hideFolderBorders && isFolder
 
-        rect.setAttribute('stroke', shouldHideBorder ? 'none' : '#1e1e1e')
-        rect.setAttribute('stroke-width', shouldHideBorder ? '0' : (this.cushionMode ? '0.5' : '2'))
+        // Repository border color depends on color scheme for good contrast
+        const REPO_BORDER_COLORS = {
+          depth: '#009688',    // Teal - contrasts with yellow-orange-brown
+          activity: '#ff7043', // Coral - contrasts with viridis purple-yellow
+          filetype: '#ffffff'  // White - stands out against mixed colors
+        }
+        const REPO_BORDER_COLOR = REPO_BORDER_COLORS[this.colorMode] || '#e67e22'
+
+        let strokeColor = '#1e1e1e'
+        let strokeWidth = this.cushionMode ? '0.5' : '2'
+
+        if (shouldHideBorder && !(isRepoRoot && this.showRepoBorders)) {
+          strokeColor = 'none'
+          strokeWidth = '0'
+        } else if (isRepoRoot && this.showRepoBorders) {
+          strokeColor = REPO_BORDER_COLOR
+          strokeWidth = '2'
+        }
+
+        rect.setAttribute('stroke', strokeColor)
+        rect.setAttribute('stroke-width', strokeWidth)
         rect.style.cursor = 'pointer'
 
         // Add click handler - all nodes are clickable
@@ -428,6 +473,10 @@ export default {
 
           // Build stats string
           const parts = []
+          const isRepo = node.data.type === 'repository'
+          if (isRepo) {
+            parts.push('repo')
+          }
           if (node.value) {
             parts.push(`${node.value.toLocaleString()} lines`)
           }
@@ -442,7 +491,10 @@ export default {
           }
           const stats = parts.length > 0 ? ` (${parts.join(', ')})` : ''
 
-          this.$emit('hover', fullPath + stats)
+          this.$emit('hover', {
+            text: fullPath + stats,
+            isRepo: node.data.type === 'repository'
+          })
         })
 
         rect.addEventListener('mouseleave', () => {

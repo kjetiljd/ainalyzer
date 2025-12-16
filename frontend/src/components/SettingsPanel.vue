@@ -81,6 +81,18 @@
         <p class="setting-description sub-description">
           Removes stroke borders from directories, relying on cushion shading for separation.
         </p>
+
+        <label class="checkbox-label" style="margin-top: 16px;">
+          <input
+            type="checkbox"
+            :checked="preferences.appearance?.showRepoBorders"
+            @change="toggleShowRepoBorders"
+          />
+          <span>Show repository borders</span>
+        </label>
+        <p class="setting-description">
+          Highlights git repository boundaries with a distinct border color.
+        </p>
       </section>
 
       <section class="settings-section">
@@ -201,6 +213,13 @@ function setColorMode(mode) {
   }
   preferences.value.appearance.colorMode = mode
   updateURL()
+}
+
+function toggleShowRepoBorders(event) {
+  if (!preferences.value.appearance) {
+    preferences.value.appearance = {}
+  }
+  preferences.value.appearance.showRepoBorders = event.target.checked
 }
 
 function toggleHideClocignore(event) {
