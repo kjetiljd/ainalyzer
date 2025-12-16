@@ -93,6 +93,7 @@ const repoColor = computed(() => {
         :hideFolderBorders="preferences.appearance?.hideFolderBorders"
         :showRepoBorders="preferences.appearance?.showRepoBorders"
         :colorMode="preferences.appearance?.colorMode || 'depth'"
+        :activityTimeframe="preferences.appearance?.activityTimeframe || '1year'"
         @drill-down="handleDrillDown"
         @hover="handleHover"
         @hover-end="handleHoverEnd"

@@ -25,8 +25,22 @@
               <span>{{ mode.label }}</span>
             </label>
             <p class="setting-description radio-description">
-              {{ mode.description }}
+              {{ getDescription(mode) }}
             </p>
+            <!-- Timeframe selector for activity mode -->
+            <div v-if="mode.key === 'activity' && showTimeframeSelector" class="timeframe-selector">
+              <span class="timeframe-label">Time range:</span>
+              <div class="timeframe-buttons">
+                <button
+                  v-for="option in timeframeOptions"
+                  :key="option.value"
+                  :class="['timeframe-button', { active: (preferences.appearance?.activityTimeframe || '1year') === option.value }]"
+                  @click="setActivityTimeframe(option.value)"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+            </div>
           </template>
         </div>
       </section>
@@ -146,6 +160,27 @@ const colorModesList = computed(() => {
   return ['depth', 'filetype', 'activity'].map(key => COLOR_MODES[key])
 })
 
+// Timeframe options for activity mode
+const timeframeOptions = [
+  { value: '3months', label: '3 months' },
+  { value: '1year', label: '1 year' }
+]
+
+// Whether to show timeframe selector (only when activity mode is selected)
+const showTimeframeSelector = computed(() => {
+  return (preferences.value.appearance?.colorMode || 'depth') === 'activity'
+})
+
+// Get description for a color mode, with dynamic text for activity mode
+function getDescription(mode) {
+  if (mode.key === 'activity') {
+    const timeframe = preferences.value.appearance?.activityTimeframe || '1year'
+    const timeframeLabel = timeframe === '3months' ? '3 months' : 'year'
+    return `Shows file changes in last ${timeframeLabel}.`
+  }
+  return mode.description
+}
+
 function handleAddExclusion() {
   if (newPattern.value.trim()) {
     addExclusion(newPattern.value.trim())
@@ -209,6 +244,13 @@ function toggleHideClocignore(event) {
     preferences.value.filters = {}
   }
   preferences.value.filters.hideClocignore = event.target.checked
+}
+
+function setActivityTimeframe(timeframe) {
+  if (!preferences.value.appearance) {
+    preferences.value.appearance = {}
+  }
+  preferences.value.appearance.activityTimeframe = timeframe
 }
 </script>
 
@@ -357,6 +399,45 @@ function toggleHideClocignore(event) {
 
 .setting-description.radio-description {
   margin: 4px 0 0 28px;
+}
+
+.timeframe-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 12px 28px;
+}
+
+.timeframe-label {
+  font-size: 12px;
+  color: #888;
+}
+
+.timeframe-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.timeframe-button {
+  padding: 4px 12px;
+  background: #1e1e1e;
+  border: 1px solid #3e3e3e;
+  border-radius: 4px;
+  color: #888;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+
+.timeframe-button:hover {
+  border-color: #4fc3f7;
+  color: #d4d4d4;
+}
+
+.timeframe-button.active {
+  background: #4fc3f7;
+  border-color: #4fc3f7;
+  color: #1e1e1e;
 }
 
 .exclusion-list {

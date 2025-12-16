@@ -37,6 +37,10 @@ export default {
     colorMode: {
       type: String,
       default: 'depth'  // 'depth' | 'filetype' | 'activity'
+    },
+    activityTimeframe: {
+      type: String,
+      default: '1year'  // '3months' | '1year'
     }
   },
   data() {
@@ -48,6 +52,10 @@ export default {
     }
   },
   computed: {
+    // Returns the commits field name based on selected timeframe
+    commitsField() {
+      return this.activityTimeframe === '3months' ? 'last_3_months' : 'last_year'
+    },
     computedColorMap() {
       if (this.colorMode !== 'filetype') return null
 
@@ -57,7 +65,8 @@ export default {
     },
     maxCommits() {
       if (this.colorMode !== 'activity') return 0
-      return findMaxInTree(this.data, n => n.commits?.last_year || 0)
+      const field = this.commitsField
+      return findMaxInTree(this.data, n => n.commits?.[field] || 0)
     },
     maxDepth() {
       if (this.colorMode !== 'depth') return 0
@@ -97,6 +106,9 @@ export default {
     },
     colorMode() {
       this.render()
+    },
+    activityTimeframe() {
+      this.render()
     }
   },
   methods: {
@@ -123,7 +135,7 @@ export default {
       if (mode?.colorFn) {
         const depthOffset = this.navigationStack.length > 0 ? this.navigationStack.length - 1 : 0
         const value = this.colorMode === 'activity'
-          ? (node.data.commits?.last_year || 0)
+          ? (node.data.commits?.[this.commitsField] || 0)
           : (node.depth + depthOffset)
         const max = this.colorMode === 'activity' ? this.maxCommits : this.maxDepth
         return mode.colorFn(value, max)
@@ -133,7 +145,8 @@ export default {
     },
 
     countChanges(node) {
-      return aggregateTree(node, n => n.commits?.last_year || 0)
+      const field = this.commitsField
+      return aggregateTree(node, n => n.commits?.[field] || 0)
     },
 
     hexToRgb(hex) {
@@ -197,7 +210,7 @@ export default {
       // Determine label tier
       const showMultiLine = width >= COMPACT_WIDTH && height >= COMPACT_HEIGHT && node.value
       const showLanguage = width >= FULL_WIDTH && height >= FULL_HEIGHT && node.data.language
-      const hasCommits = node.data.commits && node.data.commits.last_year !== undefined
+      const hasCommits = node.data.commits && node.data.commits[this.commitsField] !== undefined
 
       // Create group to hold multiple text elements
       const group = document.createElementNS('http://www.w3.org/2000/svg', 'g')
@@ -248,7 +261,7 @@ export default {
         line3.setAttribute('opacity', '0.7')
         line3.style.textShadow = `0 1px 2px ${shadowColor}`
         if (hasCommits) {
-          const commits = node.data.commits.last_year
+          const commits = node.data.commits[this.commitsField]
           line3.textContent = `${commits} change${commits !== 1 ? 's' : ''}`
         } else {
           line3.textContent = node.data.language
@@ -479,7 +492,7 @@ export default {
           // For files, show commits directly; for directories, aggregate
           const changes = node.data.children
             ? this.countChanges(node.data)
-            : (node.data.commits?.last_year || 0)
+            : (node.data.commits?.[this.commitsField] || 0)
           if (changes === 0) {
             parts.push('no file changes')
           } else {
