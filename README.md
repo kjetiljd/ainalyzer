@@ -85,4 +85,70 @@ Open http://localhost:8080 to view.
 
 ---
 
+## Tutorial
+
+Once you've run `./aina show`, open the browser to explore your codebase.
+
+### Navigation
+
+- **Click** any rectangle to drill down into that folder/repo
+- **Breadcrumb** at the top shows your current location - click any segment to jump back
+- **Escape key** navigates up the breadcrumb (also closes modals)
+- **Click twice** on a file to open the code viewer with syntax highlighting
+
+### Analysis Modes
+
+Open **Settings** (gear icon, top-right) to switch between three analysis modes:
+
+| Mode | Shows | Colors indicate |
+|------|-------|-----------------|
+| **Code size** | Lines of code | Directory depth |
+| **Change activity** | Lines of code | Commit frequency (purple=stable, yellow=hot) |
+| **File types** | Lines of code | Programming language |
+
+### Filtering and Exclusions
+
+Focus on the code that matters by filtering out noise:
+
+**Right-click** any file or folder to quickly exclude it. Or open Settings to manage exclusions:
+
+- **Hide .clocignore files** - respects `.clocignore` patterns in your repos
+- **Custom exclusions** - add glob patterns to hide generated files:
+  - `**/node_modules/**` - dependencies
+  - `**/*.min.js` - minified JavaScript
+  - `**/generated/**` - generated code folders
+  - `**/*.pb.go` - protobuf generated files
+  - `**/dist/**` - build output
+
+Exclusions apply instantly - no re-analysis needed. All settings are saved in your browser.
+
+### Activity Timeframe
+
+When using **Change activity** mode, toggle between time ranges:
+- **3 months** - recent development focus
+- **1 year** - longer-term patterns (default)
+
+### Appearance Options
+
+- **Enable 3D cushion effect** - WinDirStat-style shading for visual depth
+- **Hide folder borders** - cleaner look when using cushion mode
+- **Show repository borders** - highlights git repo boundaries with distinct colors
+
+### Hover Information
+
+The statusline at the bottom shows:
+- Full path to the hovered item
+- Line count
+- File change count (based on selected timeframe)
+- "(repo)" indicator for git repository roots
+
+### Tips
+
+- Large files (>10,000 lines) are truncated in the viewer
+- Purple files in activity mode = no changes in the selected period
+- Bright yellow = high activity hotspots
+- Use exclusions to hide generated code and focus on source
+
+---
+
 For development, see [DEVELOPMENT.md](./DEVELOPMENT.md).
