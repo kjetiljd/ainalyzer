@@ -4,7 +4,7 @@
 
 <script>
 import { hierarchy, treemap } from 'd3-hierarchy'
-import { assignColors, OVERFLOW_COLOR, getActivityColor, getDepthColor, COLOR_MODES } from '../utils/colorUtils'
+import { assignColors, OVERFLOW_COLOR, COLOR_MODES } from '../utils/colorUtils'
 import { countLeafValues, findMaxInTree, aggregateTree } from '../composables/useTreeStats'
 
 export default {
@@ -107,28 +107,29 @@ export default {
     },
 
     getNodeColor(node) {
-      // If node has children, it's a directory - use neutral gray
+      // Directories use neutral gray
       if (node.data.children) {
         return '#4a4a4a'
       }
 
-      // If colorMode is activity, use commit-based coloring
-      if (this.colorMode === 'activity') {
-        const commits = node.data.commits?.last_year
-        return getActivityColor(commits, this.maxCommits)
+      const mode = COLOR_MODES[this.colorMode]
+
+      // Filetype mode uses colorMap lookup
+      if (this.colorMode === 'filetype') {
+        return this.computedColorMap?.[node.data.language] || OVERFLOW_COLOR
       }
 
-      // If colorMode is filetype, use the computed colorMap
-      if (this.colorMode === 'filetype' && this.computedColorMap) {
-        return this.computedColorMap[node.data.language] || OVERFLOW_COLOR
+      // Use registry colorFn with mode-specific value/max
+      if (mode?.colorFn) {
+        const depthOffset = this.navigationStack.length > 0 ? this.navigationStack.length - 1 : 0
+        const value = this.colorMode === 'activity'
+          ? (node.data.commits?.last_year || 0)
+          : (node.depth + depthOffset)
+        const max = this.colorMode === 'activity' ? this.maxCommits : this.maxDepth
+        return mode.colorFn(value, max)
       }
 
-      // Default: color by absolute depth using warm earth scale
-      // navigationStack length gives depth offset from drill-down navigation
-      const depthOffset = this.navigationStack.length > 0 ? this.navigationStack.length - 1 : 0
-      const absoluteDepth = node.depth + depthOffset
-
-      return getDepthColor(absoluteDepth, this.maxDepth)
+      return OVERFLOW_COLOR
     },
 
     countChanges(node) {
