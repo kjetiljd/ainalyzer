@@ -30,25 +30,22 @@ cloc --version
 
 ### Setup
 
-Clone: 
+Clone:
 
 ```bash
 git clone https://github.com/kjetiljd/ainalyzer.git
 cd ainalyzer
 ```
 
-Build the frontend (one-time operation)
-```bash
-cd frontend && npm install && npm run build && cd ..
-```
-
 ### Analyze repositories
 
 First time: provide name and path:
 ```bash
-
 ./aina analyze <myproject> </path/to/repos>
 ```
+> Replace `<myproject>` with any name you choose (e.g., `backend`, `mobile-apps`, `my-teams-repos`).
+> Replace `</path/to/repos>` with the actual path to your repositories folder (either a repository or a folder with multiple repositories).
+
 Re-analyze (uses stored path):
 ```bash
 ./aina analyze <myproject>
@@ -58,8 +55,6 @@ View results in browser:
 ./aina show
 ```
 
-> Replace `<myproject>` with any name you choose (e.g., `backend`, `mobile-apps`).
-> Replace `</path/to/repos>` with the actual path to your repositories folder (either a repository or a folder with multiple repositories).
 
 ### Commands
 

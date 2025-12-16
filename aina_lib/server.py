@@ -1,6 +1,8 @@
 """HTTP server for serving analysis results."""
 import http.server
+import shutil
 import socketserver
+import subprocess
 import urllib.parse
 import webbrowser
 import json
@@ -159,6 +161,184 @@ def create_request_handler(frontend_dir, analysis_dir):
     return AinaRequestHandler
 
 
+def _get_git_head(repo_path):
+    """Get the current HEAD commit hash.
+
+    Args:
+        repo_path: Path to git repository
+
+    Returns:
+        str: Commit hash or None if not a git repo
+    """
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', 'HEAD'],
+            cwd=repo_path,
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return None
+
+
+def _check_origin_status(repo_path):
+    """Check if origin has newer commits.
+
+    Args:
+        repo_path: Path to git repository
+
+    Returns:
+        tuple: (is_behind: bool, commits_behind: int)
+    """
+    try:
+        # Fetch origin (quiet, don't fail if offline)
+        subprocess.run(
+            ['git', 'fetch', '--quiet'],
+            cwd=repo_path,
+            capture_output=True,
+            timeout=10
+        )
+
+        # Check how many commits behind
+        result = subprocess.run(
+            ['git', 'rev-list', '--count', 'HEAD..@{u}'],
+            cwd=repo_path,
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0:
+            behind = int(result.stdout.strip())
+            return behind > 0, behind
+    except Exception:
+        pass
+    return False, 0
+
+
+def _get_newest_mtime(directory, pattern='**/*'):
+    """Get the newest modification time of files matching pattern.
+
+    Args:
+        directory: Path to search in
+        pattern: Glob pattern to match
+
+    Returns:
+        float: Newest mtime or 0 if no files found
+    """
+    newest = 0
+    try:
+        for f in directory.glob(pattern):
+            if f.is_file():
+                mtime = f.stat().st_mtime
+                if mtime > newest:
+                    newest = mtime
+    except Exception:
+        pass
+    return newest
+
+
+def _frontend_needs_rebuild(frontend_path, script_dir):
+    """Check if frontend needs to be rebuilt.
+
+    Args:
+        frontend_path: Path to frontend directory
+        script_dir: Path to repository root
+
+    Returns:
+        tuple: (needs_rebuild: bool, needs_install: bool, reason: str)
+    """
+    dist_dir = frontend_path / 'dist'
+    revision_file = dist_dir / '.revision'
+    node_modules = frontend_path / 'node_modules'
+
+    # Check if dist exists
+    if not dist_dir.exists() or not (dist_dir / 'index.html').exists():
+        needs_install = not node_modules.exists()
+        return True, needs_install, "frontend not built"
+
+    # Check if node_modules exists
+    if not node_modules.exists():
+        return True, True, "dependencies not installed"
+
+    # Compare git revision
+    current_head = _get_git_head(script_dir)
+    if current_head:
+        built_revision = None
+        if revision_file.exists():
+            built_revision = revision_file.read_text().strip()
+
+        if built_revision != current_head:
+            return True, False, "new version available"
+
+    # Fallback: check if source files are newer than dist (catches uncommitted changes)
+    src_dir = frontend_path / 'src'
+    if src_dir.exists():
+        newest_src = _get_newest_mtime(src_dir)
+        dist_index = dist_dir / 'index.html'
+        if dist_index.exists() and newest_src > dist_index.stat().st_mtime:
+            return True, False, "source files modified"
+
+    return False, False, ""
+
+
+def _build_frontend(frontend_path, script_dir, needs_install):
+    """Build the frontend.
+
+    Args:
+        frontend_path: Path to frontend directory
+        script_dir: Path to repository root
+        needs_install: Whether to run npm install first
+
+    Returns:
+        bool: True if successful
+    """
+    # Check npm is available
+    if not shutil.which('npm'):
+        print("Error: npm not found. Install Node.js to continue.")
+        return False
+
+    try:
+        if needs_install:
+            print("Installing dependencies...")
+            result = subprocess.run(
+                ['npm', 'install'],
+                cwd=frontend_path,
+                capture_output=True,
+                text=True
+            )
+            if result.returncode != 0:
+                print(f"Error: npm install failed")
+                print(result.stderr)
+                return False
+
+        print("Building frontend...")
+        result = subprocess.run(
+            ['npm', 'run', 'build'],
+            cwd=frontend_path,
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            print(f"Error: npm run build failed")
+            print(result.stderr)
+            return False
+
+        # Write revision file
+        current_head = _get_git_head(script_dir)
+        if current_head:
+            revision_file = frontend_path / 'dist' / '.revision'
+            revision_file.write_text(current_head)
+
+        print("Build complete")
+        return True
+
+    except Exception as e:
+        print(f"Error building frontend: {e}")
+        return False
+
+
 def cmd_show(port=8080, no_browser=False):
     """Start web server and open browser to view analyses.
 
@@ -171,11 +351,20 @@ def cmd_show(port=8080, no_browser=False):
     """
     try:
         script_dir = Path(__file__).parent.parent
-        frontend_dir = script_dir / 'frontend' / 'dist'
+        frontend_path = script_dir / 'frontend'
+        frontend_dir = frontend_path / 'dist'
 
-        if not frontend_dir.exists():
-            print(f"Error: Frontend not built. Run 'cd frontend && npm run build' first.")
-            return False
+        # Check if rebuild needed and build automatically
+        needs_rebuild, needs_install, reason = _frontend_needs_rebuild(frontend_path, script_dir)
+        if needs_rebuild:
+            print(f"Frontend outdated ({reason}), rebuilding...")
+            if not _build_frontend(frontend_path, script_dir, needs_install):
+                return False
+
+        # Check if updates are available on origin
+        is_behind, commits_behind = _check_origin_status(script_dir)
+        if is_behind:
+            print(f"Note: {commits_behind} update(s) available. Run 'git pull' and restart to get latest features.")
 
         analysis_dir = Path.home() / '.aina' / 'analysis'
         analysis_dir.mkdir(parents=True, exist_ok=True)
