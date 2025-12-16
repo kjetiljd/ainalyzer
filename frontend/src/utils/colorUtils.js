@@ -262,14 +262,6 @@ export const COLOR_MODES = {
   }
 }
 
-// Repository border colors per color mode (for contrast)
-// Legacy accessor - prefer COLOR_MODES[mode].borderColor
-export const REPO_BORDER_COLORS = {
-  depth: COLOR_MODES.depth.borderColor,
-  activity: COLOR_MODES.activity.borderColor,
-  filetype: COLOR_MODES.filetype.borderColor
-}
-
 export function assignColors(languageCounts) {
   // Sort by frequency (most common first)
   const sorted = Object.entries(languageCounts)
