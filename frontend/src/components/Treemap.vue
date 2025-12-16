@@ -4,7 +4,7 @@
 
 <script>
 import { hierarchy, treemap } from 'd3-hierarchy'
-import { assignColors, OVERFLOW_COLOR, getActivityColor, getDepthColor } from '../utils/colorUtils'
+import { assignColors, OVERFLOW_COLOR, getActivityColor, getDepthColor, REPO_BORDER_COLORS } from '../utils/colorUtils'
 import { countLeafValues, findMaxInTree, aggregateTree } from '../composables/useTreeStats'
 
 export default {
@@ -420,11 +420,6 @@ export default {
         const shouldHideBorder = this.cushionMode && this.hideFolderBorders && isFolder
 
         // Repository border color depends on color scheme for good contrast
-        const REPO_BORDER_COLORS = {
-          depth: '#009688',    // Teal - contrasts with yellow-orange-brown
-          activity: '#ff7043', // Coral - contrasts with viridis purple-yellow
-          filetype: '#ffffff'  // White - stands out against mixed colors
-        }
         const REPO_BORDER_COLOR = REPO_BORDER_COLORS[this.colorMode] || '#e67e22'
 
         let strokeColor = '#1e1e1e'

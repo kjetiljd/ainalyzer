@@ -240,6 +240,13 @@ function findSlot(language, usedSlots, saltRound = 0) {
   return findSlot(language, usedSlots, saltRound + 1)
 }
 
+// Repository border colors per color mode (for contrast)
+export const REPO_BORDER_COLORS = {
+  depth: '#009688',    // Teal - contrasts with yellow-orange-brown
+  activity: '#ff7043', // Coral - contrasts with viridis purple-yellow
+  filetype: '#ffffff'  // White - stands out against mixed colors
+}
+
 export function assignColors(languageCounts) {
   // Sort by frequency (most common first)
   const sorted = Object.entries(languageCounts)

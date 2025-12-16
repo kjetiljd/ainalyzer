@@ -5,6 +5,7 @@ import Breadcrumb from './Breadcrumb.vue'
 import StatsBar from './StatsBar.vue'
 import Statusline from './Statusline.vue'
 import { findNodeByPath } from '../composables/useTreeStats'
+import { REPO_BORDER_COLORS } from '../utils/colorUtils'
 
 const props = defineProps({
   data: { type: Object, required: true },
@@ -72,12 +73,7 @@ function handleHoverEnd() {
   statuslineIsRepo.value = false
 }
 
-// Repo border color depends on color scheme
-const REPO_BORDER_COLORS = {
-  depth: '#009688',    // Teal
-  activity: '#ff7043', // Coral
-  filetype: '#ffffff'  // White
-}
+// Repo border color depends on color scheme (imported from colorUtils)
 const repoColor = computed(() => {
   const colorMode = props.preferences.appearance?.colorMode || 'depth'
   return REPO_BORDER_COLORS[colorMode] || '#e67e22'
