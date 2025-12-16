@@ -246,19 +246,22 @@ export const COLOR_MODES = {
     key: 'depth',
     label: 'Code size',
     description: 'Shows lines of code. Color indicates directory depth.',
-    borderColor: '#009688'  // Teal - contrasts with yellow-orange-brown
+    borderColor: '#009688',  // Teal - contrasts with yellow-orange-brown
+    colorFn: getDepthColor   // (depth, maxDepth) => color
   },
   activity: {
     key: 'activity',
     label: 'Change activity',
     description: 'Shows file change frequency in last year.',
-    borderColor: '#ff7043'  // Coral - contrasts with viridis purple-yellow
+    borderColor: '#ff7043',  // Coral - contrasts with viridis purple-yellow
+    colorFn: getActivityColor  // (commits, maxCommits) => color
   },
   filetype: {
     key: 'filetype',
     label: 'File types',
     description: 'Shows lines of code. Color indicates language.',
-    borderColor: '#ffffff'  // White - stands out against mixed colors
+    borderColor: '#ffffff',  // White - stands out against mixed colors
+    colorFn: null  // Uses colorMap lookup, handled differently
   }
 }
 
