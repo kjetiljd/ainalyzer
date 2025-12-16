@@ -2,6 +2,8 @@
 
 Interactive treemap visualization for exploring code volume and change patterns across multiple repositories.
 
+![Ainalyzer treemap visualization](docs/example.png)
+
 Point the tool at a local folder containing one or more Git repositories. Analysis runs entirely on your machine - no data is sent anywhere.
 
 > **Note:** Only tested on macOS.
