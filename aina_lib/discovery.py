@@ -1,4 +1,5 @@
 """Repository discovery functions."""
+import os
 from pathlib import Path
 
 
@@ -25,7 +26,7 @@ def discover_repos(path):
     repos = []
     max_depth = 1  # Root (0) + 1 level
 
-    for root, dirs, files in path_obj.walk():
+    for root, dirs, files in os.walk(path_obj):
         depth = len(Path(root).relative_to(path_obj).parts)
 
         if '.git' in dirs:
