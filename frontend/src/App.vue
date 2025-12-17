@@ -194,6 +194,19 @@ async function loadClocignore(analysisName) {
   }
 }
 
+// Page title
+const pageTitle = computed(() => {
+  if (analysisInfo.value?.name) {
+    return `Ainalyzer - ${analysisInfo.value.name}`
+  }
+  return 'Ainalyzer'
+})
+
+// Update document title when analysis changes
+watch(pageTitle, (newTitle) => {
+  document.title = newTitle
+}, { immediate: true })
+
 // Watch for selection changes
 watch(selectedAnalysis, (newValue) => {
   if (newValue) {
@@ -244,7 +257,7 @@ function closeContextMenu() {
 <template>
   <div class="app">
     <header class="app-header">
-      <h1>Ainalyzer - Code Visibility</h1>
+      <h1>{{ pageTitle }}</h1>
 
       <div class="header-controls">
         <div v-if="analyses.length > 0" class="analysis-selector">
