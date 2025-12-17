@@ -23,10 +23,10 @@ cloc --version
 
 | Tool | Minimum | Install |
 |------|---------|---------|
-| Git | any | - |
-| Python | 3.10+ | - |
-| Node.js | 18+ | - |
-| cloc | any | `brew install cloc` |
+| Git | any     | - |
+| Python | 3.9+    | - |
+| Node.js | 18+     | - |
+| cloc | any     | `brew install cloc` |
 
 ### Setup
 
