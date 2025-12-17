@@ -41,8 +41,9 @@ export function matchesPattern(filePath, pattern) {
   }
 
   // For patterns with path separators, match against full path
-  // picomatch handles **, *, etc. natively
-  return picomatch.isMatch(filePath, normalizedPattern, { contains: true })
+  // Patterns are anchored - test/fixtures/** only matches test/fixtures/ at root,
+  // not repo/test/fixtures/. Use **/test/fixtures/** for anywhere matching.
+  return picomatch.isMatch(filePath, normalizedPattern)
 }
 
 /**

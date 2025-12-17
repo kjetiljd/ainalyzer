@@ -104,8 +104,11 @@ describe('matchesPattern', () => {
   })
 
   describe('complex patterns', () => {
-    it('matches __tests__/__snapshots__/**', () => {
-      expect(matchesPattern('src/__tests__/__snapshots__/App.test.js.snap', '__tests__/__snapshots__/**')).toBe(true)
+    it('matches __tests__/__snapshots__/** only at root', () => {
+      // Anchored pattern - does NOT match nested paths
+      expect(matchesPattern('src/__tests__/__snapshots__/App.test.js.snap', '__tests__/__snapshots__/**')).toBe(false)
+      // Use **/ prefix for anywhere matching
+      expect(matchesPattern('src/__tests__/__snapshots__/App.test.js.snap', '**/__tests__/__snapshots__/**')).toBe(true)
     })
 
     it('matches *.generated.* pattern', () => {
@@ -188,8 +191,11 @@ describe('matchesPattern', () => {
       expect(matchesPattern('repo/src/resources/data.json', '**/test/resources/**/*.json')).toBe(false)
     })
 
-    it('matches test/resources/**/*.json without leading **/', () => {
-      expect(matchesPattern('repo/test/resources/data.json', 'test/resources/**/*.json')).toBe(true)
+    it('anchored pattern test/resources/**/*.json does NOT match nested path', () => {
+      // Anchored - only matches at root level
+      expect(matchesPattern('repo/test/resources/data.json', 'test/resources/**/*.json')).toBe(false)
+      // Use **/ for anywhere matching
+      expect(matchesPattern('repo/test/resources/data.json', '**/test/resources/**/*.json')).toBe(true)
     })
 
     it('matches /**/test/resources/**/*.json with leading slash', () => {
@@ -200,9 +206,11 @@ describe('matchesPattern', () => {
       expect(matchesPattern('repo/test/resources/json/data.json', '**/test/resources/json/*')).toBe(true)
     })
 
-    it('matches **/test/resources/json/* for nested subdirs (gitignore behavior)', () => {
-      // In gitignore, trailing * matches anything including nested paths
-      expect(matchesPattern('repo/test/resources/json/nested/data.json', '**/test/resources/json/*')).toBe(true)
+    it('single * does NOT match nested subdirs', () => {
+      // Single * matches only within one directory level, not nested paths
+      expect(matchesPattern('repo/test/resources/json/nested/data.json', '**/test/resources/json/*')).toBe(false)
+      // Use ** for nested matching
+      expect(matchesPattern('repo/test/resources/json/nested/data.json', '**/test/resources/json/**')).toBe(true)
     })
   })
 
@@ -213,6 +221,18 @@ describe('matchesPattern', () => {
 
     it('does not match different path', () => {
       expect(matchesPattern('repo1/lib/app.js', 'repo1/src/app.js')).toBe(false)
+    })
+  })
+
+  describe('exact filename with **/ prefix', () => {
+    it('matches **/gradlew for gradlew files', () => {
+      expect(matchesPattern('repo/gradlew', '**/gradlew')).toBe(true)
+      expect(matchesPattern('repo/subdir/gradlew', '**/gradlew')).toBe(true)
+    })
+
+    it('does NOT match **/gradlew for gradlew.bat', () => {
+      // This is the bug - **/gradlew should NOT match gradlew.bat
+      expect(matchesPattern('repo/gradlew.bat', '**/gradlew')).toBe(false)
     })
   })
 })
@@ -300,13 +320,26 @@ describe('filterTree', () => {
     expect(lockFile).toBeDefined()
   })
 
-  it('filters out files in directory pattern', () => {
+  it('filters out files in directory pattern (anchored)', () => {
+    // Anchored pattern - test/fixtures/** does NOT match repo2/test/fixtures/
     const result = filterTree(sampleTree, ['test/fixtures/**'])
 
     const repo2 = result.children.find(c => c.name === 'repo2')
     const testDir = repo2.children.find(c => c.name === 'test')
 
-    // fixtures directory should be removed (no children left)
+    // fixtures directory should still exist (pattern is anchored, doesn't match)
+    const fixtures = testDir.children.find(c => c.name === 'fixtures')
+    expect(fixtures).toBeDefined()
+  })
+
+  it('filters out files with **/ prefix pattern', () => {
+    // **/ prefix matches anywhere in path
+    const result = filterTree(sampleTree, ['**/test/fixtures/**'])
+
+    const repo2 = result.children.find(c => c.name === 'repo2')
+    const testDir = repo2.children.find(c => c.name === 'test')
+
+    // fixtures directory should be removed
     const fixtures = testDir.children.find(c => c.name === 'fixtures')
     expect(fixtures).toBeUndefined()
 
@@ -316,8 +349,8 @@ describe('filterTree', () => {
   })
 
   it('removes empty directories after filtering', () => {
-    // Filter all files in test/fixtures
-    const result = filterTree(sampleTree, ['test/fixtures/**'])
+    // Use **/ prefix for anywhere matching
+    const result = filterTree(sampleTree, ['**/test/fixtures/**'])
 
     const repo2 = result.children.find(c => c.name === 'repo2')
     const testDir = repo2.children.find(c => c.name === 'test')
