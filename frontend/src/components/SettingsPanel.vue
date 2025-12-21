@@ -157,7 +157,7 @@ const customExclusions = computed(() => {
 
 // Ordered list of color modes for radio buttons
 const colorModesList = computed(() => {
-  return ['depth', 'filetype', 'activity'].map(key => COLOR_MODES[key])
+  return ['depth', 'filetype', 'activity', 'contributors'].map(key => COLOR_MODES[key])
 })
 
 // Timeframe options for activity mode

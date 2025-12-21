@@ -133,10 +133,11 @@ describe('SettingsPanel', () => {
     const wrapper = mount(SettingsPanel)
 
     const radios = wrapper.findAll('input[type="radio"][name="colorMode"]')
-    expect(radios.length).toBe(3)
+    expect(radios.length).toBe(4)
     expect(wrapper.text()).toContain('Code size')
     expect(wrapper.text()).toContain('File types')
     expect(wrapper.text()).toContain('Change activity')
+    expect(wrapper.text()).toContain('Contributors')
   })
 
   it('radio reflects current colorMode preference', async () => {

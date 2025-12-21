@@ -36,7 +36,7 @@ export default {
     },
     colorMode: {
       type: String,
-      default: 'depth'  // 'depth' | 'filetype' | 'activity'
+      default: 'depth'  // 'depth' | 'filetype' | 'activity' | 'contributors'
     },
     activityTimeframe: {
       type: String,
@@ -129,6 +129,12 @@ export default {
       // Filetype mode uses colorMap lookup
       if (this.colorMode === 'filetype') {
         return this.computedColorMap?.[node.data.language] || OVERFLOW_COLOR
+      }
+
+      // Contributors mode - takes single value (no max normalization needed)
+      if (this.colorMode === 'contributors') {
+        const count = node.data.contributors?.count ?? 0
+        return mode.colorFn(count)
       }
 
       // Use registry colorFn with mode-specific value/max
@@ -451,6 +457,15 @@ export default {
         rect.setAttribute('stroke-width', strokeWidth)
         rect.style.cursor = 'pointer'
 
+        // Add tooltip for contributor names (if available)
+        const contributors = node.data.contributors
+        if (contributors?.names?.length > 0) {
+          const names = contributors.names.join(', ')
+          const title = document.createElementNS('http://www.w3.org/2000/svg', 'title')
+          title.textContent = `${node.data.name}\n\nContributors: ${names}`
+          rect.appendChild(title)
+        }
+
         // Add click handler - all nodes are clickable
         rect.addEventListener('click', () => {
           // Build path from current hierarchy root to this node
@@ -497,6 +512,11 @@ export default {
             parts.push('no file changes')
           } else {
             parts.push(`${changes.toLocaleString()} file change${changes !== 1 ? 's' : ''}`)
+          }
+          // Show contributor count for files (backwards compatible)
+          const contributorCount = node.data.contributors?.count
+          if (contributorCount !== undefined) {
+            parts.push(`${contributorCount} contributor${contributorCount !== 1 ? 's' : ''}`)
           }
           const stats = parts.length > 0 ? ` (${parts.join(', ')})` : ''
 

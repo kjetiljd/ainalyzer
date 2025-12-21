@@ -127,6 +127,8 @@ def tree_to_schema(tree, name, path_prefix='', git_stats=None):
                         'last_year': stats['commits_1y'],
                         'last_commit_date': stats['last_commit_date']
                     }
+                    if 'contributors' in stats:
+                        file_node['contributors'] = stats['contributors']
                 else:
                     file_node['commits'] = {
                         'last_3_months': 0,
@@ -212,6 +214,8 @@ def analyze_single_repo(repo_path, path_obj):
                     'last_year': stats['commits_1y'],
                     'last_commit_date': stats['last_commit_date']
                 }
+                if 'contributors' in stats:
+                    file_node['contributors'] = stats['contributors']
             else:
                 file_node['commits'] = {
                     'last_3_months': 0,

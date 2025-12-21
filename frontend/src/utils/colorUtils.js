@@ -167,6 +167,17 @@ export const DEPTH_PALETTE = [
   '#ffffe5'   // Pale yellow (deepest/leaves)
 ]
 
+// Contributor count palette: Red-Yellow-Green for bus factor risk
+// Fewer contributors = higher risk (red), more = healthier (green)
+export const CONTRIBUTOR_PALETTE = [
+  '#8b0000',  // Dark red (0 - no data, highest risk)
+  '#d32f2f',  // Red (1 contributor - bus factor risk)
+  '#f57c00',  // Orange (2 contributors)
+  '#fbc02d',  // Yellow (3 contributors)
+  '#8bc34a',  // Light green (4 contributors)
+  '#4caf50'   // Green (5+ contributors - healthy)
+]
+
 /**
  * Get color for a file based on its commit activity.
  * @param {number} commits - Number of commits in the time period
@@ -212,6 +223,23 @@ export function getDepthColor(depth, maxDepth) {
     DEPTH_PALETTE.length - 1
   )
   return DEPTH_PALETTE[index]
+}
+
+/**
+ * Get color for a file based on its contributor count.
+ * Backwards compatible: returns gray for missing data.
+ * @param {number} count - Number of unique contributors
+ * @returns {string} Hex color
+ */
+export function getContributorColor(count) {
+  // Handle missing data (backwards compatibility)
+  if (count === undefined || count === null || count <= 0) {
+    return CONTRIBUTOR_PALETTE[0]  // Gray - no data
+  }
+
+  // Map 1-5+ to palette indices 1-5
+  const index = Math.min(count, CONTRIBUTOR_PALETTE.length - 1)
+  return CONTRIBUTOR_PALETTE[index]
 }
 
 export function simpleHash(str) {
@@ -262,6 +290,13 @@ export const COLOR_MODES = {
     description: 'Shows lines of code. Color indicates language.',
     borderColor: '#ffffff',  // White - stands out against mixed colors
     colorFn: null  // Uses colorMap lookup, handled differently
+  },
+  contributors: {
+    key: 'contributors',
+    label: 'Contributors',
+    description: 'Shows contributor count per file. Red = 1 (bus factor risk), Green = 4+.',
+    borderColor: '#4caf50',  // Green - contrasts with red-yellow tones
+    colorFn: getContributorColor  // (count) => color
   }
 }
 

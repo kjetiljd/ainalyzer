@@ -59,6 +59,19 @@ class GitRepoTestCase(unittest.TestCase):
         env['GIT_COMMITTER_DATE'] = date_str
         subprocess.run(['git', 'commit', '-m', message], cwd=self.repo_path, capture_output=True, check=True, env=env)
 
+    def commit_as(self, message, author_name, author_email, files=None):
+        """Create a commit as a specific author."""
+        if files:
+            for f in files:
+                subprocess.run(['git', 'add', f], cwd=self.repo_path, capture_output=True)
+        else:
+            subprocess.run(['git', 'add', '-A'], cwd=self.repo_path, capture_output=True)
+
+        subprocess.run(
+            ['git', 'commit', '-m', message, '--author', f'{author_name} <{author_email}>'],
+            cwd=self.repo_path, capture_output=True, check=True
+        )
+
 
 class TestGetFileStats(GitRepoTestCase):
     """Test get_file_stats function."""
@@ -183,6 +196,46 @@ class TestGetFileStatsWithFollow(GitRepoTestCase):
         self.assertGreaterEqual(stats['new_name.py']['commits_1y'], 2)
 
 
+class TestContributorExtraction(GitRepoTestCase):
+    """Test contributor count extraction from git log."""
+
+    def test_extracts_contributor_count_per_file(self):
+        """Files show contributor count and names."""
+        self.create_file('shared.py', 'v1')
+        self.commit_as('Alice adds file', 'Alice', 'alice@example.com')
+
+        self.create_file('shared.py', 'v2')
+        self.commit_as('Bob updates file', 'Bob', 'bob@example.com')
+
+        self.create_file('shared.py', 'v3')
+        self.commit_as('Charlie updates file', 'Charlie', 'charlie@example.com')
+
+        stats = get_file_stats(self.repo_path)
+
+        self.assertIn('shared.py', stats)
+        self.assertIn('contributors', stats['shared.py'])
+        self.assertEqual(stats['shared.py']['contributors']['count'], 3)
+        self.assertIn('Alice', stats['shared.py']['contributors']['names'])
+        self.assertIn('Bob', stats['shared.py']['contributors']['names'])
+        self.assertIn('Charlie', stats['shared.py']['contributors']['names'])
+
+    def test_counts_unique_contributors_not_commits(self):
+        """Same author with multiple commits counted once."""
+        self.create_file('test.py', 'v1')
+        self.commit_as('First', 'Alice', 'alice@example.com')
+
+        self.create_file('test.py', 'v2')
+        self.commit_as('Second', 'Alice', 'alice@example.com')
+
+        self.create_file('test.py', 'v3')
+        self.commit_as('Third', 'Alice', 'alice@example.com')
+
+        stats = get_file_stats(self.repo_path)
+
+        self.assertEqual(stats['test.py']['contributors']['count'], 1)
+        self.assertEqual(stats['test.py']['contributors']['names'], ['Alice'])
+
+
 class TestGetFileStatsIntegration(GitRepoTestCase):
     """Integration tests for get_file_stats."""
 
@@ -274,6 +327,35 @@ class TestAnalyzeReposWithGitStats(GitRepoTestCase):
         self.assertIsNotNone(test_node)
         self.assertEqual(test_node['commits']['last_year'], 3)
         self.assertEqual(test_node['commits']['last_3_months'], 3)
+
+    def test_analysis_includes_contributors(self):
+        """Analysis output includes contributor data per file."""
+        from aina_lib import analyze_repos
+
+        self.create_file('shared.py', 'v1')
+        self.commit_as('Alice adds', 'Alice', 'alice@example.com')
+
+        self.create_file('shared.py', 'v2')
+        self.commit_as('Bob updates', 'Bob', 'bob@example.com')
+
+        result = analyze_repos('test', self.repo_path)
+
+        def find_node_by_name(node, name):
+            if node.get('name') == name:
+                return node
+            for child in node.get('children', []):
+                found = find_node_by_name(child, name)
+                if found:
+                    return found
+            return None
+
+        shared_node = find_node_by_name(result['tree'], 'shared.py')
+
+        self.assertIsNotNone(shared_node)
+        self.assertIn('contributors', shared_node)
+        self.assertEqual(shared_node['contributors']['count'], 2)
+        self.assertIn('Alice', shared_node['contributors']['names'])
+        self.assertIn('Bob', shared_node['contributors']['names'])
 
 
 class TestGetRepoStalenessInfo(GitRepoTestCase):

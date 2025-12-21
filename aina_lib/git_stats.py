@@ -24,7 +24,7 @@ def get_file_stats(repo_path):
     uses --follow to get accurate commit counts including pre-rename history.
     """
     result = subprocess.run(
-        ['git', 'log', '-M', '--name-status', '--format=COMMIT|%aI', '--since=1 year ago'],
+        ['git', 'log', '-M', '--name-status', '--format=COMMIT|%aI|%aN', '--since=1 year ago'],
         cwd=repo_path,
         capture_output=True,
         text=True
@@ -39,12 +39,14 @@ def get_file_stats(repo_path):
     stats = defaultdict(lambda: {
         'commits_3m': 0,
         'commits_1y': 0,
-        'last_commit_date': None
+        'last_commit_date': None,
+        'contributors_set': set()
     })
 
     renamed_files = set()
     current_date = None
     current_timestamp = None
+    current_author = None
 
     for line in result.stdout.split('\n'):
         line = line.strip()
@@ -52,7 +54,9 @@ def get_file_stats(repo_path):
             continue
 
         if line.startswith('COMMIT|'):
-            current_date = line.split('|', 1)[1]
+            parts = line.split('|')
+            current_date = parts[1] if len(parts) > 1 else None
+            current_author = parts[2] if len(parts) > 2 else None
             try:
                 dt = datetime.fromisoformat(current_date.replace('Z', '+00:00'))
                 current_timestamp = dt.timestamp()
@@ -86,13 +90,29 @@ def get_file_stats(repo_path):
         if stats[file_path]['last_commit_date'] is None:
             stats[file_path]['last_commit_date'] = current_date
 
+        if current_author:
+            stats[file_path]['contributors_set'].add(current_author)
+
     # For renamed files, use --follow to get accurate history
     for file_path in renamed_files:
         follow_stats = get_file_stats_with_follow(repo_path, file_path, three_months_ago)
         if follow_stats:
+            # Merge contributors from both passes (follow may have more from pre-rename)
+            follow_stats['contributors_set'].update(stats[file_path]['contributors_set'])
             stats[file_path] = follow_stats
 
-    return dict(stats)
+    # Convert contributors_set to final format
+    result = {}
+    for file_path, file_stats in stats.items():
+        contributors_set = file_stats.pop('contributors_set', set())
+        contributors_list = sorted(list(contributors_set))
+        file_stats['contributors'] = {
+            'count': len(contributors_list),
+            'names': contributors_list
+        }
+        result[file_path] = file_stats
+
+    return result
 
 
 def get_file_stats_with_follow(repo_path, file_path, three_months_timestamp):
@@ -106,10 +126,10 @@ def get_file_stats_with_follow(repo_path, file_path, three_months_timestamp):
         three_months_timestamp: Unix timestamp for 3-month cutoff
 
     Returns:
-        dict with commits_3m, commits_1y, last_commit_date, or None on error
+        dict with commits_3m, commits_1y, last_commit_date, contributors_set, or None on error
     """
     result = subprocess.run(
-        ['git', 'log', '--follow', '--format=%aI', '--since=1 year ago', '--', file_path],
+        ['git', 'log', '--follow', '--format=%aI|%aN', '--since=1 year ago', '--', file_path],
         cwd=repo_path,
         capture_output=True,
         text=True
@@ -121,18 +141,26 @@ def get_file_stats_with_follow(repo_path, file_path, three_months_timestamp):
     commits_3m = 0
     commits_1y = 0
     last_commit_date = None
+    contributors_set = set()
 
     for line in result.stdout.strip().split('\n'):
         if not line:
             continue
 
+        parts = line.split('|')
+        date_str = parts[0]
+        author = parts[1] if len(parts) > 1 else None
+
         commits_1y += 1
 
         if last_commit_date is None:
-            last_commit_date = line
+            last_commit_date = date_str
+
+        if author:
+            contributors_set.add(author)
 
         try:
-            dt = datetime.fromisoformat(line.replace('Z', '+00:00'))
+            dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
             if dt.timestamp() >= three_months_timestamp:
                 commits_3m += 1
         except ValueError:
@@ -141,5 +169,6 @@ def get_file_stats_with_follow(repo_path, file_path, three_months_timestamp):
     return {
         'commits_3m': commits_3m,
         'commits_1y': commits_1y,
-        'last_commit_date': last_commit_date
+        'last_commit_date': last_commit_date,
+        'contributors_set': contributors_set
     }
