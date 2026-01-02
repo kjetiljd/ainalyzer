@@ -40,7 +40,26 @@ def run_cloc(repo_path, on_progress=None):
         if not result.stdout.strip():
             raise RuntimeError(f"cloc produced no output: {result.stderr}")
 
-        cloc_data = json.loads(result.stdout)
+        # cloc may append warning text after JSON on timeout - extract just the JSON
+        stdout = result.stdout.strip()
+        try:
+            cloc_data = json.loads(stdout)
+        except json.JSONDecodeError:
+            # Find end of JSON by matching braces
+            brace_count = 0
+            json_end = 0
+            for i, char in enumerate(stdout):
+                if char == '{':
+                    brace_count += 1
+                elif char == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        json_end = i + 1
+                        break
+            if json_end > 0:
+                cloc_data = json.loads(stdout[:json_end])
+            else:
+                raise RuntimeError(f"cloc produced invalid JSON: {stdout[:200]}")
 
         # Check stderr for timeout errors and fall back to wc -l
         if result.stderr and 'exceeded timeout' in result.stderr:
