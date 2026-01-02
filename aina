@@ -34,8 +34,11 @@ def main():
         'analyze',
         help='Analyze repositories and generate JSON output'
     )
-    analyze_parser.add_argument('name', help='Name for the analysis set')
+    analyze_parser.add_argument('name', nargs='?', help='Name for the analysis set')
     analyze_parser.add_argument('path', nargs='?', help='Path to folder (required first time, remembered after)')
+    analyze_parser.add_argument('--all', action='store_true', help='Analyze all registered sets')
+    analyze_parser.add_argument('--yes', '-y', action='store_true', help='Skip interactive prompts')
+    analyze_parser.add_argument('--quiet', '-q', action='store_true', help='Summary output only (implies --yes)')
 
     # List command
     list_parser = subparsers.add_parser(
@@ -72,7 +75,21 @@ def main():
 
     # Handle commands
     if args.command == 'analyze':
-        success = cmd_analyze(args.name, args.path, args.db)
+        # Validate mutual exclusion: --all vs name
+        if getattr(args, 'all', False) and args.name:
+            print("Error: Cannot specify both --all and a set name")
+            sys.exit(1)
+        if not getattr(args, 'all', False) and not args.name:
+            print("Error: Must specify either a set name or --all")
+            analyze_parser.print_help()
+            sys.exit(1)
+
+        success = cmd_analyze(
+            args.name, args.path, args.db,
+            all_sets=getattr(args, 'all', False),
+            yes=args.yes,
+            quiet=args.quiet
+        )
         sys.exit(0 if success else 1)
     elif args.command == 'list':
         success = cmd_list(args.db)

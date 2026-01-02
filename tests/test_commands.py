@@ -125,6 +125,74 @@ class TestCmdRemove(unittest.TestCase):
 
         self.assertFalse(result)
 
+class TestCmdAnalyzeAll(unittest.TestCase):
+    """Test the analyze --all functionality."""
+
+    def setUp(self):
+        """Create temporary database and directories for testing."""
+        self.db_fd, self.db_path = tempfile.mkstemp()
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Clean up temporary files."""
+        os.close(self.db_fd)
+        os.unlink(self.db_path)
+        import shutil
+        shutil.rmtree(self.temp_dir)
+
+    def test_analyze_all_no_sets(self):
+        """Test --all with no registered sets."""
+        from aina_lib.cli import _analyze_all
+
+        result = _analyze_all(self.db_path)
+
+        self.assertTrue(result)
+
+    def test_analyze_all_with_sets(self):
+        """Test --all analyzes all registered sets."""
+        from aina_lib.cli import _analyze_all
+        from aina_lib import Database
+        from unittest.mock import patch
+
+        # Register two sets
+        database = Database(self.db_path)
+        database.add_analysis_set('set1', self.temp_dir)
+        database.add_analysis_set('set2', self.temp_dir)
+
+        # Mock analyze_repos to avoid actual analysis
+        mock_result = {
+            'analysis_set': 'test',
+            'stats': {'total_repos': 1, 'total_files': 10, 'total_lines': 100}
+        }
+
+        with patch('aina_lib.cli.analyze_repos', return_value=mock_result):
+            result = _analyze_all(self.db_path, quiet=True)
+
+        self.assertTrue(result)
+
+    def test_analyze_all_continues_on_failure(self):
+        """Test --all continues when one set fails."""
+        from aina_lib.cli import _analyze_all
+        from aina_lib import Database
+        from unittest.mock import patch
+
+        # Register two sets, one with non-existent path
+        database = Database(self.db_path)
+        database.add_analysis_set('good-set', self.temp_dir)
+        database.add_analysis_set('bad-set', '/nonexistent/path')
+
+        # Mock analyze_repos for the good set
+        mock_result = {
+            'analysis_set': 'test',
+            'stats': {'total_repos': 1, 'total_files': 10, 'total_lines': 100}
+        }
+
+        with patch('aina_lib.cli.analyze_repos', return_value=mock_result):
+            result = _analyze_all(self.db_path, quiet=True)
+
+        # Should return False because one failed
+        self.assertFalse(result)
+
 
 if __name__ == '__main__':
     unittest.main()
