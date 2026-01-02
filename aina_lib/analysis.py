@@ -10,31 +10,79 @@ from .git_staleness import get_repo_staleness_info, format_staleness_warning
 from .git_stats import get_file_stats
 
 
-def run_cloc(repo_path):
+def run_cloc(repo_path, on_progress=None):
     """Run cloc on a repository and return parsed JSON.
 
     Args:
         repo_path: Path to repository to analyze
+        on_progress: Optional callback for progress messages
 
     Returns:
-        dict: Parsed cloc JSON output, or None on error
+        dict: Parsed cloc JSON output
 
     Raises:
         FileNotFoundError: If cloc is not installed
-        subprocess.CalledProcessError: If cloc fails
+        RuntimeError: If cloc produces no usable output
     """
+    def log(msg):
+        if on_progress:
+            on_progress(msg)
+
     try:
         result = subprocess.run(
             ['cloc', '--vcs=git', '--json', '--by-file', str(repo_path)],
             capture_output=True,
             text=True,
-            check=True
+            check=False  # Don't fail on non-zero exit (e.g., timeout on one file)
         )
-        return json.loads(result.stdout)
+
+        # Parse JSON even if cloc had partial errors
+        if not result.stdout.strip():
+            raise RuntimeError(f"cloc produced no output: {result.stderr}")
+
+        cloc_data = json.loads(result.stdout)
+
+        # Check stderr for timeout errors and fall back to wc -l
+        if result.stderr and 'exceeded timeout' in result.stderr:
+            for line in result.stderr.splitlines():
+                if 'exceeded timeout:' in line:
+                    # Extract file path from error message
+                    file_path = line.split('exceeded timeout:')[-1].strip()
+                    if file_path and Path(file_path).exists():
+                        try:
+                            wc_result = subprocess.run(
+                                ['wc', '-l', file_path],
+                                capture_output=True,
+                                text=True,
+                                check=True
+                            )
+                            line_count = int(wc_result.stdout.strip().split()[0])
+                            # Determine language from extension
+                            ext = Path(file_path).suffix.lstrip('.')
+                            lang_map = {
+                                'ts': 'TypeScript', 'tsx': 'TypeScript',
+                                'js': 'JavaScript', 'jsx': 'JavaScript',
+                                'py': 'Python', 'java': 'Java',
+                                'go': 'Go', 'rs': 'Rust', 'rb': 'Ruby',
+                            }
+                            language = lang_map.get(ext, 'Unknown')
+                            # Add to cloc data
+                            cloc_data[file_path] = {
+                                'blank': 0,
+                                'comment': 0,
+                                'code': line_count,
+                                'language': language
+                            }
+                            log(f"  (wc -l fallback for {Path(file_path).name}: {line_count} lines)")
+                        except Exception:
+                            pass  # Skip files we can't count
+
+        return cloc_data
+
     except FileNotFoundError:
         raise FileNotFoundError("cloc not found. Install with: brew install cloc")
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"cloc failed: {e.stderr}")
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"cloc produced invalid JSON: {e}")
 
 
 def build_directory_tree(files, base_path):
@@ -165,12 +213,13 @@ def check_staleness(repos):
     return staleness_infos
 
 
-def analyze_single_repo(repo_path, path_obj):
+def analyze_single_repo(repo_path, path_obj, on_progress=None):
     """Analyze a single repository.
 
     Args:
         repo_path: Path to repository
         path_obj: Path object for analysis set root
+        on_progress: Optional callback for progress messages
 
     Returns:
         tuple: (repo_node, files_dict) or (None, None) on error
@@ -178,7 +227,7 @@ def analyze_single_repo(repo_path, path_obj):
     repo_name = Path(repo_path).name
 
     try:
-        cloc_data = run_cloc(repo_path)
+        cloc_data = run_cloc(repo_path, on_progress=on_progress)
         files = {k: v for k, v in cloc_data.items() if k not in ['header', 'SUM']}
 
         if not files:
@@ -299,7 +348,7 @@ def analyze_repos(analysis_set_name, analysis_set_path, on_staleness_warning=Non
         repo_name = Path(repo_path).name
         log(f"[{i}/{len(repos)}] Analyzing {repo_name}...")
 
-        repo_node, files = analyze_single_repo(repo_path, path_obj)
+        repo_node, files = analyze_single_repo(repo_path, path_obj, on_progress=log)
 
         if repo_node and files:
             repo_nodes.append(repo_node)
