@@ -78,6 +78,14 @@ def cmd_remove(name, db_path):
 
         if success:
             print(f"Removed analysis set '{name}'")
+
+            # Also remove the JSON file if it exists
+            json_path = Path.home() / '.aina' / 'analysis' / f'{name}.json'
+            if json_path.exists():
+                json_path.unlink()
+                print(f"Removed {json_path}")
+                generate_analysis_index()
+
             return True
         else:
             print(f"Error: Analysis set '{name}' not found")
