@@ -39,7 +39,8 @@ class TestCmdAdd(unittest.TestCase):
 
         self.assertEqual(len(sets), 1)
         self.assertEqual(sets[0]['name'], 'test-set')
-        self.assertEqual(sets[0]['path'], self.temp_dir)
+        # Path is stored as absolute (resolved)
+        self.assertEqual(sets[0]['path'], str(Path(self.temp_dir).resolve()))
 
     def test_cmd_add_nonexistent_path(self):
         """Test adding non-existent path fails."""

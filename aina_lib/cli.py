@@ -22,10 +22,13 @@ def cmd_add(name, path, db_path):
         print(f"Error: Path does not exist: {path}")
         return False
 
+    # Convert to absolute path for storage
+    absolute_path = str(Path(path).resolve())
+
     try:
         database = Database(db_path)
-        database.add_analysis_set(name, path)
-        print(f"Added analysis set '{name}' -> {path}")
+        database.add_analysis_set(name, absolute_path)
+        print(f"Added analysis set '{name}' -> {absolute_path}")
         return True
     except sqlite3.IntegrityError:
         print(f"Error: Analysis set '{name}' already exists")
@@ -311,13 +314,15 @@ def cmd_analyze(name, path, db_path, all_sets=False, yes=False, quiet=False):
             if not Path(path).exists():
                 print(f"Error: Path does not exist: {path}")
                 return False
+            # Convert to absolute path for storage
+            absolute_path = str(Path(path).resolve())
             try:
-                database.add_analysis_set(name, path)
-                print(f"Registered '{name}' -> {path}")
+                database.add_analysis_set(name, absolute_path)
+                print(f"Registered '{name}' -> {absolute_path}")
             except sqlite3.IntegrityError:
                 print(f"Error: Analysis set '{name}' already exists")
                 return False
-            analysis_set_path = path
+            analysis_set_path = absolute_path
 
         success, data = _run_single_analysis(name, analysis_set_path, interactive=interactive, quiet=quiet)
 
