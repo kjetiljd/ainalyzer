@@ -9,6 +9,7 @@ import { COLOR_MODES } from '../utils/colorUtils'
 
 const props = defineProps({
   data: { type: Object, required: true },
+  coupling: { type: Object, default: null },
   navigationStack: { type: Array, required: true },
   preferences: { type: Object, required: true }
 })
@@ -89,9 +90,11 @@ const repoColor = computed(() => {
         :data="data"
         :currentNode="filteredCurrentNode"
         :navigationStack="navigationStack"
+        :coupling="coupling"
         :cushionMode="preferences.appearance?.cushionTreemap"
         :hideFolderBorders="preferences.appearance?.hideFolderBorders"
         :showRepoBorders="preferences.appearance?.showRepoBorders"
+        :showCouplingHighlights="preferences.appearance?.showCouplingHighlights"
         :colorMode="preferences.appearance?.colorMode || 'depth'"
         :activityTimeframe="preferences.appearance?.activityTimeframe || '1year'"
         @drill-down="handleDrillDown"

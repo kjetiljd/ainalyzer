@@ -3,7 +3,7 @@
 from .database import Database
 from .discovery import discover_repos
 from .git_staleness import get_repo_staleness_info, format_staleness_warning
-from .git_stats import get_file_stats, get_file_stats_with_follow
+from .git_stats import get_file_stats, get_file_stats_with_follow, get_coupling_data
 from .analysis import (
     run_cloc,
     build_directory_tree,
@@ -25,6 +25,7 @@ __all__ = [
     # Git stats
     'get_file_stats',
     'get_file_stats_with_follow',
+    'get_coupling_data',
     # Analysis
     'run_cloc',
     'build_directory_tree',

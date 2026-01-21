@@ -12,6 +12,7 @@ const defaultAnalysisPrefs = {
     cushionTreemap: false,
     hideFolderBorders: true,
     showRepoBorders: true,
+    showCouplingHighlights: false,
     colorMode: 'depth',
     activityTimeframe: '1year'  // '3months' or '1year'
   },

@@ -58,6 +58,7 @@ describe('usePreferences', () => {
         cushionTreemap: false,
         hideFolderBorders: true,
         showRepoBorders: true,
+        showCouplingHighlights: false,
         colorMode: 'depth',
         activityTimeframe: '1year'
       },

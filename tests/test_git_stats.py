@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from aina_lib import get_file_stats, get_file_stats_with_follow, get_repo_staleness_info, format_staleness_warning
+from aina_lib import get_file_stats, get_file_stats_with_follow, get_coupling_data, get_repo_staleness_info, format_staleness_warning
 
 
 class GitRepoTestCase(unittest.TestCase):
@@ -356,6 +356,148 @@ class TestAnalyzeReposWithGitStats(GitRepoTestCase):
         self.assertEqual(shared_node['contributors']['count'], 2)
         self.assertIn('Alice', shared_node['contributors']['names'])
         self.assertIn('Bob', shared_node['contributors']['names'])
+
+
+class TestGetCouplingData(GitRepoTestCase):
+    """Test get_coupling_data function for co-change detection."""
+
+    def test_returns_empty_pairs_for_empty_repo(self):
+        """Empty repo returns no coupling pairs."""
+        result = get_coupling_data(self.repo_path)
+
+        self.assertIn('threshold', result)
+        self.assertIn('pairs', result)
+        self.assertEqual(result['pairs'], [])
+
+    def test_detects_files_changed_together(self):
+        """Files changed in same commit are detected as coupled."""
+        # Change files together 3 times (meets default threshold)
+        for i in range(3):
+            self.create_file('service.py', f'service v{i}')
+            self.create_file('test_service.py', f'test v{i}')
+            self.commit(f'Update service {i}')
+
+        result = get_coupling_data(self.repo_path, threshold=3)
+
+        self.assertEqual(len(result['pairs']), 1)
+        pair = result['pairs'][0]
+        self.assertEqual(set(pair['files']), {'service.py', 'test_service.py'})
+        self.assertEqual(pair['count'], 3)
+
+    def test_filters_by_threshold(self):
+        """Pairs below threshold are excluded."""
+        # Files changed together only twice
+        for i in range(2):
+            self.create_file('a.py', f'a v{i}')
+            self.create_file('b.py', f'b v{i}')
+            self.commit(f'Update {i}')
+
+        result = get_coupling_data(self.repo_path, threshold=3)
+
+        self.assertEqual(len(result['pairs']), 0)
+
+    def test_sorts_by_count_descending(self):
+        """Pairs are sorted by co-change count (most coupled first)."""
+        # Pair A-B: 5 co-changes
+        for i in range(5):
+            self.create_file('a.py', f'a v{i}')
+            self.create_file('b.py', f'b v{i}')
+            self.commit(f'AB {i}')
+
+        # Pair C-D: 3 co-changes
+        for i in range(3):
+            self.create_file('c.py', f'c v{i}')
+            self.create_file('d.py', f'd v{i}')
+            self.commit(f'CD {i}')
+
+        result = get_coupling_data(self.repo_path, threshold=3)
+
+        self.assertEqual(len(result['pairs']), 2)
+        self.assertEqual(result['pairs'][0]['count'], 5)  # A-B first
+        self.assertEqual(result['pairs'][1]['count'], 3)  # C-D second
+
+    def test_limits_to_max_pairs(self):
+        """Respects max_pairs limit."""
+        # Create many file pairs
+        for i in range(10):
+            for j in range(3):
+                self.create_file(f'file{i}_a.py', f'v{j}')
+                self.create_file(f'file{i}_b.py', f'v{j}')
+                self.commit(f'Update pair {i} v{j}')
+
+        result = get_coupling_data(self.repo_path, threshold=3, max_pairs=5)
+
+        self.assertEqual(len(result['pairs']), 5)
+
+    def test_skips_large_commits(self):
+        """Commits with >50 files are skipped (likely bulk changes)."""
+        # Create 60 files in one commit
+        for i in range(60):
+            self.create_file(f'bulk_{i}.py', 'content')
+        self.commit('Bulk add')
+
+        # Change a subset together multiple times
+        for i in range(3):
+            self.create_file('real_a.py', f'v{i}')
+            self.create_file('real_b.py', f'v{i}')
+            self.commit(f'Real change {i}')
+
+        result = get_coupling_data(self.repo_path, threshold=3)
+
+        # Only the real pair should be detected
+        self.assertEqual(len(result['pairs']), 1)
+        self.assertEqual(set(result['pairs'][0]['files']), {'real_a.py', 'real_b.py'})
+
+    def test_handles_nested_paths(self):
+        """Files in subdirectories have correct paths."""
+        for i in range(3):
+            self.create_file('src/main/app.py', f'v{i}')
+            self.create_file('tests/test_app.py', f'v{i}')
+            self.commit(f'Update {i}')
+
+        result = get_coupling_data(self.repo_path, threshold=3)
+
+        self.assertEqual(len(result['pairs']), 1)
+        self.assertIn('src/main/app.py', result['pairs'][0]['files'])
+        self.assertIn('tests/test_app.py', result['pairs'][0]['files'])
+
+
+class TestAnalyzeReposWithCoupling(GitRepoTestCase):
+    """Test that analyze_repos includes coupling data."""
+
+    def test_analysis_includes_coupling_field(self):
+        """Analysis output includes coupling field."""
+        from aina_lib import analyze_repos
+
+        # Create coupled files
+        for i in range(3):
+            self.create_file('model.py', f'v{i}')
+            self.create_file('test_model.py', f'v{i}')
+            self.commit(f'Update {i}')
+
+        result = analyze_repos('test', self.repo_path)
+
+        self.assertIn('coupling', result)
+        self.assertIn('threshold', result['coupling'])
+        self.assertIn('pairs', result['coupling'])
+
+    def test_coupling_pairs_have_correct_structure(self):
+        """Coupling pairs have files list and count."""
+        from aina_lib import analyze_repos
+
+        for i in range(3):
+            self.create_file('a.py', f'v{i}')
+            self.create_file('b.py', f'v{i}')
+            self.commit(f'Update {i}')
+
+        result = analyze_repos('test', self.repo_path)
+
+        if result['coupling']['pairs']:
+            pair = result['coupling']['pairs'][0]
+            self.assertIn('files', pair)
+            self.assertIn('count', pair)
+            self.assertIsInstance(pair['files'], list)
+            self.assertEqual(len(pair['files']), 2)
 
 
 class TestGetRepoStalenessInfo(GitRepoTestCase):

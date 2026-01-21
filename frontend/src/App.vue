@@ -56,6 +56,7 @@ const selectedAnalysis = ref(null)
 const data = ref(null)
 const analysisInfo = ref(null)
 const rootPath = ref(null)
+const coupling = ref(null)
 const loading = ref(true)
 const error = ref(null)
 
@@ -161,6 +162,9 @@ async function loadAnalysis(filename) {
     // Store root path for file opening
     rootPath.value = json.root_path
 
+    // Store coupling data for cross-file correlation
+    coupling.value = json.coupling || null
+
     // Extract tree for visualization
     data.value = json.tree
     navigationStack.value = [json.tree]
@@ -168,6 +172,9 @@ async function loadAnalysis(filename) {
 
     console.log('Loaded analysis:', json.analysis_set)
     console.log('Stats:', json.stats)
+    if (json.coupling?.pairs?.length) {
+      console.log('Coupling pairs:', json.coupling.pairs.length)
+    }
 
     // Load .clocignore patterns
     await loadClocignore(json.analysis_set)
@@ -303,6 +310,7 @@ function closeContextMenu() {
     <TreemapExplorer
       v-else-if="filteredData"
       :data="filteredData"
+      :coupling="coupling"
       v-model:navigationStack="navigationStack"
       :preferences="preferences"
       @file-open="handleFileOpen"

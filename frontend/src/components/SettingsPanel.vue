@@ -83,6 +83,18 @@
         <p class="setting-description">
           Highlights git repository boundaries with a distinct border color.
         </p>
+
+        <label class="checkbox-label" style="margin-top: 16px;">
+          <input
+            type="checkbox"
+            :checked="preferences.appearance?.showCouplingHighlights"
+            @change="toggleShowCouplingHighlights"
+          />
+          <span>Show coupling highlights</span>
+        </label>
+        <p class="setting-description">
+          Highlights files that frequently change together when hovering.
+        </p>
       </section>
 
       <section class="settings-section">
@@ -237,6 +249,13 @@ function toggleShowRepoBorders(event) {
     preferences.value.appearance = {}
   }
   preferences.value.appearance.showRepoBorders = event.target.checked
+}
+
+function toggleShowCouplingHighlights(event) {
+  if (!preferences.value.appearance) {
+    preferences.value.appearance = {}
+  }
+  preferences.value.appearance.showCouplingHighlights = event.target.checked
 }
 
 function toggleHideClocignore(event) {

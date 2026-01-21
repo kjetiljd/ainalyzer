@@ -41,6 +41,14 @@ export default {
     activityTimeframe: {
       type: String,
       default: '1year'  // '3months' | '1year'
+    },
+    coupling: {
+      type: Object,
+      default: null  // { threshold: 3, pairs: [{files: ['a.py', 'b.py'], count: 5}, ...] }
+    },
+    showCouplingHighlights: {
+      type: Boolean,
+      default: false
     }
   },
   data() {
@@ -48,7 +56,8 @@ export default {
       width: 0,
       height: 0,
       resizeObserver: null,
-      colorMap: null
+      colorMap: null,
+      hoveredFilePath: null  // Track which file is being hovered for coupling highlight
     }
   },
   computed: {
@@ -71,6 +80,20 @@ export default {
     maxDepth() {
       if (this.colorMode !== 'depth') return 0
       return findMaxInTree(this.data, (n, depth) => depth)
+    },
+    // Build coupling lookup: filePath → [{path, count}, ...]
+    couplingMap() {
+      if (!this.coupling?.pairs) return new Map()
+      const map = new Map()
+      for (const pair of this.coupling.pairs) {
+        const [fileA, fileB] = pair.files
+        // Add bidirectional entries
+        if (!map.has(fileA)) map.set(fileA, [])
+        if (!map.has(fileB)) map.set(fileB, [])
+        map.get(fileA).push({ path: fileB, count: pair.count })
+        map.get(fileB).push({ path: fileA, count: pair.count })
+      }
+      return map
     }
   },
   mounted() {
@@ -153,6 +176,65 @@ export default {
     countChanges(node) {
       const field = this.commitsField
       return aggregateTree(node, n => n.commits?.[field] || 0)
+    },
+
+    // Highlight files that are coupled to the given file path
+    highlightCoupledFiles(filePath, hoveredRect) {
+      const svg = this.$refs.svg
+      if (!svg) return
+
+      // Use the current color mode's border color for coupling highlights
+      const highlightColor = COLOR_MODES[this.colorMode]?.borderColor || '#ffffff'
+
+      // Create overlay group for highlight strokes (renders on top of everything)
+      const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+      overlay.setAttribute('class', 'coupling-overlay')
+      svg.appendChild(overlay)
+
+      // Helper to create highlight rect in overlay
+      const addHighlightRect = (sourceRect) => {
+        const highlightRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+        highlightRect.setAttribute('x', sourceRect.getAttribute('x'))
+        highlightRect.setAttribute('y', sourceRect.getAttribute('y'))
+        highlightRect.setAttribute('width', sourceRect.getAttribute('width'))
+        highlightRect.setAttribute('height', sourceRect.getAttribute('height'))
+        highlightRect.setAttribute('fill', 'none')
+        highlightRect.setAttribute('stroke', highlightColor)
+        highlightRect.setAttribute('stroke-width', '3')
+        highlightRect.setAttribute('pointer-events', 'none')
+        highlightRect.style.filter = `drop-shadow(0 0 4px ${highlightColor})`
+        overlay.appendChild(highlightRect)
+      }
+
+      // Highlight the hovered file itself
+      if (hoveredRect) {
+        addHighlightRect(hoveredRect)
+      }
+
+      const coupledFiles = this.couplingMap.get(filePath)
+      if (!coupledFiles || coupledFiles.length === 0) return
+
+      // Create a Set of coupled paths for fast lookup
+      const coupledPaths = new Set(coupledFiles.map(f => f.path))
+
+      // Find and highlight coupled file rects
+      svg.querySelectorAll('rect[data-file-path]').forEach(rect => {
+        const rectPath = rect.getAttribute('data-file-path')
+        if (coupledPaths.has(rectPath)) {
+          addHighlightRect(rect)
+        }
+      })
+    },
+
+    // Remove coupling highlights
+    clearCouplingHighlights() {
+      const svg = this.$refs.svg
+      if (!svg) return
+
+      const overlay = svg.querySelector('.coupling-overlay')
+      if (overlay) {
+        overlay.remove()
+      }
     },
 
     hexToRgb(hex) {
@@ -457,12 +539,38 @@ export default {
         rect.setAttribute('stroke-width', strokeWidth)
         rect.style.cursor = 'pointer'
 
-        // Add tooltip for contributor names (if available)
+        // Add data-file-path for coupling highlight lookup (files only)
+        if (node.data.type === 'file' && node.data.path) {
+          rect.setAttribute('data-file-path', node.data.path)
+        }
+
+        // Add tooltip with contributor names and coupled files
+        const tooltipParts = [node.data.name]
         const contributors = node.data.contributors
         if (contributors?.names?.length > 0) {
-          const names = contributors.names.join(', ')
+          tooltipParts.push('')
+          tooltipParts.push(`Contributors: ${contributors.names.join(', ')}`)
+        }
+        // Add coupled files info for file nodes
+        if (node.data.type === 'file' && node.data.path) {
+          const coupledFiles = this.couplingMap.get(node.data.path)
+          if (coupledFiles && coupledFiles.length > 0) {
+            tooltipParts.push('')
+            tooltipParts.push('Changes with:')
+            // Sort by count descending, show top 10
+            const sorted = [...coupledFiles].sort((a, b) => b.count - a.count).slice(0, 10)
+            for (const cf of sorted) {
+              const filename = cf.path.split('/').pop()
+              tooltipParts.push(`  ${filename} (${cf.count}x)`)
+            }
+            if (coupledFiles.length > 10) {
+              tooltipParts.push(`  ...and ${coupledFiles.length - 10} more`)
+            }
+          }
+        }
+        if (tooltipParts.length > 1) {
           const title = document.createElementNS('http://www.w3.org/2000/svg', 'title')
-          title.textContent = `${node.data.name}\n\nContributors: ${names}`
+          title.textContent = tooltipParts.join('\n')
           rect.appendChild(title)
         }
 
@@ -524,10 +632,18 @@ export default {
             text: fullPath + stats,
             isRepo: node.data.type === 'repository'
           })
+
+          // Highlight coupled files if enabled and this is a file node
+          if (this.showCouplingHighlights && node.data.type === 'file' && node.data.path) {
+            this.highlightCoupledFiles(node.data.path, rect)
+          }
         })
 
         rect.addEventListener('mouseleave', () => {
           this.$emit('hover-end')
+          if (this.showCouplingHighlights) {
+            this.clearCouplingHighlights()
+          }
         })
 
         // Add context menu handler for exclusion
@@ -573,5 +689,12 @@ export default {
   to {
     opacity: 1;
   }
+}
+
+/* Coupling highlight - files that change together
+   Color is set dynamically via inline style based on color mode's borderColor */
+:deep(.coupling-highlight) {
+  stroke-width: 3px !important;
+  filter: drop-shadow(0 0 4px currentColor);
 }
 </style>

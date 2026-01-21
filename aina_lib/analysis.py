@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .discovery import discover_repos
 from .git_staleness import get_repo_staleness_info, format_staleness_warning
-from .git_stats import get_file_stats
+from .git_stats import get_file_stats, get_coupling_data
 
 
 def run_cloc(repo_path, on_progress=None):
@@ -241,7 +241,7 @@ def analyze_single_repo(repo_path, path_obj, on_progress=None):
         on_progress: Optional callback for progress messages
 
     Returns:
-        tuple: (repo_node, files_dict) or (None, None) on error
+        tuple: (repo_node, files_dict, coupling_data) or (None, None, None) on error
     """
     repo_name = Path(repo_path).name
 
@@ -250,10 +250,11 @@ def analyze_single_repo(repo_path, path_obj, on_progress=None):
         files = {k: v for k, v in cloc_data.items() if k not in ['header', 'SUM']}
 
         if not files:
-            return None, None
+            return None, None, None
 
         repo_tree = build_directory_tree(files, repo_path)
         git_stats = get_file_stats(repo_path)
+        coupling = get_coupling_data(repo_path)
 
         is_root_repo = Path(repo_path).resolve() == path_obj.resolve()
         path_prefix = '' if is_root_repo else repo_name
@@ -299,10 +300,15 @@ def analyze_single_repo(repo_path, path_obj, on_progress=None):
             'children': children
         }
 
-        return repo_node if children else None, files
+        # Prefix coupling paths with repo name for multi-repo analysis
+        if path_prefix and coupling['pairs']:
+            for pair in coupling['pairs']:
+                pair['files'] = [f"{path_prefix}/{f}" for f in pair['files']]
+
+        return repo_node if children else None, files, coupling
 
     except Exception:
-        return None, None
+        return None, None, None
 
 
 def analyze_repos(analysis_set_name, analysis_set_path, on_staleness_warning=None, on_progress=None):
@@ -362,12 +368,13 @@ def analyze_repos(analysis_set_name, analysis_set_path, on_staleness_warning=Non
     total_lines = 0
     languages = {}
     repo_nodes = []
+    all_coupling_pairs = []
 
     for i, repo_path in enumerate(repos, 1):
         repo_name = Path(repo_path).name
         log(f"[{i}/{len(repos)}] Analyzing {repo_name}...")
 
-        repo_node, files = analyze_single_repo(repo_path, path_obj, on_progress=log)
+        repo_node, files, coupling = analyze_single_repo(repo_path, path_obj, on_progress=log)
 
         if repo_node and files:
             repo_nodes.append(repo_node)
@@ -379,12 +386,20 @@ def analyze_repos(analysis_set_name, analysis_set_path, on_staleness_warning=Non
                 lang = file.get('language', 'Unknown')
                 languages[lang] = languages.get(lang, 0) + code_lines
 
+            # Collect coupling pairs from this repo
+            if coupling and coupling.get('pairs'):
+                all_coupling_pairs.extend(coupling['pairs'])
+
             log(f"  {len(files)} files, {sum(f.get('code', 0) for f in files.values()):,} lines")
         elif files is None:
             log(f"  No files found in {repo_name}, skipping")
 
     if not repo_nodes:
         raise ValueError("No repositories were successfully analyzed")
+
+    # Sort and limit aggregated coupling pairs
+    all_coupling_pairs.sort(key=lambda p: p['count'], reverse=True)
+    all_coupling_pairs = all_coupling_pairs[:500]
 
     analysis_json = {
         'analysis_set': analysis_set_name,
@@ -395,6 +410,10 @@ def analyze_repos(analysis_set_name, analysis_set_path, on_staleness_warning=Non
             'total_lines': total_lines,
             'total_repos': len(repo_nodes),
             'languages': dict(sorted(languages.items(), key=lambda x: x[1], reverse=True))
+        },
+        'coupling': {
+            'threshold': 3,
+            'pairs': all_coupling_pairs
         },
         'tree': {
             'name': analysis_set_name,

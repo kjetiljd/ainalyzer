@@ -2,9 +2,10 @@
 import subprocess
 from datetime import datetime, timezone
 from collections import defaultdict
+from itertools import combinations
 
 
-def get_file_stats(repo_path):
+def get_file_stats(repo_path, coupling_threshold=3):
     """Get commit statistics for all files in a repository.
 
     Args:
@@ -171,4 +172,96 @@ def get_file_stats_with_follow(repo_path, file_path, three_months_timestamp):
         'commits_1y': commits_1y,
         'last_commit_date': last_commit_date,
         'contributors_set': contributors_set
+    }
+
+
+def get_coupling_data(repo_path, threshold=3, max_pairs=500):
+    """Detect files that frequently change together.
+
+    Args:
+        repo_path: Path to git repository
+        threshold: Minimum co-changes to include (default: 3)
+        max_pairs: Maximum number of pairs to return (default: 500)
+
+    Returns:
+        dict with coupling data:
+        {
+            'threshold': 3,
+            'pairs': [
+                {'files': ['path/a.py', 'path/b.py'], 'count': 15},
+                ...
+            ]
+        }
+
+    Pairs are sorted by count (descending) and limited to max_pairs.
+    """
+    result = subprocess.run(
+        ['git', 'log', '-M', '--name-status', '--format=COMMIT|%H', '--since=1 year ago'],
+        cwd=repo_path,
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode != 0:
+        return {'threshold': threshold, 'pairs': []}
+
+    # Collect files per commit
+    commits = []  # List of sets of files
+    current_files = set()
+
+    for line in result.stdout.split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+
+        if line.startswith('COMMIT|'):
+            # Save previous commit's files if any
+            if current_files:
+                commits.append(current_files)
+            current_files = set()
+            continue
+
+        parts = line.split('\t')
+        if len(parts) < 2:
+            continue
+
+        status = parts[0]
+
+        if status.startswith('R'):
+            if len(parts) == 3:
+                # For renames, track the new path
+                current_files.add(parts[2])
+        elif status in ('M', 'A', 'D'):
+            current_files.add(parts[1])
+
+    # Don't forget the last commit
+    if current_files:
+        commits.append(current_files)
+
+    # Build co-change counts
+    co_changes = defaultdict(int)
+
+    for files in commits:
+        # Skip commits with too many files (likely merges or bulk changes)
+        if len(files) > 50:
+            continue
+
+        # Create all pairs from this commit
+        for file_a, file_b in combinations(sorted(files), 2):
+            co_changes[(file_a, file_b)] += 1
+
+    # Filter by threshold and sort by count
+    pairs = [
+        {'files': list(pair), 'count': count}
+        for pair, count in co_changes.items()
+        if count >= threshold
+    ]
+    pairs.sort(key=lambda p: p['count'], reverse=True)
+
+    # Limit to max_pairs
+    pairs = pairs[:max_pairs]
+
+    return {
+        'threshold': threshold,
+        'pairs': pairs
     }
