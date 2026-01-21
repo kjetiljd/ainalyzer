@@ -167,11 +167,11 @@ export const DEPTH_PALETTE = [
   '#ffffe5'   // Pale yellow (deepest/leaves)
 ]
 
-// Contributor count palette: Red-Yellow-Green for bus factor risk
+// Contributor count palette: Red-Yellow-Green for lottery factor risk
 // Fewer contributors = higher risk (red), more = healthier (green)
 export const CONTRIBUTOR_PALETTE = [
   '#8b0000',  // Dark red (0 - no data, highest risk)
-  '#d32f2f',  // Red (1 contributor - bus factor risk)
+  '#d32f2f',  // Red (1 contributor - lottery factor risk)
   '#f57c00',  // Orange (2 contributors)
   '#fbc02d',  // Yellow (3 contributors)
   '#8bc34a',  // Light green (4 contributors)
@@ -294,7 +294,7 @@ export const COLOR_MODES = {
   contributors: {
     key: 'contributors',
     label: 'Contributors',
-    description: 'Shows contributor count per file. Red = 1 (bus factor risk), Green = 4+.',
+    description: 'Shows contributor count per file. Red = 1 (lottery factor risk), Green = 4+.',
     borderColor: '#4caf50',  // Green - contrasts with red-yellow tones
     colorFn: getContributorColor  // (count) => color
   }
