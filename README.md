@@ -21,12 +21,12 @@ node --version
 cloc --version
 ```
 
-| Tool | Minimum | Install |
-|------|---------|---------|
-| Git | any     | - |
-| Python | 3.9+    | - |
-| Node.js | 18+     | - |
-| cloc | any     | `brew install cloc` |
+| Tool    | Minimum | Install             |
+|---------|---------|---------------------|
+| Git     | any     | -                   |
+| Python  | 3.9+    | -                   |
+| Node.js | 18+     | `brew install node` |
+| cloc    | any     | `brew install cloc` |
 
 ### Setup
 
