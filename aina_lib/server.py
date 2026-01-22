@@ -8,6 +8,8 @@ import webbrowser
 import json
 from pathlib import Path
 
+from .file_utils import detect_file_encoding
+
 
 def create_request_handler(frontend_dir, analysis_dir):
     """Create a request handler class for the aina server.
@@ -83,8 +85,13 @@ def create_request_handler(frontend_dir, analysis_dir):
                 self.send_json_error(404, 'File not found')
                 return
 
+            encoding = detect_file_encoding(resolved_file)
+            if encoding is None:
+                self.send_json_error(400, 'Binary file - cannot display as text')
+                return
+
             try:
-                with resolved_file.open('r') as f:
+                with resolved_file.open('r', encoding=encoding) as f:
                     lines = []
                     total_lines = 0
                     for line in f:
