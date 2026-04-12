@@ -41,13 +41,32 @@ class TestDetectFileEncoding(unittest.TestCase):
         self.assertEqual(encoding, 'iso-8859-1')
 
     def test_detect_ascii(self):
-        """Test detection of plain ASCII file."""
+        """Test that plain ASCII files are treated as utf-8 (a safe superset)."""
         path = Path(self.temp_dir) / 'ascii.txt'
         path.write_text('Plain ASCII text with no special chars')
 
         encoding = detect_file_encoding(path)
 
-        self.assertEqual(encoding, 'us-ascii')
+        self.assertEqual(encoding, 'utf-8')
+
+    def test_detect_ascii_with_utf8_bytes(self):
+        """Test that mostly-ASCII files with UTF-8 multi-byte chars are readable.
+
+        Regression: files reported as 'us-ascii' by the system file command
+        may still contain valid UTF-8 sequences (e.g. Norwegian å, ø, æ).
+        Opening them with 'ascii' encoding raises UnicodeDecodeError.
+        """
+        path = Path(self.temp_dir) / 'ascii_with_utf8.ts'
+        # Simulates a large ASCII file with one UTF-8 char buried inside
+        content = 'x' * 7000 + 'kan også skyldes' + 'y' * 200
+        path.write_bytes(content.encode('utf-8'))
+
+        encoding = detect_file_encoding(path)
+
+        # Must be readable without error
+        with path.open('r', encoding=encoding) as f:
+            result = f.read()
+        self.assertIn('også', result)
 
     def test_detect_binary_returns_none(self):
         """Test that binary files return None."""

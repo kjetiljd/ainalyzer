@@ -30,6 +30,10 @@ def detect_file_encoding(path: Path) -> str:
                 return 'utf-8'
             if encoding == 'binary':
                 return None
+            # us-ascii is a subset of utf-8; use utf-8 to handle files that
+            # are mostly ASCII but contain occasional non-ASCII UTF-8 bytes.
+            if encoding == 'us-ascii':
+                return 'utf-8'
             return encoding
     except (subprocess.TimeoutExpired, FileNotFoundError):
         pass
