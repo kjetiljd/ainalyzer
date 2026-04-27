@@ -6,6 +6,7 @@ import FileViewer from './components/FileViewer.vue'
 import ExclusionMenu from './components/ExclusionMenu.vue'
 import { usePreferences } from './composables/usePreferences'
 import { parseClocignore, filterTree } from './utils/clocignore'
+import { generateReport, downloadMarkdown } from './composables/useReportGenerator'
 
 // Preferences
 const { preferences, updateURL, addExclusion, setCurrentAnalysis } = usePreferences()
@@ -259,6 +260,22 @@ function handleExclude(pattern) {
 function closeContextMenu() {
   contextMenu.value.visible = false
 }
+
+// Export analysis report
+function exportReport() {
+  if (!analysisInfo.value || !data.value) return
+
+  const markdown = generateReport({
+    analysisInfo: analysisInfo.value,
+    rootPath: rootPath.value,
+    tree: data.value,
+    clocignorePatterns: clocignorePatterns.value,
+    customExclusions: preferences.value.filters?.customExclusions || []
+  })
+
+  const safeName = analysisInfo.value.name.replace(/[^a-zA-Z0-9-_]/g, '-')
+  downloadMarkdown(markdown, `${safeName}-report.md`)
+}
 </script>
 
 <template>
@@ -279,6 +296,11 @@ function closeContextMenu() {
             </option>
           </select>
         </div>
+        <button class="settings-button" @click="exportReport" aria-label="Export report" title="Export report">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"/>
+          </svg>
+        </button>
         <button class="settings-button" @click="showSettings = true" aria-label="Open settings">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
