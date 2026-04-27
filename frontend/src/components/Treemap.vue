@@ -452,6 +452,27 @@ export default {
       return aggregateTree(node, n => n.commits?.[field] || 0)
     },
 
+    // Collect unique contributors with their commit counts across a repo subtree
+    getRepoContributors(node) {
+      const counts = {}
+      function walk(n) {
+        if (!n) return
+        if (!n.children) {
+          if (n.contributors?.names) {
+            for (const name of n.contributors.names) {
+              counts[name] = (counts[name] || 0) + (n.commits?.last_year || 0)
+            }
+          }
+          return
+        }
+        n.children.forEach(walk)
+      }
+      walk(node)
+      return Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, commits]) => `${name} (${commits})`)
+    },
+
     // Create label for repo tiles (adaptive based on size)
     createRepoLabel(node, width, height) {
       // Thresholds for repo labels (slightly larger since we show more info)
@@ -593,13 +614,18 @@ export default {
     // Get color for repo tile based on aggregated activity
     getRepoColor(node) {
       const mode = COLOR_MODES['activity']
-      const aggregatedCommits = this.getAggregatedCommits(node.data)
+      // Use original children since they were stripped for D3
+      const originalData = node.data._originalChildren
+        ? { ...node.data, children: node.data._originalChildren }
+        : node.data
+      const aggregatedCommits = this.getAggregatedCommits(originalData)
 
       // Calculate max commits across all repos for normalization
-      const nodeToRender = this.currentNode || this.data
+      // Use the unstripped source tree, not the D3-modified one
+      const sourceNode = this.currentNode || this.data
       let maxRepoCommits = 0
-      if (nodeToRender.children) {
-        for (const child of nodeToRender.children) {
+      if (sourceNode.children) {
+        for (const child of sourceNode.children) {
           if (child.type === 'repository') {
             const commits = this.getAggregatedCommits(child)
             if (commits > maxRepoCommits) maxRepoCommits = commits
@@ -772,9 +798,12 @@ export default {
 
           // Hover handler - show aggregated stats
           rect.addEventListener('mouseenter', () => {
+            const originalData = node.data._originalChildren
+              ? { ...node.data, children: node.data._originalChildren }
+              : node.data
             const totalLines = node.value
-            const totalFiles = this.countFiles(node.data._originalChildren ? { children: node.data._originalChildren } : node.data)
-            const totalCommits = this.getAggregatedCommits(node.data._originalChildren ? { children: node.data._originalChildren } : node.data)
+            const totalFiles = this.countFiles(originalData)
+            const totalCommits = this.getAggregatedCommits(originalData)
 
             const parts = ['repo']
             parts.push(`${totalLines.toLocaleString()} lines`)
@@ -794,6 +823,17 @@ export default {
           rect.addEventListener('mouseleave', () => {
             this.$emit('hover-end')
           })
+
+          // Add tooltip with contributor breakdown
+          const repoData = node.data._originalChildren
+            ? { ...node.data, children: node.data._originalChildren }
+            : node.data
+          const contributors = this.getRepoContributors(repoData)
+          if (contributors.length > 0) {
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'title')
+            title.textContent = `${node.data.name}\n\nContributors (file changes):\n${contributors.join('\n')}`
+            rect.appendChild(title)
+          }
 
           svg.appendChild(rect)
 
