@@ -19,6 +19,7 @@ const emit = defineEmits(['update:navigationStack', 'file-open', 'contextmenu'])
 // Internal state
 const statuslineText = ref('')
 const statuslineIsRepo = ref(false)
+const expandedRepoPath = ref(null)  // Track which repo is expanded to show contents
 
 // Computed from navigationStack
 const breadcrumbPath = computed(() => props.navigationStack.map(n => n.name))
@@ -35,6 +36,9 @@ const filteredCurrentNode = computed(() => {
 // Handle drill-down from Treemap
 function handleDrillDown(event) {
   const node = event.node
+
+  // Clear expanded repo when navigating
+  expandedRepoPath.value = null
 
   // Check if this is a file
   if (node.type === 'file') {
@@ -59,6 +63,8 @@ function handleDrillDown(event) {
 
 // Handle breadcrumb navigation
 function handleBreadcrumbNavigate(index) {
+  // Clear expanded repo when navigating via breadcrumb
+  expandedRepoPath.value = null
   const newStack = props.navigationStack.slice(0, index + 1)
   emit('update:navigationStack', newStack)
 }
@@ -72,6 +78,11 @@ function handleHover(event) {
 function handleHoverEnd() {
   statuslineText.value = ''
   statuslineIsRepo.value = false
+}
+
+// Handle expand-repo event from Treemap (when clicking single repo tile)
+function handleExpandRepo(repoPath) {
+  expandedRepoPath.value = repoPath
 }
 
 // Repo border color depends on color scheme (from COLOR_MODES registry)
@@ -97,9 +108,12 @@ const repoColor = computed(() => {
         :showCouplingHighlights="preferences.appearance?.showCouplingHighlights"
         :colorMode="preferences.appearance?.colorMode || 'depth'"
         :activityTimeframe="preferences.appearance?.activityTimeframe || '1year'"
+        :showRepoView="preferences.appearance?.showRepoView"
+        :expandedRepoPath="expandedRepoPath"
         @drill-down="handleDrillDown"
         @hover="handleHover"
         @hover-end="handleHoverEnd"
+        @expand-repo="handleExpandRepo"
         @node-contextmenu="$emit('contextmenu', $event)"
       />
     </div>

@@ -41,6 +41,18 @@
                 </button>
               </div>
             </div>
+            <!-- Repo view toggle for activity mode -->
+            <label v-if="mode.key === 'activity' && showTimeframeSelector" class="checkbox-label activity-sub-option">
+              <input
+                type="checkbox"
+                :checked="preferences.appearance?.showRepoView"
+                @change="toggleShowRepoView"
+              />
+              <span>Repo view</span>
+            </label>
+            <p v-if="mode.key === 'activity' && showTimeframeSelector" class="setting-description activity-sub-description">
+              Show repositories as tiles at root level.
+            </p>
           </template>
         </div>
       </section>
@@ -271,6 +283,13 @@ function setActivityTimeframe(timeframe) {
   }
   preferences.value.appearance.activityTimeframe = timeframe
 }
+
+function toggleShowRepoView(event) {
+  if (!preferences.value.appearance) {
+    preferences.value.appearance = {}
+  }
+  preferences.value.appearance.showRepoView = event.target.checked
+}
 </script>
 
 <style scoped>
@@ -457,6 +476,14 @@ function setActivityTimeframe(timeframe) {
   background: #4fc3f7;
   border-color: #4fc3f7;
   color: #1e1e1e;
+}
+
+.checkbox-label.activity-sub-option {
+  margin: 12px 0 0 28px;
+}
+
+.setting-description.activity-sub-description {
+  margin: 4px 0 12px 56px;
 }
 
 .exclusion-list {

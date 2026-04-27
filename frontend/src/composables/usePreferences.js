@@ -14,7 +14,8 @@ const defaultAnalysisPrefs = {
     showRepoBorders: true,
     showCouplingHighlights: false,
     colorMode: 'depth',
-    activityTimeframe: '1year'  // '3months' or '1year'
+    activityTimeframe: '1year',  // '3months' or '1year'
+    showRepoView: false  // Show repos as tiles at root level (activity mode only)
   },
   filters: {
     hideClocignore: true,

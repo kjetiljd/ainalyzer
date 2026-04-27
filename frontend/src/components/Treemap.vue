@@ -49,6 +49,14 @@ export default {
     showCouplingHighlights: {
       type: Boolean,
       default: false
+    },
+    showRepoView: {
+      type: Boolean,
+      default: false
+    },
+    expandedRepoPath: {
+      type: String,
+      default: null  // Path of repo that should show contents instead of single tile
     }
   },
   data() {
@@ -94,6 +102,27 @@ export default {
         map.get(fileB).push({ path: fileA, count: pair.count })
       }
       return map
+    },
+    // Whether to show folder/repo aggregation view
+    // Active at root (show repo tiles) or inside a repo (show that repo as single tile)
+    isRepoViewActive() {
+      if (!this.showRepoView) return false
+      // At root (no current node or nav stack has only root)
+      const atRoot = !this.currentNode || this.navigationStack.length <= 1
+      if (atRoot) return true
+      // Inside a repo (current node is a repository) - show it as single tile
+      // Unless this repo has been "expanded" to show its contents
+      if (this.currentNode?.type === 'repository') {
+        if (this.expandedRepoPath && this.currentNode.path === this.expandedRepoPath) {
+          return false  // Show repo contents, not single tile
+        }
+        return true
+      }
+      return false
+    },
+    // Whether we're inside a single repo (not at root)
+    isInsideRepo() {
+      return this.currentNode?.type === 'repository'
     }
   },
   mounted() {
@@ -131,6 +160,12 @@ export default {
       this.render()
     },
     activityTimeframe() {
+      this.render()
+    },
+    showRepoView() {
+      this.render()
+    },
+    expandedRepoPath() {
       this.render()
     }
   },
@@ -405,6 +440,176 @@ export default {
       return group
     },
 
+    // Count files in a tree node recursively
+    countFiles(node) {
+      if (!node.children) return node.type === 'file' ? 1 : 0
+      return node.children.reduce((sum, child) => sum + this.countFiles(child), 0)
+    },
+
+    // Get aggregated commits for a node
+    getAggregatedCommits(node) {
+      const field = this.commitsField
+      return aggregateTree(node, n => n.commits?.[field] || 0)
+    },
+
+    // Create label for repo tiles (adaptive based on size)
+    createRepoLabel(node, width, height) {
+      // Thresholds for repo labels (slightly larger since we show more info)
+      const MIN_WIDTH = 60
+      const MIN_HEIGHT = 30
+      const MEDIUM_WIDTH = 100
+      const MEDIUM_HEIGHT = 50
+      const LARGE_WIDTH = 120
+      const LARGE_HEIGHT = 80
+
+      if (width < MIN_WIDTH || height < MIN_HEIGHT) {
+        return null
+      }
+
+      // Get text color based on background (use activity color for repo tiles)
+      const bgColor = this.getRepoColor(node)
+      const textColor = this.getTextColor(bgColor)
+      const shadowColor = textColor === '#ffffff' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.8)'
+
+      const group = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+      group.setAttribute('pointer-events', 'none')
+      group.setAttribute('class', 'treemap-label')
+
+      const centerX = node.x0 + width / 2
+      const padding = 8
+
+      // Aggregate stats for this repo (use original children since they were stripped for D3)
+      const totalLines = node.value
+      const originalData = node.data._originalChildren
+        ? { ...node.data, children: node.data._originalChildren }
+        : node.data
+      const totalFiles = this.countFiles(originalData)
+      const totalCommits = this.getAggregatedCommits(originalData)
+
+      const isLarge = width >= LARGE_WIDTH && height >= LARGE_HEIGHT
+      const isMedium = width >= MEDIUM_WIDTH && height >= MEDIUM_HEIGHT
+
+      if (isLarge) {
+        // Four-line layout: name + lines + files + commits
+        const lineHeight = 14
+        const totalHeight = lineHeight * 4
+        const startY = node.y0 + (height - totalHeight) / 2
+
+        // Line 1: Repo name
+        const nameLine = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+        nameLine.setAttribute('x', centerX)
+        nameLine.setAttribute('y', startY + lineHeight)
+        nameLine.setAttribute('text-anchor', 'middle')
+        nameLine.setAttribute('fill', textColor)
+        nameLine.setAttribute('font-size', '12')
+        nameLine.setAttribute('font-weight', '600')
+        nameLine.style.textShadow = `0 1px 2px ${shadowColor}`
+        nameLine.textContent = this.truncateText(node.data.name, width - padding * 2, 12)
+        group.appendChild(nameLine)
+
+        // Line 2: Lines count
+        const linesLine = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+        linesLine.setAttribute('x', centerX)
+        linesLine.setAttribute('y', startY + lineHeight * 2)
+        linesLine.setAttribute('text-anchor', 'middle')
+        linesLine.setAttribute('fill', textColor)
+        linesLine.setAttribute('font-size', '10')
+        linesLine.setAttribute('opacity', '0.9')
+        linesLine.style.textShadow = `0 1px 2px ${shadowColor}`
+        linesLine.textContent = `${totalLines.toLocaleString()} lines`
+        group.appendChild(linesLine)
+
+        // Line 3: Files count
+        const filesLine = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+        filesLine.setAttribute('x', centerX)
+        filesLine.setAttribute('y', startY + lineHeight * 3)
+        filesLine.setAttribute('text-anchor', 'middle')
+        filesLine.setAttribute('fill', textColor)
+        filesLine.setAttribute('font-size', '10')
+        filesLine.setAttribute('opacity', '0.9')
+        filesLine.style.textShadow = `0 1px 2px ${shadowColor}`
+        filesLine.textContent = `${totalFiles.toLocaleString()} files`
+        group.appendChild(filesLine)
+
+        // Line 4: Commits count
+        const commitsLine = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+        commitsLine.setAttribute('x', centerX)
+        commitsLine.setAttribute('y', startY + lineHeight * 4)
+        commitsLine.setAttribute('text-anchor', 'middle')
+        commitsLine.setAttribute('fill', textColor)
+        commitsLine.setAttribute('font-size', '9')
+        commitsLine.setAttribute('opacity', '0.7')
+        commitsLine.style.textShadow = `0 1px 2px ${shadowColor}`
+        commitsLine.textContent = `${totalCommits} change${totalCommits !== 1 ? 's' : ''}`
+        group.appendChild(commitsLine)
+
+      } else if (isMedium) {
+        // Two-line layout: name + lines
+        const lineHeight = 14
+        const totalHeight = lineHeight * 2
+        const startY = node.y0 + (height - totalHeight) / 2
+
+        const nameLine = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+        nameLine.setAttribute('x', centerX)
+        nameLine.setAttribute('y', startY + lineHeight)
+        nameLine.setAttribute('text-anchor', 'middle')
+        nameLine.setAttribute('fill', textColor)
+        nameLine.setAttribute('font-size', '12')
+        nameLine.setAttribute('font-weight', '600')
+        nameLine.style.textShadow = `0 1px 2px ${shadowColor}`
+        nameLine.textContent = this.truncateText(node.data.name, width - padding * 2, 12)
+        group.appendChild(nameLine)
+
+        const linesLine = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+        linesLine.setAttribute('x', centerX)
+        linesLine.setAttribute('y', startY + lineHeight * 2)
+        linesLine.setAttribute('text-anchor', 'middle')
+        linesLine.setAttribute('fill', textColor)
+        linesLine.setAttribute('font-size', '10')
+        linesLine.setAttribute('opacity', '0.9')
+        linesLine.style.textShadow = `0 1px 2px ${shadowColor}`
+        linesLine.textContent = `${totalLines.toLocaleString()} lines`
+        group.appendChild(linesLine)
+
+      } else {
+        // Single-line layout: name only
+        const centerY = node.y0 + height / 2
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+        text.setAttribute('x', centerX)
+        text.setAttribute('y', centerY)
+        text.setAttribute('text-anchor', 'middle')
+        text.setAttribute('dominant-baseline', 'middle')
+        text.setAttribute('fill', textColor)
+        text.setAttribute('font-size', '12')
+        text.setAttribute('font-weight', '600')
+        text.style.textShadow = `0 1px 2px ${shadowColor}`
+        text.textContent = this.truncateText(node.data.name, width - padding * 2, 12)
+        group.appendChild(text)
+      }
+
+      return group
+    },
+
+    // Get color for repo tile based on aggregated activity
+    getRepoColor(node) {
+      const mode = COLOR_MODES['activity']
+      const aggregatedCommits = this.getAggregatedCommits(node.data)
+
+      // Calculate max commits across all repos for normalization
+      const nodeToRender = this.currentNode || this.data
+      let maxRepoCommits = 0
+      if (nodeToRender.children) {
+        for (const child of nodeToRender.children) {
+          if (child.type === 'repository') {
+            const commits = this.getAggregatedCommits(child)
+            if (commits > maxRepoCommits) maxRepoCommits = commits
+          }
+        }
+      }
+
+      return mode.colorFn(aggregatedCommits, maxRepoCommits)
+    },
+
     render() {
       if (this.width === 0 || this.height === 0) return
       const svg = this.$refs.svg
@@ -416,8 +621,45 @@ export default {
       // Use currentNode if provided, otherwise use data
       const nodeToRender = this.currentNode || this.data
 
+      // For repo view, create a simplified tree
+      let dataForHierarchy = nodeToRender
+      if (this.isRepoViewActive) {
+        if (this.isInsideRepo) {
+          // Inside a repo: show the repo itself as a single tile
+          // Create a wrapper with the repo as the only child (as a leaf)
+          const repoAsLeaf = {
+            ...nodeToRender,
+            children: undefined,
+            _originalChildren: nodeToRender.children,
+            _originalData: nodeToRender,
+            value: aggregateTree(nodeToRender, n => n.value || 0)
+          }
+          dataForHierarchy = {
+            name: '_wrapper',
+            type: 'wrapper',
+            children: [repoAsLeaf]
+          }
+        } else if (nodeToRender.children) {
+          // At root: show repos as tiles
+          const aggregatedChildren = nodeToRender.children
+            .filter(child => child.type === 'repository')
+            .map(child => ({
+              ...child,
+              children: undefined,
+              _originalChildren: child.children,
+              _originalData: child,
+              value: aggregateTree(child, n => n.value || 0)
+            }))
+
+          dataForHierarchy = {
+            ...nodeToRender,
+            children: aggregatedChildren
+          }
+        }
+      }
+
       // Create hierarchy
-      const root = hierarchy(nodeToRender)
+      const root = hierarchy(dataForHierarchy)
         .sum(d => d.value || 0)
         .sort((a, b) => (b.value || 0) - (a.value || 0))
 
@@ -464,6 +706,106 @@ export default {
         // Calculate cell dimensions
         const width = node.x1 - node.x0
         const height = node.y1 - node.y0
+
+        // In repo view mode, handle repo tiles specially
+        if (this.isRepoViewActive) {
+          // Skip the root node itself
+          if (node.depth === 0) return
+
+          // Render repo tile
+          const baseColor = this.getRepoColor(node)
+          let fillValue = baseColor
+
+          // Create gradient for cushion mode
+          if (this.cushionMode) {
+            if (!gradientMap.has(baseColor)) {
+              const gradientId = `cushion-${baseColor.replace('#', '')}`
+              const { lighter, darker } = this.getCushionColors(baseColor)
+
+              const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'radialGradient')
+              gradient.setAttribute('id', gradientId)
+              gradient.setAttribute('cx', '50%')
+              gradient.setAttribute('cy', '50%')
+              gradient.setAttribute('r', '70%')
+
+              const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop')
+              stop1.setAttribute('offset', '0%')
+              stop1.setAttribute('stop-color', lighter)
+
+              const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop')
+              stop2.setAttribute('offset', '100%')
+              stop2.setAttribute('stop-color', darker)
+
+              gradient.appendChild(stop1)
+              gradient.appendChild(stop2)
+              defs.appendChild(gradient)
+
+              gradientMap.set(baseColor, gradientId)
+            }
+            fillValue = `url(#${gradientMap.get(baseColor)})`
+          }
+
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+          rect.setAttribute('x', node.x0)
+          rect.setAttribute('y', node.y0)
+          rect.setAttribute('width', width)
+          rect.setAttribute('height', height)
+          rect.setAttribute('fill', fillValue)
+          rect.setAttribute('stroke', COLOR_MODES['activity'].borderColor)
+          rect.setAttribute('stroke-width', '2')
+          rect.style.cursor = 'pointer'
+
+          // Click handler - drill into the repo
+          rect.addEventListener('click', () => {
+            // Get original data with children restored
+            const originalData = node.data._originalData || node.data
+
+            if (this.isInsideRepo) {
+              // Already inside repo (single tile view) - expand to show contents
+              this.$emit('expand-repo', originalData.path)
+            } else {
+              // At root - navigate into the repo (will show as single tile)
+              const pathNodes = [this.data, originalData]
+              this.$emit('drill-down', { node: originalData, path: pathNodes })
+            }
+          })
+
+          // Hover handler - show aggregated stats
+          rect.addEventListener('mouseenter', () => {
+            const totalLines = node.value
+            const totalFiles = this.countFiles(node.data._originalChildren ? { children: node.data._originalChildren } : node.data)
+            const totalCommits = this.getAggregatedCommits(node.data._originalChildren ? { children: node.data._originalChildren } : node.data)
+
+            const parts = ['repo']
+            parts.push(`${totalLines.toLocaleString()} lines`)
+            parts.push(`${totalFiles.toLocaleString()} files`)
+            if (totalCommits === 0) {
+              parts.push('no file changes')
+            } else {
+              parts.push(`${totalCommits.toLocaleString()} file change${totalCommits !== 1 ? 's' : ''}`)
+            }
+
+            this.$emit('hover', {
+              text: `${node.data.name} (${parts.join(', ')})`,
+              isRepo: true
+            })
+          })
+
+          rect.addEventListener('mouseleave', () => {
+            this.$emit('hover-end')
+          })
+
+          svg.appendChild(rect)
+
+          // Create repo-specific label
+          const label = this.createRepoLabel(node, width, height)
+          if (label) {
+            svg.appendChild(label)
+          }
+
+          return // Skip normal rendering for repo view tiles
+        }
+
         const isFolder = node.data.children && node.data.children.length > 0
         const isRepoRoot = node.data.type === 'repository'
 

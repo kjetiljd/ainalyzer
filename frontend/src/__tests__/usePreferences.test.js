@@ -60,7 +60,8 @@ describe('usePreferences', () => {
         showRepoBorders: true,
         showCouplingHighlights: false,
         colorMode: 'depth',
-        activityTimeframe: '1year'
+        activityTimeframe: '1year',
+        showRepoView: false
       },
       filters: {
         hideClocignore: true,
