@@ -460,7 +460,7 @@ export default {
         if (!n.children) {
           if (n.contributors?.names) {
             for (const name of n.contributors.names) {
-              counts[name] = (counts[name] || 0) + (n.commits?.last_year || 0)
+              counts[name] = (counts[name] || 0) + 1
             }
           }
           return
@@ -470,7 +470,7 @@ export default {
       walk(node)
       return Object.entries(counts)
         .sort((a, b) => b[1] - a[1])
-        .map(([name, commits]) => `${name} (${commits})`)
+        .map(([name, files]) => `${name} (${files})`)
     },
 
     // Create label for repo tiles (adaptive based on size)
@@ -831,7 +831,7 @@ export default {
           const contributors = this.getRepoContributors(repoData)
           if (contributors.length > 0) {
             const title = document.createElementNS('http://www.w3.org/2000/svg', 'title')
-            title.textContent = `${node.data.name}\n\nContributors (file changes):\n${contributors.join('\n')}`
+            title.textContent = `${node.data.name}\n\nContributors (files touched):\n${contributors.join('\n')}`
             rect.appendChild(title)
           }
 

@@ -98,13 +98,31 @@ Once you've run `./aina show`, open the browser to explore your codebase.
 
 ### Analysis Modes
 
-Open **Settings** (gear icon, top-right) to switch between three analysis modes:
+Open **Settings** (gear icon, top-right) to switch between four analysis modes:
 
 | Mode | Shows | Colors indicate |
 |------|-------|-----------------|
 | **Code size** | Lines of code | Directory depth |
 | **Change activity** | Lines of code | Commit frequency (purple=stable, yellow=hot) |
 | **File types** | Lines of code | Programming language |
+| **Contributors** | Lines of code | Lottery factor risk (red=1 contributor, green=5+) |
+
+### Cross-file Coupling
+
+Enable **Show coupling highlights** in Settings to see files that frequently change together. Hover over a file and coupled files will be highlighted. The tooltip shows which files are coupled and how often they change together.
+
+### Repo View
+
+In **Change activity** mode, enable **Repo view** in Settings to see repositories as aggregated tiles. Each tile is colored by relative activity. Hover to see a contributor breakdown sorted by files touched. Click to drill into the repo.
+
+### Export Report
+
+Click the **download icon** (next to the settings gear) to export a Markdown report with:
+- Analysis metadata and configured exclusions
+- Per-repository summary table (lines, files, unchanged files)
+- Language breakdown by files and lines
+
+The `.md` file works in GitHub, VS Code, Slack, or any Markdown viewer.
 
 ### Filtering and Exclusions
 
@@ -136,17 +154,23 @@ When using **Change activity** mode, toggle between time ranges:
 
 ### Hover Information
 
-The statusline at the bottom shows:
+The **statusline** at the bottom shows:
 - Full path to the hovered item
-- Line count
-- File change count (based on selected timeframe)
+- Line count and file change count (based on selected timeframe)
+- Contributor count
 - "(repo)" indicator for git repository roots
+
+**Tooltips** (native browser popups) show additional detail:
+- Contributor names on files
+- Coupled files and co-change frequency
+- Contributor breakdown on repo tiles (in repo view)
 
 ### Tips
 
 - Large files (>10,000 lines) are truncated in the viewer
 - Purple files in activity mode = no changes in the selected period
 - Bright yellow = high activity hotspots
+- Red files in contributors mode = single contributor (lottery factor risk)
 - Use exclusions to hide generated code and focus on source
 
 ---
