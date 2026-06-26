@@ -8,3 +8,4 @@ __pycache__/
 *.so
 .Python
 frontend/.playwright-mcp/
+**/.claude/**/*.local.json
