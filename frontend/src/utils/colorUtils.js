@@ -346,7 +346,8 @@ export const COLOR_MODES = {
     fieldFor: windowField,
     colorFn: getActivityColor,
     scalarValue: (node, ctx) => node.data.commits?.[ctx.field] || 0,
-    treeValue: (node, depth, ctx) => node.commits?.[ctx.field] || 0
+    treeValue: (node, depth, ctx) => node.commits?.[ctx.field] || 0,
+    dirLeafValue: (node, ctx) => node.commits?.[ctx.field] || 0
   },
   filetype: {
     key: 'filetype',

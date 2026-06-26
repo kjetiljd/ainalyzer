@@ -19,9 +19,8 @@
     <template v-if="modeHeadline">
       <span class="stat-separator">•</span>
       <span class="stat-item mode-headline" :title="modeHeadline.title">
-        {{ modeHeadline.label }}
         <strong :class="modeHeadline.netClass">{{ modeHeadline.netText }}</strong>
-        net <span class="mode-headline-note">({{ modeHeadline.note }})</span>
+        lines
       </span>
     </template>
   </div>
@@ -69,11 +68,12 @@ const modeHeadline = computed(() => {
   const sign = net > 0 ? '+' : ''
   const windowLabel = tf === '3months' ? 'last 3 months' : 'last year'
   return {
-    label: `${mode.label}:`,
     netText: `${sign}${net.toLocaleString()}`,
     netClass: net > 0 ? 'net-grow' : (net < 0 ? 'net-shrink' : 'net-flat'),
-    note: 'net change incl. deletions, not size',
-    title: `+${added.toLocaleString()} added, −${deleted.toLocaleString()} deleted over the ${windowLabel}`
+    title: `Net change incl. deletions, not code size: `
+      + `+${added.toLocaleString()} added, −${deleted.toLocaleString()} deleted over the ${windowLabel}. `
+      + `Counts every changed line in git history (including blank and comment lines), `
+      + `so it differs from the cloc code-line count shown as "lines".`
   }
 })
 </script>
@@ -117,9 +117,10 @@ const modeHeadline = computed(() => {
   color: #888;
 }
 
-.mode-headline-note {
-  color: #777;
-  font-style: italic;
+.mode-headline {
+  cursor: help;
+  text-decoration: underline dotted #555;
+  text-underline-offset: 3px;
 }
 
 .net-grow {

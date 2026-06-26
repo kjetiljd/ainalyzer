@@ -75,6 +75,10 @@ export default {
     commitsField() {
       return this.activityTimeframe === '3months' ? 'last_3_months' : 'last_year'
     },
+    // Returns the growth (net lines) field name based on selected timeframe
+    growthField() {
+      return this.activityTimeframe === '3months' ? 'last_3_months' : 'last_year'
+    },
     // Active color-mode descriptor (generic dispatch source for getNodeColor)
     colorModeDescriptor() {
       return COLOR_MODES[this.colorMode] || null
@@ -394,7 +398,10 @@ export default {
         line3.setAttribute('font-size', '9')
         line3.setAttribute('opacity', '0.7')
         line3.style.textShadow = `0 1px 2px ${shadowColor}`
-        if (hasCommits) {
+        if (this.colorMode === 'growth') {
+          const net = node.data.growth?.[this.growthField] || 0
+          line3.textContent = `${net > 0 ? '+' : ''}${net.toLocaleString()} net`
+        } else if (hasCommits) {
           const commits = node.data.commits[this.commitsField]
           line3.textContent = `${commits} change${commits !== 1 ? 's' : ''}`
         } else {
@@ -517,6 +524,7 @@ export default {
         : node.data
       const totalFiles = this.countFiles(originalData)
       const totalCommits = this.getAggregatedCommits(originalData)
+      const totalNet = aggregateTree(originalData, n => n.growth?.[this.growthField] || 0)
 
       const isLarge = width >= LARGE_WIDTH && height >= LARGE_HEIGHT
       const isMedium = width >= MEDIUM_WIDTH && height >= MEDIUM_HEIGHT
@@ -563,7 +571,7 @@ export default {
         filesLine.textContent = `${totalFiles.toLocaleString()} files`
         group.appendChild(filesLine)
 
-        // Line 4: Commits count
+        // Line 4: net growth (growth mode) or change count
         const commitsLine = document.createElementNS('http://www.w3.org/2000/svg', 'text')
         commitsLine.setAttribute('x', centerX)
         commitsLine.setAttribute('y', startY + lineHeight * 4)
@@ -572,7 +580,9 @@ export default {
         commitsLine.setAttribute('font-size', '9')
         commitsLine.setAttribute('opacity', '0.7')
         commitsLine.style.textShadow = `0 1px 2px ${shadowColor}`
-        commitsLine.textContent = `${totalCommits} change${totalCommits !== 1 ? 's' : ''}`
+        commitsLine.textContent = this.colorMode === 'growth'
+          ? `${totalNet > 0 ? '+' : ''}${totalNet.toLocaleString()} net`
+          : `${totalCommits} change${totalCommits !== 1 ? 's' : ''}`
         group.appendChild(commitsLine)
 
       } else if (isMedium) {
@@ -622,29 +632,43 @@ export default {
       return group
     },
 
-    // Get color for repo tile based on aggregated activity
+    // Get color for a repo tile by aggregating the active mode's metric over the
+    // whole repo, normalized against sibling repos. Generic dispatch over the
+    // color-mode descriptor so repo view honors growth (and any future windowed
+    // mode), not just activity.
     getRepoColor(node) {
-      const mode = COLOR_MODES['activity']
+      const mode = this.colorModeDescriptor
+      const ctx = this.colorContext
+      // Modes without an additive per-leaf metric (filetype, depth, contributors)
+      // can't meaningfully color a whole-repo tile — fall back to a neutral tone.
+      if (!mode || !mode.colorFn || !mode.dirLeafValue) return DIRECTORY_COLOR
+
       // Use original children since they were stripped for D3
       const originalData = node.data._originalChildren
         ? { ...node.data, children: node.data._originalChildren }
         : node.data
-      const aggregatedCommits = this.getAggregatedCommits(originalData)
+      const repoValue = aggregateTree(originalData, n => mode.dirLeafValue(n, ctx))
+      return mode.colorFn(repoValue, this.repoColorMax(mode, ctx))
+    },
 
-      // Calculate max commits across all repos for normalization
-      // Use the unstripped source tree, not the D3-modified one
+    // Normalization max for repo tiles: extent of per-repo aggregates across sibling
+    // repositories, reduced per the descriptor's normalize strategy (symmetric for
+    // growth, plain max for activity). Matches how colorMax normalizes leaf colors.
+    repoColorMax(mode, ctx) {
+      if (mode.normalize === 'none') return 0
       const sourceNode = this.currentNode || this.data
-      let maxRepoCommits = 0
-      if (sourceNode.children) {
+      let min = 0
+      let max = 0
+      if (sourceNode?.children) {
         for (const child of sourceNode.children) {
           if (child.type === 'repository') {
-            const commits = this.getAggregatedCommits(child)
-            if (commits > maxRepoCommits) maxRepoCommits = commits
+            const v = aggregateTree(child, n => mode.dirLeafValue(n, ctx))
+            if (v < min) min = v
+            if (v > max) max = v
           }
         }
       }
-
-      return mode.colorFn(aggregatedCommits, maxRepoCommits)
+      return mode.normalize === 'symmetric' ? Math.max(Math.abs(min), Math.abs(max)) : max
     },
 
     render() {
@@ -788,7 +812,7 @@ export default {
           rect.setAttribute('width', width)
           rect.setAttribute('height', height)
           rect.setAttribute('fill', fillValue)
-          rect.setAttribute('stroke', COLOR_MODES['activity'].borderColor)
+          rect.setAttribute('stroke', COLOR_MODES[this.colorMode]?.borderColor || COLOR_MODES['activity'].borderColor)
           rect.setAttribute('stroke-width', '2')
           rect.style.cursor = 'pointer'
 

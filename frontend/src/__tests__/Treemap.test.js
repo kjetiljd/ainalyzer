@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import Treemap from '../components/Treemap.vue'
-import { GROWTH_PALETTE, GROWTH_NEUTRAL } from '../utils/colorUtils'
+import { GROWTH_PALETTE, GROWTH_NEUTRAL, ACTIVITY_PALETTE } from '../utils/colorUtils'
 
 describe('Treemap', () => {
   const mockData = {
@@ -384,6 +384,59 @@ describe('Treemap', () => {
       })
       const colors = wrapper.findAll('rect').map(r => r.attributes('fill'))
       expect(colors.some(c => allGrowthColors.includes(c))).toBe(true)
+    })
+
+    it('colors repo-view tiles by the active growth mode, not activity', () => {
+      // Two repos: one net-growing, one net-shrinking. In repo view, the repo tiles
+      // must reflect growth (diverging palette), not the old hardcoded activity viridis.
+      const repoData = {
+        name: 'set', type: 'set',
+        children: [
+          { name: 'grew', type: 'repository', path: '/grew', children: [
+            { name: 'a.js', value: 100, language: 'JavaScript',
+              commits: { last_3_months: 9, last_year: 30 },
+              growth: { last_3_months: 50, last_year: 200, added_3m: 60, deleted_3m: 10, added_1y: 250, deleted_1y: 50 } }
+          ]},
+          { name: 'shrank', type: 'repository', path: '/shrank', children: [
+            { name: 'b.js', value: 80, language: 'JavaScript',
+              commits: { last_3_months: 7, last_year: 25 },
+              growth: { last_3_months: -40, last_year: -180, added_3m: 5, deleted_3m: 45, added_1y: 20, deleted_1y: 200 } }
+          ]}
+        ]
+      }
+      const wrapper = mount(Treemap, {
+        props: { data: repoData, colorMode: 'growth', activityTimeframe: '1year', showRepoView: true }
+      })
+      const colors = wrapper.findAll('rect').map(r => r.attributes('fill'))
+      // Repo tiles must use the diverging growth palette: one grow, one shrink
+      expect(colors.some(c => GROWTH_PALETTE.grow.includes(c))).toBe(true)
+      expect(colors.some(c => GROWTH_PALETTE.shrink.includes(c))).toBe(true)
+      // And must NOT fall back to the activity viridis palette
+      expect(colors.some(c => ACTIVITY_PALETTE.includes(c))).toBe(false)
+    })
+
+    it('shows net growth in repo-view tile text instead of change count', async () => {
+      const repoData = {
+        name: 'set', type: 'set',
+        children: [
+          { name: 'grew', type: 'repository', path: '/grew', children: [
+            { name: 'a.js', value: 100, language: 'JavaScript',
+              commits: { last_3_months: 9, last_year: 30 },
+              growth: { last_3_months: 50, last_year: 200, added_3m: 60, deleted_3m: 10, added_1y: 250, deleted_1y: 50 } }
+          ]}
+        ]
+      }
+      const wrapper = mount(Treemap, {
+        props: { data: repoData, colorMode: 'growth', activityTimeframe: '1year', showRepoView: true }
+      })
+      // Force a real tile size (happy-dom reports ~0), then redraw the SVG labels
+      wrapper.vm.width = 800
+      wrapper.vm.height = 600
+      wrapper.vm.render()
+      await wrapper.vm.$nextTick()
+      // The repo tile's metric line shows the net (+200), not "30 changes"
+      expect(wrapper.text()).toContain('+200 net')
+      expect(wrapper.text()).not.toContain('30 change')
     })
   })
 

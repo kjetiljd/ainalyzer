@@ -54,8 +54,20 @@ describe('StatsBar', () => {
     expect(headline.exists()).toBe(true)
     // 1y net for THIS node is -300 (added 500 - deleted 800)
     expect(headline.text()).toContain('-300')
-    expect(headline.text()).toContain('net')
-    expect(headline.text()).toContain('not size')
+    // Terse visible unit; explanation lives in the tooltip
+    expect(headline.text()).toContain('lines')
+    const title = headline.attributes('title')
+    expect(title).toContain('not code size')
+    expect(title).toContain('deletions')
+  })
+
+  it('explains the git-vs-cloc line basis in the headline tooltip', () => {
+    const wrapper = mount(StatsBar, {
+      props: { currentNode: growthNode, colorMode: 'growth', activityTimeframe: '1year' }
+    })
+    const title = wrapper.find('.mode-headline').attributes('title')
+    expect(title).toContain('blank')
+    expect(title).toContain('cloc')
   })
 
   it('honors the timeframe (3 months net differs from 1 year)', () => {
