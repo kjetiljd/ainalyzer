@@ -98,6 +98,50 @@ describe('useTreeStats', () => {
       const { changes } = useTreeStats(treeRef)
       expect(changes.value).toBe(0)
     })
+
+    // Deleted files live in the tree (type: 'deleted', value 0) so their growth rolls up,
+    // but they are NOT part of the current code base: they must not inflate lines, file
+    // counts, or directory counts.
+    describe('deleted-file nodes', () => {
+      const treeWithDeleted = {
+        name: 'root',
+        path: 'root',
+        children: [
+          {
+            name: 'src',
+            path: 'root/src',
+            children: [
+              { name: 'app.js', type: 'file', path: 'root/src/app.js', value: 200, commits: { last_year: 4 } },
+              { name: 'old.js', type: 'deleted', path: 'root/src/old.js', value: 0, growth: { last_year: -80 } }
+            ]
+          },
+          {
+            // directory that exists ONLY because a deleted file used to live here
+            name: 'gone',
+            path: 'root/gone',
+            children: [
+              { name: 'removed.js', type: 'deleted', path: 'root/gone/removed.js', value: 0, growth: { last_year: -120 } }
+            ]
+          }
+        ]
+      }
+
+      it('excludes deleted files from totalLines', () => {
+        const { totalLines } = useTreeStats(ref(treeWithDeleted))
+        expect(totalLines.value).toBe(200)
+      })
+
+      it('excludes deleted files from fileCount', () => {
+        const { fileCount } = useTreeStats(ref(treeWithDeleted))
+        expect(fileCount.value).toBe(1)
+      })
+
+      it('excludes deleted-only directories from directoryCount', () => {
+        const { directoryCount } = useTreeStats(ref(treeWithDeleted))
+        // root + src count (have a surviving file); 'gone' has only a deleted file
+        expect(directoryCount.value).toBe(2)
+      })
+    })
   })
 
   describe('findNodeByPath', () => {
@@ -197,6 +241,19 @@ describe('useTreeStats', () => {
       const leaf = { name: 'file', value: 100, commits: { last_year: 5 } }
       const sum = aggregateTree(leaf, n => n.commits?.last_year || 0)
       expect(sum).toBe(5)
+    })
+
+    it('includes deleted-file leaves in growth rollups', () => {
+      // Deleted files contribute their churn so net growth is not overstated.
+      const tree = {
+        name: 'root',
+        children: [
+          { name: 'a.js', type: 'file', value: 100, growth: { last_year: 150 } },
+          { name: 'gone.js', type: 'deleted', value: 0, growth: { last_year: -300 } }
+        ]
+      }
+      const net = aggregateTree(tree, n => n.growth?.last_year || 0)
+      expect(net).toBe(-150) // 150 + (−300)
     })
   })
 

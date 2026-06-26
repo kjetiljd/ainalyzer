@@ -30,15 +30,29 @@ export function useTreeStats(treeRef) {
   })
 
   const fileCount = computed(() => {
-    return aggregate(treeRef.value, n => n.value ? 1 : 0)
+    // Deleted-file nodes (value 0) are not part of the current code base.
+    return aggregate(treeRef.value, n => (n.type === 'deleted' || !n.value) ? 0 : 1)
   })
 
   const directoryCount = computed(() => {
-    function count(node) {
-      if (!node || !node.children) return 0
-      return 1 + node.children.reduce((sum, child) => sum + count(child), 0)
+    // Count container nodes that hold at least one surviving (non-deleted) file. A directory
+    // that exists only to host deleted-file nodes is not part of the current code base and
+    // must not inflate the count.
+    function walk(node) {
+      if (!node) return { dirs: 0, hasSurviving: false }
+      if (!node.children) {
+        return { dirs: 0, hasSurviving: node.type !== 'deleted' }
+      }
+      let dirs = 0
+      let hasSurviving = false
+      for (const child of node.children) {
+        const r = walk(child)
+        dirs += r.dirs
+        if (r.hasSurviving) hasSurviving = true
+      }
+      return { dirs: dirs + (hasSurviving ? 1 : 0), hasSurviving }
     }
-    return count(treeRef.value)
+    return walk(treeRef.value).dirs
   })
 
   const changes = computed(() => {

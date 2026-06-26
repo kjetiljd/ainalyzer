@@ -197,27 +197,49 @@ def _resolve_rename_path(path):
     return path.split('=>')[1].strip()
 
 
+def _list_git_paths(repo_path, args):
+    """Run a git command that prints one repo-relative path per line; return them as a set.
+
+    Quoting is disabled (``core.quotepath=false``) so non-ASCII paths match the numstat
+    output. Returns an empty set on any git error (e.g. a repo with no commits).
+    """
+    result = subprocess.run(
+        ['git', '-c', 'core.quotepath=false'] + args,
+        cwd=repo_path,
+        capture_output=True,
+        text=True
+    )
+    if result.returncode != 0:
+        return set()
+    return {line.strip() for line in result.stdout.split('\n') if line.strip()}
+
+
 def get_growth_data(repo_path, valid_paths=None):
-    """Per-file net growth and repo deletion-inclusive totals from one git pass.
+    """Per-file net growth (surviving and deleted) from a single git pass.
 
-    Runs a single ``git log -M --numstat --no-merges`` pass and derives both:
+    Runs one ``git log -M --numstat --no-merges`` pass (plus two cheap path-listing
+    commands) and derives:
 
-      - **Per-file signed net** ``(added - deleted)`` for the 3-month and 1-year
-        windows, with renames resolved to the surviving path and reconciled against
-        ``valid_paths`` (the cloc file set) when provided, so growth can only light up
-        cells that have a cloc area.
-      - **Repo-level totals** ``{added, deleted, net}`` per window, summed over *all*
-        commits (NOT filtered to surviving files), so whole-file deletions are included.
-        This is the deletion-inclusive truth the honest headline reports.
+      - **Surviving files** (``files``): signed net ``(added - deleted)`` for the 3-month
+        and 1-year windows, renames resolved to the surviving path and reconciled against
+        ``valid_paths`` (the cloc file set) when provided, so growth only lights up cells
+        that have a cloc area.
+      - **Deleted files** (``deleted_files``): the same per-file shape for files truly
+        removed in-window (``-M --diff-filter=D``, so rename origins are excluded). These
+        become zero-size ``deleted`` nodes in the tree so net growth isn't overstated by
+        ignoring removals — drillable per folder and subject to the same path exclusions.
+      - **Repo-level totals** (``totals``): ``{added, deleted, net}`` per window, summed
+        over *all* commits, kept for reference/diagnostics. The headline no longer reads
+        these (it sums the tree, which now includes deleted nodes and honors live filters).
 
     Args:
         repo_path: Path to git repository
-        valid_paths: Optional iterable of paths to keep in the per-file result
-            (typically the cloc ``files`` keys). When ``None``, all paths are kept.
+        valid_paths: Optional iterable of paths to keep in the surviving ``files`` result
+            (typically the cloc ``files`` keys). When ``None``, all tracked paths are kept.
 
     Returns:
-        dict: ``{'files': {rel_path: {...}}, 'totals': {window: {added, deleted, net}}}``
-        where each per-file entry is::
+        dict: ``{'files': {...}, 'deleted_files': {...}, 'totals': {...}}`` where each
+        per-file entry is::
 
             {
                 'last_3_months': net, 'last_year': net,
@@ -239,7 +261,19 @@ def get_growth_data(repo_path, valid_paths=None):
     )
 
     if result.returncode != 0:
-        return {'files': {}, 'totals': empty_totals()}
+        return {'files': {}, 'deleted_files': {}, 'totals': empty_totals()}
+
+    # Classify history paths by their current fate:
+    #   - tracked now (git ls-files)            -> surviving file
+    #   - truly deleted in-window (-M filter=D)  -> deleted file (a phantom tree node)
+    #   - gone but a rename origin               -> dropped (its lines live under the new path)
+    # -M makes a renamed file's old path show as R, not D, so rename origins are excluded
+    # from the deleted set and never become misleading "deleted" nodes.
+    tracked = _list_git_paths(repo_path, ['ls-files'])
+    deleted_set = _list_git_paths(repo_path, [
+        'log', '-M', '--diff-filter=D', '--no-merges',
+        '--since=1 year ago', '--name-only', '--format='
+    ])
 
     now = datetime.now(timezone.utc)
     three_months_ago = now.timestamp() - (90 * 24 * 60 * 60)
@@ -303,10 +337,9 @@ def get_growth_data(repo_path, valid_paths=None):
             stats['deleted_3m'] += deleted
 
     files_out = {}
+    deleted_out = {}
     for path, stats in file_stats.items():
-        if valid_set is not None and path not in valid_set:
-            continue
-        files_out[path] = {
+        entry = {
             'last_3_months': stats['added_3m'] - stats['deleted_3m'],
             'last_year': stats['added_1y'] - stats['deleted_1y'],
             'added_3m': stats['added_3m'],
@@ -314,11 +347,19 @@ def get_growth_data(repo_path, valid_paths=None):
             'added_1y': stats['added_1y'],
             'deleted_1y': stats['deleted_1y'],
         }
+        if path in tracked:
+            # Surviving file: keep only if cloc counted it (so growth lights up a real cell).
+            if valid_set is None or path in valid_set:
+                files_out[path] = entry
+        elif path in deleted_set:
+            # Truly removed: surface as a deleted node so its churn isn't lost.
+            deleted_out[path] = entry
+        # else: gone rename origin — counted in totals, but not a per-file cell.
 
     for window in totals:
         totals[window]['net'] = totals[window]['added'] - totals[window]['deleted']
 
-    return {'files': files_out, 'totals': totals}
+    return {'files': files_out, 'deleted_files': deleted_out, 'totals': totals}
 
 
 def get_file_growth(repo_path, valid_paths=None):

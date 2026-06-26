@@ -438,6 +438,21 @@ describe('Treemap', () => {
       expect(wrapper.text()).toContain('+200 net')
       expect(wrapper.text()).not.toContain('30 change')
     })
+
+    it('counts surviving files only, ignoring deleted-file leaves', () => {
+      // A folder with one surviving file and one deleted file must report 1 file.
+      const folder = {
+        name: 'src', type: 'directory', path: 'src',
+        children: [
+          { name: 'a.js', type: 'file', value: 100, growth: { last_year: 50, added_1y: 60, deleted_1y: 10 } },
+          { name: 'gone.js', type: 'deleted', value: 0, growth: { last_year: -300, added_1y: 0, deleted_1y: 300 } }
+        ]
+      }
+      const wrapper = mount(Treemap, {
+        props: { data: folder, colorMode: 'growth', activityTimeframe: '1year' }
+      })
+      expect(wrapper.vm.countFiles(folder)).toBe(1)
+    })
   })
 
   describe('context menu', () => {

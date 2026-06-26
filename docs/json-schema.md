@@ -71,10 +71,6 @@ The analysis output is a hierarchical tree structure representing:
       "Python": 85000,
       "JavaScript": 30000,
       "TypeScript": 10430
-    },
-    "growth": {
-      "last_3_months": { "added": 5120, "deleted": 1980, "net": 3140 },
-      "last_year": { "added": 18430, "deleted": 6210, "net": 12220 }
     }
   },
   "tree": {
@@ -194,7 +190,7 @@ The analysis output is a hierarchical tree structure representing:
 |-------|------|-------------|
 | `analysis_set` | string | Name of the analysis set (from `aina add`) |
 | `generated_at` | ISO 8601 timestamp | When analysis was run |
-| `stats` | object | Aggregate statistics (total lines, files, repos, languages, growth) |
+| `stats` | object | Aggregate statistics (total lines, files, repos, languages) |
 | `tree` | object | Hierarchical tree structure (root node) |
 
 ### Node Object (Branch)
@@ -211,13 +207,29 @@ The analysis output is a hierarchical tree structure representing:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `name` | string | Yes | Filename with extension |
-| `type` | enum | Yes | `"file"` |
+| `type` | enum | Yes | `"file"` or `"deleted"` |
 | `path` | string | Yes | Relative path from analysis set root |
-| `value` | integer | Yes | Lines of code (from cloc) |
-| `language` | string | Yes | Programming language (from cloc or extension mapping) |
-| `extension` | string | Yes | File extension (e.g. ".py", ".js") |
-| `commits` | object | Yes | Git commit metadata |
-| `growth` | object | No | Net line growth per window (present when the file had in-window line changes) |
+| `value` | integer | Yes | Lines of code (from cloc); always `0` for `deleted` nodes |
+| `language` | string | Yes | Programming language (from cloc or extension mapping); omitted for `deleted` nodes |
+| `extension` | string | Yes | File extension (e.g. ".py", ".js"); omitted for `deleted` nodes |
+| `commits` | object | Yes | Git commit metadata; omitted for `deleted` nodes |
+| `growth` | object | No | Net line growth per window (present when the file had in-window line changes; always present for `deleted` nodes) |
+
+### Deleted Node (Leaf)
+
+A file that was **removed in-window** is emitted as a zero-size leaf with `type: "deleted"`
+at its real (former) path, nested under its directory (rebuilt synthetically if the whole
+directory is gone). It carries `value: 0` and a `growth` object but no `language`,
+`extension`, or `commits`. Deleted nodes:
+
+- contribute their (typically negative) `growth` to every ancestor folder, so **net growth
+  isn't overstated** by ignoring removals;
+- are **excluded** from line counts, file counts, and directory counts (they have no code);
+- are subject to the **same path-based exclusion rules** (`.clocignore` + custom exclusions)
+  as surviving files, applied dynamically on the frontend.
+
+Rename origins are *not* deleted (they survive under the new path), so they never produce a
+deleted node.
 
 ### Commits Object
 
@@ -230,11 +242,12 @@ The analysis output is a hierarchical tree structure representing:
 
 ### Growth Object (per file)
 
-Net line change for the **surviving** file, signed (`added − deleted`). Sourced from a
-single `git log -M --numstat --no-merges` pass and reconciled to the cloc file set, so it
-only covers files cloc counted. Renames are resolved to the surviving path (`-M`); line
-changes made *before* a rename remain attributed to the old path (a single-pass limitation
-vs. `--follow`).
+Net line change for a file, signed (`added − deleted`). Sourced from a single
+`git log -M --numstat --no-merges` pass. For **surviving** files it is reconciled to the
+cloc file set (so it only covers files cloc counted) and renames are resolved to the
+surviving path (`-M`); line changes made *before* a rename remain attributed to the old path
+(a single-pass limitation vs. `--follow`). The same object shape is attached to `deleted`
+nodes, capturing the churn of files removed in-window.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -245,13 +258,10 @@ vs. `--follow`).
 | `added_1y` | integer | Yes | Lines added in last year |
 | `deleted_1y` | integer | Yes | Lines deleted in last year |
 
-### Stats Growth Object (analysis-level)
-
-`stats.growth` reports the **deletion-inclusive** true net change for the whole analysis
-set, summed over *all* commits including whole-file deletions (which leave no surviving cell
-in the tree). It is therefore the honest headline figure and will differ from summing the
-per-file `growth` over the tree. Keyed by window (`last_3_months`, `last_year`), each value
-is `{ "added": int, "deleted": int, "net": int }`.
+> **Note:** There is no analysis-level `stats.growth` total. The honest, deletion-inclusive
+> headline is derived on the frontend by summing the tree (surviving **and** deleted nodes),
+> which is the only way to honor the live, path-based exclusion rules — a precomputed total
+> could not reflect dynamic `.clocignore`/custom exclusions.
 
 ---
 

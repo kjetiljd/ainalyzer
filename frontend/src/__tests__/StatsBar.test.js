@@ -97,6 +97,33 @@ describe('StatsBar', () => {
     expect(wrapper.find('.mode-headline').exists()).toBe(false)
   })
 
+  it('includes deleted-file removals in the net headline (does not overstate growth)', () => {
+    // A surviving file that grew, plus a deleted file whose lines are gone. The honest net
+    // must net the deletion out, not ignore it.
+    const nodeWithDeleted = {
+      name: 'area',
+      children: [
+        {
+          name: 'a.js', value: 100, type: 'file',
+          growth: { last_3_months: 0, last_year: 150, added_3m: 0, deleted_3m: 0, added_1y: 200, deleted_1y: 50 }
+        },
+        {
+          name: 'gone.js', value: 0, type: 'deleted',
+          growth: { last_3_months: 0, last_year: -300, added_3m: 0, deleted_3m: 0, added_1y: 0, deleted_1y: 300 }
+        }
+      ]
+    }
+    const wrapper = mount(StatsBar, {
+      props: { currentNode: nodeWithDeleted, colorMode: 'growth', activityTimeframe: '1year' }
+    })
+    const headline = wrapper.find('.mode-headline')
+    expect(headline.exists()).toBe(true)
+    // 1y net: added 200, deleted 50+300=350 → −150
+    expect(headline.text()).toContain('-150')
+    // tooltip exposes the deletion-inclusive detail (350 deleted)
+    expect(headline.attributes('aria-label')).toContain('350')
+  })
+
   it('shows a custom tooltip on hover instead of the slow native title', async () => {
     const wrapper = mount(StatsBar, {
       props: { currentNode: growthNode, colorMode: 'growth', activityTimeframe: '1year' }

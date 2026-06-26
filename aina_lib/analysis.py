@@ -177,6 +177,49 @@ def apply_file_stats(file_node, stats):
     return file_node
 
 
+def _insert_deleted_node(repo_node, path_prefix, rel_path, growth):
+    """Insert a deleted file as a zero-size ``deleted`` node into a repo's schema tree.
+
+    Walks ``rel_path`` from the repo root, reusing existing directory nodes and creating
+    any missing ones (a whole deleted directory is rebuilt), then appends a leaf::
+
+        {name, type: 'deleted', path, value: 0, growth}
+
+    The node carries no code size (``value`` 0) so it never inflates line/file counts, but
+    its growth rolls up into every ancestor folder. Paths are built like surviving nodes
+    (``path_prefix`` + ``/``-joined parts) so frontend path-based exclusion applies equally.
+    """
+    parts = Path(rel_path).parts
+    if not parts:
+        return
+
+    current = repo_node
+    accum = path_prefix
+    for dirname in parts[:-1]:
+        accum = f"{accum}/{dirname}" if accum else dirname
+        child = next(
+            (c for c in current['children']
+             if c.get('type') == 'directory' and c.get('name') == dirname),
+            None
+        )
+        if child is None:
+            child = {'name': dirname, 'type': 'directory', 'path': accum, 'children': []}
+            current['children'].append(child)
+        current = child
+
+    filename = parts[-1]
+    leaf_path = f"{accum}/{filename}" if accum else filename
+    if any(c.get('path') == leaf_path for c in current['children']):
+        return
+    current['children'].append({
+        'name': filename,
+        'type': 'deleted',
+        'path': leaf_path,
+        'value': 0,
+        'growth': growth
+    })
+
+
 def tree_to_schema(tree, name, path_prefix='', git_stats=None):
     """Convert internal tree structure to JSON schema format.
 
@@ -258,8 +301,8 @@ def analyze_single_repo(repo_path, path_obj, on_progress=None):
         on_progress: Optional callback for progress messages
 
     Returns:
-        tuple: (repo_node, files_dict, coupling_data, growth_totals)
-            or (None, None, None, None) on error
+        tuple: (repo_node, files_dict, coupling_data)
+            or (None, None, None) on error
     """
     repo_name = Path(repo_path).name
 
@@ -268,16 +311,15 @@ def analyze_single_repo(repo_path, path_obj, on_progress=None):
         files = {k: v for k, v in cloc_data.items() if k not in ['header', 'SUM']}
 
         if not files:
-            return None, None, None, None
+            return None, None, None
 
         repo_tree = build_directory_tree(files, repo_path)
         git_stats = get_file_stats(repo_path)
         coupling = get_coupling_data(repo_path)
 
-        # Single growth pass per repo (per-file net + deletion-inclusive repo totals),
-        # reconciled to the cloc file set. cloc keys are absolute, so convert them to the
-        # repo-relative paths git emits before reconciling. Merge per-file growth into
-        # git_stats so each path carries one stats dict (commits/contributors/growth).
+        # Single growth pass per repo. cloc keys are absolute, so convert them to the
+        # repo-relative paths git emits before reconciling. Surviving per-file growth is
+        # merged into git_stats; deleted files are injected as nodes after the tree is built.
         base = Path(repo_path)
         valid_paths = set()
         for filepath in files.keys():
@@ -288,7 +330,6 @@ def analyze_single_repo(repo_path, path_obj, on_progress=None):
         growth = get_growth_data(repo_path, valid_paths=valid_paths)
         for file_path, file_growth in growth['files'].items():
             git_stats.setdefault(file_path, {})['growth'] = file_growth
-        growth_totals = growth['totals']
 
         is_root_repo = Path(repo_path).resolve() == path_obj.resolve()
         path_prefix = '' if is_root_repo else repo_name
@@ -321,15 +362,20 @@ def analyze_single_repo(repo_path, path_obj, on_progress=None):
             'children': children
         }
 
+        # Inject deleted files as zero-size nodes so removals count against net growth
+        # at every drill level (and remain subject to the same path-based exclusions).
+        for rel_path, file_growth in growth['deleted_files'].items():
+            _insert_deleted_node(repo_node, path_prefix, rel_path, file_growth)
+
         # Prefix coupling paths with repo name for multi-repo analysis
         if path_prefix and coupling['pairs']:
             for pair in coupling['pairs']:
                 pair['files'] = [f"{path_prefix}/{f}" for f in pair['files']]
 
-        return repo_node if children else None, files, coupling, growth_totals
+        return repo_node if repo_node['children'] else None, files, coupling
 
     except Exception:
-        return None, None, None, None
+        return None, None, None
 
 
 def analyze_repos(analysis_set_name, analysis_set_path, on_staleness_warning=None, on_progress=None):
@@ -390,16 +436,12 @@ def analyze_repos(analysis_set_name, analysis_set_path, on_staleness_warning=Non
     languages = {}
     repo_nodes = []
     all_coupling_pairs = []
-    growth_totals = {
-        'last_3_months': {'added': 0, 'deleted': 0, 'net': 0},
-        'last_year': {'added': 0, 'deleted': 0, 'net': 0},
-    }
 
     for i, repo_path in enumerate(repos, 1):
         repo_name = Path(repo_path).name
         log(f"[{i}/{len(repos)}] Analyzing {repo_name}...")
 
-        repo_node, files, coupling, repo_growth = analyze_single_repo(repo_path, path_obj, on_progress=log)
+        repo_node, files, coupling = analyze_single_repo(repo_path, path_obj, on_progress=log)
 
         if repo_node and files:
             repo_nodes.append(repo_node)
@@ -414,13 +456,6 @@ def analyze_repos(analysis_set_name, analysis_set_path, on_staleness_warning=Non
             # Collect coupling pairs from this repo
             if coupling and coupling.get('pairs'):
                 all_coupling_pairs.extend(coupling['pairs'])
-
-            # Accumulate deletion-inclusive growth totals across repos
-            if repo_growth:
-                for window in ('last_3_months', 'last_year'):
-                    growth_totals[window]['added'] += repo_growth[window]['added']
-                    growth_totals[window]['deleted'] += repo_growth[window]['deleted']
-                    growth_totals[window]['net'] += repo_growth[window]['net']
 
             log(f"  {len(files)} files, {sum(f.get('code', 0) for f in files.values()):,} lines")
         elif files is None:
@@ -441,8 +476,7 @@ def analyze_repos(analysis_set_name, analysis_set_path, on_staleness_warning=Non
             'total_files': total_files,
             'total_lines': total_lines,
             'total_repos': len(repo_nodes),
-            'languages': dict(sorted(languages.items(), key=lambda x: x[1], reverse=True)),
-            'growth': growth_totals
+            'languages': dict(sorted(languages.items(), key=lambda x: x[1], reverse=True))
         },
         'coupling': {
             'threshold': 3,

@@ -385,31 +385,90 @@ class TestAnalyzeReposWithGitStats(GitRepoTestCase):
         self.assertIn('last_year', node['growth'])
         self.assertEqual(node['growth']['last_year'], 5)
 
-    def test_stats_includes_deletion_inclusive_growth_totals(self):
-        """Analysis-level stats.growth carries deletion-inclusive repo totals."""
+    def test_analyze_injects_deleted_file_node(self):
+        """Files deleted in-window appear in the tree as zero-size 'deleted' nodes.
+
+        Deleted files carry growth so net change isn't overstated, but they are not part
+        of the current code base (value 0, type 'deleted').
+        """
         from aina_lib import analyze_repos
 
-        self.create_file('keep.py', 'a\nb\nc\n')  # +3 survives
-        self.create_file('temp.py', 'x\ny\n')      # +2 then deleted
+        self.create_file('keep.py', 'a\nb\nc\n')   # survives
+        self.create_file('temp.py', 'x\ny\n')       # +2 then deleted
         self.commit('add both')
         os.remove(Path(self.repo_path) / 'temp.py')
         self.commit('delete temp')
 
         result = analyze_repos('test', self.repo_path)
 
-        self.assertIn('growth', result['stats'])
-        totals = result['stats']['growth']['last_year']
-        # Deletion-inclusive: 5 added (3+2), 2 deleted (temp.py) => net 3
-        self.assertEqual(totals['added'], 5)
-        self.assertEqual(totals['deleted'], 2)
-        self.assertEqual(totals['net'], 3)
+        def find_node_by_name(node, name):
+            if node.get('name') == name:
+                return node
+            for child in node.get('children', []):
+                found = find_node_by_name(child, name)
+                if found:
+                    return found
+            return None
 
-    def test_analyze_single_repo_returns_four_tuple_when_no_files(self):
-        """A repo with no cloc-countable files returns a 4-tuple of Nones.
+        deleted = find_node_by_name(result['tree'], 'temp.py')
+        self.assertIsNotNone(deleted, 'deleted file should appear as a tree node')
+        self.assertEqual(deleted['type'], 'deleted')
+        self.assertEqual(deleted['value'], 0)
+        self.assertIn('growth', deleted)
+        # temp.py: +2 added, -2 deleted within the window
+        self.assertEqual(deleted['growth']['added_1y'], 2)
+        self.assertEqual(deleted['growth']['deleted_1y'], 2)
 
-        Regression: the empty-files early return used to yield a 3-tuple, so the
-        caller's 4-value unpack raised 'not enough values to unpack' and aborted
-        the whole analysis run (e.g. on infra/deploy repos with no source files).
+    def test_deleted_node_nested_under_its_directory(self):
+        """A deleted file under an otherwise-removed directory gets that directory rebuilt."""
+        from aina_lib import analyze_repos
+
+        self.create_file('keep.py', 'a\nb\n')
+        self.create_file('legacy/old.py', 'p\nq\nr\n')
+        self.commit('add')
+        os.remove(Path(self.repo_path) / 'legacy' / 'old.py')
+        self.commit('delete legacy/old.py')
+
+        result = analyze_repos('test', self.repo_path)
+
+        def find_node_by_name(node, name):
+            if node.get('name') == name:
+                return node
+            for child in node.get('children', []):
+                found = find_node_by_name(child, name)
+                if found:
+                    return found
+            return None
+
+        legacy_dir = find_node_by_name(result['tree'], 'legacy')
+        self.assertIsNotNone(legacy_dir, 'directory should be reconstructed for the deleted file')
+        self.assertEqual(legacy_dir['type'], 'directory')
+        old = find_node_by_name(legacy_dir, 'old.py')
+        self.assertIsNotNone(old)
+        self.assertEqual(old['type'], 'deleted')
+        self.assertTrue(old['path'].endswith('legacy/old.py'))
+
+    def test_stats_no_longer_emits_growth_totals(self):
+        """The precomputed stats.growth total is dropped.
+
+        It could never honor the frontend's dynamic, path-based exclusions, and the
+        deletion-inclusive net is now recoverable by summing the tree (surviving +
+        deleted nodes). So it is removed rather than left as misleading dead data.
+        """
+        from aina_lib import analyze_repos
+
+        self.create_file('keep.py', 'a\nb\nc\n')
+        self.commit('add')
+
+        result = analyze_repos('test', self.repo_path)
+        self.assertNotIn('growth', result['stats'])
+
+    def test_analyze_single_repo_returns_three_tuple_when_no_files(self):
+        """A repo with no cloc-countable files returns a 3-tuple of Nones.
+
+        Regression guard: the empty-files early return must match the arity the caller
+        unpacks; a mismatch aborts the whole run (e.g. on infra/deploy repos with no
+        source files).
         """
         from unittest.mock import patch
         from aina_lib import analysis
@@ -418,8 +477,9 @@ class TestAnalyzeReposWithGitStats(GitRepoTestCase):
         with patch.object(analysis, 'run_cloc', return_value={'header': {}, 'SUM': {}}):
             result = analysis.analyze_single_repo(self.repo_path, Path(self.repo_path))
 
-        self.assertEqual(len(result), 4)
-        self.assertEqual(result, (None, None, None, None))
+        self.assertEqual(len(result), 3)
+        self.assertEqual(result, (None, None, None))
+
 
 
 class TestGetCouplingData(GitRepoTestCase):
@@ -830,12 +890,12 @@ class TestGetGrowthData(GitRepoTestCase):
     def test_pre_rename_growth_stays_under_old_path(self):
         """Known limitation: single-pass -M does NOT rewrite pre-rename history.
 
-        Unlike --follow (a per-file pass we deliberately avoid for the single-pass
-        growth design), plain ``git log -M --numstat`` only resolves the rename row
-        itself to the new path; line changes made before the rename remain attributed
-        to the old path. With cloc reconciliation, those pre-rename additions are
-        dropped (the old path is not a surviving file). This test documents that
-        behaviour so a future change to it is a conscious decision.
+        Plain ``git log -M --numstat`` only resolves the rename row itself to the new
+        path; line changes made before the rename remain attributed to the old path.
+        The old path is neither a surviving (tracked) file nor a true deletion (``-M``
+        classifies it as a rename, not a ``D``), so it is dropped from both ``files``
+        and ``deleted_files`` rather than surfacing as a misleading deleted node. The
+        deletion-inclusive repo totals still account for every line.
         """
         self.create_file('old_name.py', 'a\nb\nc\n')  # +3 under the OLD name
         self.commit('add')
@@ -844,14 +904,62 @@ class TestGetGrowthData(GitRepoTestCase):
         subprocess.run(['git', 'mv', str(old), str(new)], cwd=self.repo_path, capture_output=True)
         self.commit('rename')
 
-        # Without reconciliation, the +3 is visible but keyed under the old path.
-        unfiltered = get_file_growth(self.repo_path)
-        self.assertEqual(unfiltered.get('old_name.py', {}).get('added_1y'), 3)
-        self.assertEqual(unfiltered.get('new_name.py', {}).get('added_1y'), 0)
+        result = get_growth_data(self.repo_path)
+        # Rename origin is not surfaced as a per-file entry and never as a deletion.
+        self.assertNotIn('old_name.py', result['files'])
+        self.assertNotIn('old_name.py', result['deleted_files'])
 
         # The deletion-inclusive repo totals still account for every added line.
         totals = get_repo_growth_totals(self.repo_path)
         self.assertEqual(totals['last_year']['added'], 3)
+
+    def test_deleted_files_returned_separately_from_surviving(self):
+        """Files truly removed in-window are returned under 'deleted_files', not 'files'."""
+        two_years_ago = (datetime.now() - timedelta(days=730)).strftime('%Y-%m-%dT12:00:00')
+        # legacy.py was created long ago (outside window) so only its deletion counts.
+        self.create_file('legacy.py', 'a\nb\nc\nd\ne\n')
+        self.commit_with_date('add legacy (old)', two_years_ago)
+        self.create_file('keep.py', 'x\ny\n')
+        self.commit('add keep (recent)')
+        os.remove(Path(self.repo_path) / 'legacy.py')
+        self.commit('delete legacy (recent)')
+
+        result = get_growth_data(self.repo_path, valid_paths={'keep.py'})
+
+        self.assertIn('keep.py', result['files'])
+        self.assertNotIn('legacy.py', result['files'])
+
+        self.assertIn('legacy.py', result['deleted_files'])
+        entry = result['deleted_files']['legacy.py']
+        self.assertEqual(entry['added_1y'], 0)      # creation is outside the window
+        self.assertEqual(entry['deleted_1y'], 5)    # whole-file deletion in-window
+        self.assertEqual(entry['last_year'], -5)    # honest negative net
+
+    def test_renamed_away_path_is_not_a_deleted_file(self):
+        """A renamed (moved) file's old path must NOT be reported as deleted."""
+        self.create_file('mod/a.py', 'a\nb\nc\n')
+        self.commit('add')
+        subprocess.run(['git', 'mv', 'mod/a.py', 'mod/b.py'], cwd=self.repo_path, capture_output=True)
+        self.commit('rename a -> b')
+
+        result = get_growth_data(self.repo_path, valid_paths={'mod/b.py'})
+        self.assertNotIn('mod/a.py', result['deleted_files'])
+
+    def test_surviving_uncounted_file_is_not_a_deleted_file(self):
+        """A surviving file absent from the cloc set is dropped, not marked deleted."""
+        self.create_file('keep.py', 'x\ny\n')
+        self.create_file('vendored.py', 'a\nb\nc\n')
+        self.commit('add both')
+
+        result = get_growth_data(self.repo_path, valid_paths={'keep.py'})
+        self.assertNotIn('vendored.py', result['files'])
+        self.assertNotIn('vendored.py', result['deleted_files'])
+
+    def test_empty_repo_has_no_deleted_files(self):
+        """Empty repo yields empty deleted_files (alongside empty files)."""
+        result = get_growth_data(self.repo_path)
+        self.assertEqual(result['deleted_files'], {})
+
 
     def test_binary_rows_skipped(self):
         """Binary files (numstat '-') do not contribute to growth numbers."""

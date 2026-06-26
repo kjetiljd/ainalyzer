@@ -407,4 +407,76 @@ describe('filterTree', () => {
     // yarn.lock should be preserved due to negation
     expect(repo1.children.find(c => c.name === 'yarn.lock')).toBeDefined()
   })
+
+  // Deleted files are represented in the tree as `type: 'deleted'` leaf nodes so their
+  // growth rolls up at every folder level. They MUST obey the exact same path-based
+  // exclusion rules as surviving files — otherwise an ignored (e.g. lockfile) deletion
+  // would silently inflate net growth.
+  describe('deleted-file nodes', () => {
+    const treeWithDeleted = {
+      name: 'root',
+      type: 'analysis_set',
+      children: [
+        {
+          name: 'repo1',
+          type: 'repository',
+          path: 'repo1',
+          children: [
+            {
+              name: 'src',
+              type: 'directory',
+              path: 'repo1/src',
+              children: [
+                { name: 'app.js', type: 'file', path: 'repo1/src/app.js', value: 100 },
+                // a deleted source file under a surviving directory
+                { name: 'old.js', type: 'deleted', path: 'repo1/src/old.js', value: 0, growth: { last_year: -80 } }
+              ]
+            },
+            // a deleted lockfile that an exclusion pattern should remove
+            { name: 'package-lock.json', type: 'deleted', path: 'repo1/package-lock.json', value: 0, growth: { last_year: -5000 } }
+          ]
+        }
+      ]
+    }
+
+    it('excludes a deleted node whose path matches an exclusion pattern', () => {
+      const result = filterTree(treeWithDeleted, ['package-lock.json'])
+      const repo1 = result.children.find(c => c.name === 'repo1')
+      expect(repo1.children.find(c => c.name === 'package-lock.json')).toBeUndefined()
+    })
+
+    it('keeps a deleted node whose path matches no pattern', () => {
+      const result = filterTree(treeWithDeleted, ['package-lock.json'])
+      const repo1 = result.children.find(c => c.name === 'repo1')
+      const src = repo1.children.find(c => c.name === 'src')
+      expect(src.children.find(c => c.name === 'old.js')).toBeDefined()
+    })
+
+    it('excludes deleted nodes by glob just like surviving files', () => {
+      const result = filterTree(treeWithDeleted, ['**/src/**'])
+      const repo1 = result.children.find(c => c.name === 'repo1')
+      const src = repo1.children.find(c => c.name === 'src')
+      // entire src dir (surviving app.js + deleted old.js) removed
+      expect(src).toBeUndefined()
+    })
+
+    it('removes a directory left with only excluded deleted children', () => {
+      const onlyDeleted = {
+        name: 'root',
+        type: 'analysis_set',
+        children: [
+          {
+            name: 'gonedir',
+            type: 'directory',
+            path: 'gonedir',
+            children: [
+              { name: 'a.js', type: 'deleted', path: 'gonedir/a.js', value: 0, growth: { last_year: -10 } }
+            ]
+          }
+        ]
+      }
+      const result = filterTree(onlyDeleted, ['**/gonedir/**'])
+      expect(result.children.find(c => c.name === 'gonedir')).toBeUndefined()
+    })
+  })
 })

@@ -72,8 +72,10 @@ export function filterTree(tree, patterns) {
   }
 
   function filterNode(node) {
-    // If this is a file, check if it should be excluded
-    if (node.type === 'file') {
+    // Files and deleted-file nodes are leaves subject to path exclusion. Deleted nodes
+    // (type 'deleted') carry growth but no surviving code; they must honor the exact same
+    // patterns as surviving files so an ignored deletion can't inflate net growth.
+    if (node.type === 'file' || node.type === 'deleted') {
       if (shouldExclude(node.path)) {
         return null
       }
