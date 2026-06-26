@@ -18,16 +18,29 @@
     <!-- Generic mode headline (G3): active color mode supplies its own honest summary -->
     <template v-if="modeHeadline">
       <span class="stat-separator">•</span>
-      <span class="stat-item mode-headline" :title="modeHeadline.title">
+      <span
+        class="stat-item mode-headline"
+        tabindex="0"
+        :aria-label="modeHeadline.title"
+        @mouseenter="showTip"
+        @mouseleave="hideTip"
+        @focus="showTip"
+        @blur="hideTip"
+      >
         <strong :class="modeHeadline.netClass">{{ modeHeadline.netText }}</strong>
         lines
       </span>
     </template>
+    <Teleport to="body">
+      <div v-if="tipVisible && modeHeadline" class="mode-headline-tip" :style="tipStyle">
+        {{ modeHeadline.title }}
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { toRef, computed } from 'vue'
+import { toRef, computed, ref, onBeforeUnmount } from 'vue'
 import { useTreeStats, aggregateTree } from '../composables/useTreeStats'
 import { COLOR_MODES } from '../utils/colorUtils'
 
@@ -76,6 +89,36 @@ const modeHeadline = computed(() => {
       + `so it differs from the cloc code-line count shown as "lines".`
   }
 })
+
+// Lightweight custom tooltip: native title has a ~1s browser delay and a help
+// cursor. We render our own fixed-position bubble (teleported to body so the
+// stats-bar's overflow can't clip it) with a short, snappy show delay.
+const tipVisible = ref(false)
+const tipStyle = ref({})
+const TIP_DELAY_MS = 120
+const TIP_MAX_WIDTH = 340
+let tipTimer = null
+
+function showTip(e) {
+  const rect = e.currentTarget.getBoundingClientRect()
+  clearTimeout(tipTimer)
+  tipTimer = setTimeout(() => {
+    const margin = 8
+    let left = rect.left
+    if (left + TIP_MAX_WIDTH + margin > window.innerWidth) {
+      left = Math.max(margin, window.innerWidth - TIP_MAX_WIDTH - margin)
+    }
+    tipStyle.value = { top: `${rect.bottom + 6}px`, left: `${left}px`, maxWidth: `${TIP_MAX_WIDTH}px` }
+    tipVisible.value = true
+  }, TIP_DELAY_MS)
+}
+
+function hideTip() {
+  clearTimeout(tipTimer)
+  tipVisible.value = false
+}
+
+onBeforeUnmount(() => clearTimeout(tipTimer))
 </script>
 
 <style scoped>
@@ -118,9 +161,25 @@ const modeHeadline = computed(() => {
 }
 
 .mode-headline {
-  cursor: help;
+  cursor: default;
   text-decoration: underline dotted #555;
   text-underline-offset: 3px;
+  outline: none;
+}
+
+.mode-headline-tip {
+  position: fixed;
+  z-index: 1000;
+  background: #2d2d2d;
+  color: #d4d4d4;
+  border: 1px solid #3e3e3e;
+  border-radius: 4px;
+  padding: 6px 9px;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: normal;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
 }
 
 .net-grow {

@@ -54,9 +54,9 @@ describe('StatsBar', () => {
     expect(headline.exists()).toBe(true)
     // 1y net for THIS node is -300 (added 500 - deleted 800)
     expect(headline.text()).toContain('-300')
-    // Terse visible unit; explanation lives in the tooltip
+    // Terse visible unit; explanation lives in the tooltip (exposed via aria-label)
     expect(headline.text()).toContain('lines')
-    const title = headline.attributes('title')
+    const title = headline.attributes('aria-label')
     expect(title).toContain('not code size')
     expect(title).toContain('deletions')
   })
@@ -65,7 +65,7 @@ describe('StatsBar', () => {
     const wrapper = mount(StatsBar, {
       props: { currentNode: growthNode, colorMode: 'growth', activityTimeframe: '1year' }
     })
-    const title = wrapper.find('.mode-headline').attributes('title')
+    const title = wrapper.find('.mode-headline').attributes('aria-label')
     expect(title).toContain('blank')
     expect(title).toContain('cloc')
   })
@@ -80,11 +80,11 @@ describe('StatsBar', () => {
     expect(headline.text()).toContain('+90')
   })
 
-  it('exposes node-scoped added/deleted detail via the headline title tooltip', () => {
+  it('exposes node-scoped added/deleted detail via the headline tooltip', () => {
     const wrapper = mount(StatsBar, {
       props: { currentNode: growthNode, colorMode: 'growth', activityTimeframe: '1year' }
     })
-    const title = wrapper.find('.mode-headline').attributes('title')
+    const title = wrapper.find('.mode-headline').attributes('aria-label')
     // node rollup: 500 added, 800 deleted
     expect(title).toContain('500')
     expect(title).toContain('800')
@@ -95,5 +95,29 @@ describe('StatsBar', () => {
       props: { currentNode: plainNode, colorMode: 'growth' }
     })
     expect(wrapper.find('.mode-headline').exists()).toBe(false)
+  })
+
+  it('shows a custom tooltip on hover instead of the slow native title', async () => {
+    const wrapper = mount(StatsBar, {
+      props: { currentNode: growthNode, colorMode: 'growth', activityTimeframe: '1year' }
+    })
+    const headline = wrapper.find('.mode-headline')
+    // No native title attribute (its show delay is browser-controlled and slow)
+    expect(headline.attributes('title')).toBeUndefined()
+    // Tooltip is not in the DOM until the user hovers
+    expect(document.body.querySelector('.mode-headline-tip')).toBeNull()
+
+    await headline.trigger('mouseenter')
+    await new Promise(resolve => setTimeout(resolve, 160))
+    await wrapper.vm.$nextTick()
+    const tip = document.body.querySelector('.mode-headline-tip')
+    expect(tip).not.toBeNull()
+    expect(tip.textContent).toContain('cloc')
+
+    // Leaving hides it again
+    await headline.trigger('mouseleave')
+    await wrapper.vm.$nextTick()
+    expect(document.body.querySelector('.mode-headline-tip')).toBeNull()
+    wrapper.unmount()
   })
 })
