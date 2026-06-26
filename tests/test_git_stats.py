@@ -404,6 +404,23 @@ class TestAnalyzeReposWithGitStats(GitRepoTestCase):
         self.assertEqual(totals['deleted'], 2)
         self.assertEqual(totals['net'], 3)
 
+    def test_analyze_single_repo_returns_four_tuple_when_no_files(self):
+        """A repo with no cloc-countable files returns a 4-tuple of Nones.
+
+        Regression: the empty-files early return used to yield a 3-tuple, so the
+        caller's 4-value unpack raised 'not enough values to unpack' and aborted
+        the whole analysis run (e.g. on infra/deploy repos with no source files).
+        """
+        from unittest.mock import patch
+        from aina_lib import analysis
+
+        # cloc finds nothing countable (only header/SUM, no file entries)
+        with patch.object(analysis, 'run_cloc', return_value={'header': {}, 'SUM': {}}):
+            result = analysis.analyze_single_repo(self.repo_path, Path(self.repo_path))
+
+        self.assertEqual(len(result), 4)
+        self.assertEqual(result, (None, None, None, None))
+
 
 class TestGetCouplingData(GitRepoTestCase):
     """Test get_coupling_data function for co-change detection."""

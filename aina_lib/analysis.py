@@ -268,7 +268,7 @@ def analyze_single_repo(repo_path, path_obj, on_progress=None):
         files = {k: v for k, v in cloc_data.items() if k not in ['header', 'SUM']}
 
         if not files:
-            return None, None, None
+            return None, None, None, None
 
         repo_tree = build_directory_tree(files, repo_path)
         git_stats = get_file_stats(repo_path)
