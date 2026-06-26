@@ -178,6 +178,14 @@ export const CONTRIBUTOR_PALETTE = [
   '#4caf50'   // Green (5+ contributors - healthy)
 ]
 
+// Growth palette: diverging, neutral midpoint, blue (shrink) <-> orange (grow).
+// Neutral hues (not green<->red) so "shrink" doesn't read as "bad".
+export const GROWTH_NEUTRAL = '#8a8a8a'
+export const GROWTH_PALETTE = {
+  shrink: ['#bdd7e7', '#6baed6', '#3182bd', '#08519c'],  // mild -> strong blue
+  grow:   ['#fdbe85', '#fd8d3c', '#e6550d', '#a63603']   // mild -> strong orange
+}
+
 /**
  * Get color for a file based on its commit activity.
  * @param {number} commits - Number of commits in the time period
@@ -242,6 +250,32 @@ export function getContributorColor(count) {
   return CONTRIBUTOR_PALETTE[index]
 }
 
+/**
+ * Get a diverging color for a file/area's net line growth.
+ *
+ * Unlike getActivityColor (log scale, NaN on negatives), this is symmetric and
+ * signed: negative net = blue (shrink), positive net = orange (grow), zero/neutral
+ * = gray midpoint. Normalization is symmetric against maxAbs (= max(|min|, |max|)).
+ *
+ * @param {number} net - Signed net lines (added - deleted) for the node
+ * @param {number} maxAbs - Symmetric maximum magnitude across the tree
+ * @returns {string} Hex color
+ */
+export function getGrowthColor(net, maxAbs) {
+  if (net === undefined || net === null || net === 0 || !maxAbs || maxAbs <= 0) {
+    return GROWTH_NEUTRAL
+  }
+
+  // Symmetric normalize to [-1, 1], clamping outliers.
+  const norm = Math.max(-1, Math.min(1, net / maxAbs))
+  const magnitude = Math.abs(norm)
+
+  const ramp = net > 0 ? GROWTH_PALETTE.grow : GROWTH_PALETTE.shrink
+  // Log-ish bucketing so small changes remain visible.
+  const index = Math.min(ramp.length - 1, Math.floor(Math.pow(magnitude, 0.6) * ramp.length))
+  return ramp[index]
+}
+
 export function simpleHash(str) {
   let hash = 0
   for (let i = 0; i < str.length; i++) {
@@ -268,35 +302,93 @@ function findSlot(language, usedSlots, saltRound = 0) {
   return findSlot(language, usedSlots, saltRound + 1)
 }
 
-// Color mode registry - single source of truth for all mode configuration
+// Resolve the per-window field name shared by commits and growth blocks.
+function windowField(timeframe) {
+  return timeframe === '3months' ? 'last_3_months' : 'last_year'
+}
+
+// Color mode registry - single source of truth for all mode configuration.
+//
+// Each entry is a descriptor the Treemap dispatches over generically (G1), so adding a
+// mode is a data change, not another `if (colorMode === ...)` branch. Descriptor fields:
+//   type            'scalar' | 'categorical'
+//   colorFn         (value, max) => hex   — uniform signature (max ignored when unused)
+//   normalize       'max' | 'symmetric' | 'none' — how the tree extent becomes `max`
+//   scalarValue     (d3Node, ctx) => number — leaf value fed to colorFn
+//   treeValue       (dataNode, depth, ctx) => number — value used to compute the extent
+//   colorDirectories  bool — color directories by rollup instead of neutral gray
+//   dirLeafValue    (dataNode, ctx) => number — leaf extractor for directory rollup
+//   usesTimeframe   bool — show the 3m/1y selector and follow it
+//   fieldFor        (timeframe) => field name
+//   headline        { leafAdded(node,tf), leafDeleted(node,tf) } — StatsBar rolls these up
+//                   over the *current node* (so the figure is scoped like the other stats)
 export const COLOR_MODES = {
   depth: {
     key: 'depth',
     label: 'Code size',
     description: 'Shows lines of code. Color indicates directory depth.',
     borderColor: '#009688',  // Teal - contrasts with yellow-orange-brown
-    colorFn: getDepthColor   // (depth, maxDepth) => color
+    type: 'scalar',
+    normalize: 'max',
+    colorFn: getDepthColor,
+    scalarValue: (node, ctx) => node.depth + ctx.depthOffset,
+    treeValue: (node, depth) => depth
   },
   activity: {
     key: 'activity',
     label: 'Change activity',
     description: 'Shows file change frequency in last year.',
+    windowedDescription: (label) => `Shows file changes in last ${label}.`,
     borderColor: '#ff7043',  // Coral - contrasts with viridis purple-yellow
-    colorFn: getActivityColor  // (commits, maxCommits) => color
+    type: 'scalar',
+    normalize: 'max',
+    usesTimeframe: true,
+    fieldFor: windowField,
+    colorFn: getActivityColor,
+    scalarValue: (node, ctx) => node.data.commits?.[ctx.field] || 0,
+    treeValue: (node, depth, ctx) => node.commits?.[ctx.field] || 0
   },
   filetype: {
     key: 'filetype',
     label: 'File types',
     description: 'Shows lines of code. Color indicates language.',
     borderColor: '#ffffff',  // White - stands out against mixed colors
-    colorFn: null  // Uses colorMap lookup, handled differently
+    type: 'categorical',
+    normalize: 'none',
+    colorFn: null  // Uses colorMap lookup, handled by the categorical branch
   },
   contributors: {
     key: 'contributors',
     label: 'Contributors',
     description: 'Shows contributor count per file. Red = 1 (lottery factor risk), Green = 4+.',
     borderColor: '#4caf50',  // Green - contrasts with red-yellow tones
-    colorFn: getContributorColor  // (count) => color
+    type: 'scalar',
+    normalize: 'none',
+    colorFn: getContributorColor,
+    scalarValue: (node) => node.data.contributors?.count ?? 0,
+    treeValue: () => 0
+  },
+  growth: {
+    key: 'growth',
+    label: 'Net growth',
+    description: 'Net lines added minus deleted for current files in the selected window.',
+    windowedDescription: (label) => `Net lines added minus deleted for current files in the last ${label}.`,
+    borderColor: '#3182bd',  // Blue - contrasts with diverging orange grow tones
+    type: 'scalar',
+    normalize: 'symmetric',
+    usesTimeframe: true,
+    fieldFor: windowField,
+    colorDirectories: true,
+    colorFn: getGrowthColor,
+    scalarValue: (node, ctx) => node.data.growth?.[ctx.field] || 0,
+    treeValue: (node, depth, ctx) => node.growth?.[ctx.field] || 0,
+    dirLeafValue: (node, ctx) => node.growth?.[ctx.field] || 0,
+    // Node-scoped headline: StatsBar sums these leaf extractors over the current node,
+    // so the net matches the scope of the lines/files/changes shown beside it.
+    headline: {
+      leafAdded: (node, timeframe) => node.growth?.[timeframe === '3months' ? 'added_3m' : 'added_1y'] || 0,
+      leafDeleted: (node, timeframe) => node.growth?.[timeframe === '3months' ? 'deleted_3m' : 'deleted_1y'] || 0
+    }
   }
 }
 

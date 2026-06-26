@@ -27,8 +27,8 @@
             <p class="setting-description radio-description">
               {{ getDescription(mode) }}
             </p>
-            <!-- Timeframe selector for activity mode -->
-            <div v-if="mode.key === 'activity' && showTimeframeSelector" class="timeframe-selector">
+            <!-- Timeframe selector for windowed modes (activity, growth, …) -->
+            <div v-if="mode.usesTimeframe && showTimeframeSelector" class="timeframe-selector">
               <span class="timeframe-label">Time range:</span>
               <div class="timeframe-buttons">
                 <button
@@ -41,8 +41,8 @@
                 </button>
               </div>
             </div>
-            <!-- Repo view toggle for activity mode -->
-            <label v-if="mode.key === 'activity' && showTimeframeSelector" class="checkbox-label activity-sub-option">
+            <!-- Repo view toggle for windowed modes -->
+            <label v-if="mode.usesTimeframe && showTimeframeSelector" class="checkbox-label activity-sub-option">
               <input
                 type="checkbox"
                 :checked="preferences.appearance?.showRepoView"
@@ -50,7 +50,7 @@
               />
               <span>Repo view</span>
             </label>
-            <p v-if="mode.key === 'activity' && showTimeframeSelector" class="setting-description activity-sub-description">
+            <p v-if="mode.usesTimeframe && showTimeframeSelector" class="setting-description activity-sub-description">
               Show repositories as tiles at root level.
             </p>
           </template>
@@ -181,26 +181,27 @@ const customExclusions = computed(() => {
 
 // Ordered list of color modes for radio buttons
 const colorModesList = computed(() => {
-  return ['depth', 'filetype', 'activity', 'contributors'].map(key => COLOR_MODES[key])
+  return ['depth', 'filetype', 'activity', 'contributors', 'growth'].map(key => COLOR_MODES[key])
 })
 
-// Timeframe options for activity mode
+// Timeframe options for windowed modes
 const timeframeOptions = [
   { value: '3months', label: '3 months' },
   { value: '1year', label: '1 year' }
 ]
 
-// Whether to show timeframe selector (only when activity mode is selected)
+// Whether to show timeframe selector (only when a windowed mode is selected)
 const showTimeframeSelector = computed(() => {
-  return (preferences.value.appearance?.colorMode || 'depth') === 'activity'
+  const mode = COLOR_MODES[preferences.value.appearance?.colorMode || 'depth']
+  return !!mode?.usesTimeframe
 })
 
-// Get description for a color mode, with dynamic text for activity mode
+// Get description for a color mode, with dynamic text for windowed modes
 function getDescription(mode) {
-  if (mode.key === 'activity') {
+  if (mode.usesTimeframe && mode.windowedDescription) {
     const timeframe = preferences.value.appearance?.activityTimeframe || '1year'
     const timeframeLabel = timeframe === '3months' ? '3 months' : 'year'
-    return `Shows file changes in last ${timeframeLabel}.`
+    return mode.windowedDescription(timeframeLabel)
   }
   return mode.description
 }

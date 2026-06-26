@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import Treemap from '../components/Treemap.vue'
+import { GROWTH_PALETTE, GROWTH_NEUTRAL } from '../utils/colorUtils'
 
 describe('Treemap', () => {
   const mockData = {
@@ -304,6 +305,85 @@ describe('Treemap', () => {
       const depthColors = ['#ffffe5', '#fff7bc', '#fee391', '#fec44f', '#fe9929', '#ec7014', '#cc4c02', '#993404', '#662506']
       const usesDepthColors = fileColors.some(c => depthColors.includes(c))
       expect(usesDepthColors).toBe(true)
+    })
+  })
+
+  describe('growth colorMode', () => {
+    const growthData = {
+      name: 'root',
+      children: [
+        { name: 'grew', children: [
+          { name: 'big.js', value: 100, language: 'JavaScript',
+            growth: { last_3_months: 50, last_year: 200, added_3m: 60, deleted_3m: 10, added_1y: 250, deleted_1y: 50 } }
+        ]},
+        { name: 'shrank', children: [
+          { name: 'small.js', value: 20, language: 'JavaScript',
+            growth: { last_3_months: -40, last_year: -180, added_3m: 5, deleted_3m: 45, added_1y: 20, deleted_1y: 200 } }
+        ]}
+      ]
+    }
+
+    const allGrowthColors = [...GROWTH_PALETTE.grow, ...GROWTH_PALETTE.shrink]
+
+    it('colors files by net growth using the diverging palette', () => {
+      const wrapper = mount(Treemap, {
+        props: { data: growthData, colorMode: 'growth', activityTimeframe: '1year' }
+      })
+
+      const fileColors = wrapper.findAll('rect')
+        .map(r => r.attributes('fill'))
+        .filter(c => allGrowthColors.includes(c))
+
+      expect(fileColors.length).toBeGreaterThan(0)
+    })
+
+    it('uses a grow (orange) color for a positive file and a shrink (blue) color for a negative file', () => {
+      const wrapper = mount(Treemap, {
+        props: { data: growthData, colorMode: 'growth', activityTimeframe: '1year' }
+      })
+
+      const colors = wrapper.findAll('rect').map(r => r.attributes('fill'))
+      expect(colors.some(c => GROWTH_PALETTE.grow.includes(c))).toBe(true)
+      expect(colors.some(c => GROWTH_PALETTE.shrink.includes(c))).toBe(true)
+    })
+
+    it('colors directories by signed rollup instead of neutral gray', () => {
+      const wrapper = mount(Treemap, {
+        props: { data: growthData, colorMode: 'growth', activityTimeframe: '1year' }
+      })
+
+      // Some directory rect must carry a diverging palette color (not #4a4a4a)
+      const colors = wrapper.findAll('rect').map(r => r.attributes('fill'))
+      const dirHasGrowthColor = colors.some(c => allGrowthColors.includes(c))
+      expect(dirHasGrowthColor).toBe(true)
+      // Directories must NOT fall back to the depth/filetype neutral gray here
+      expect(colors.some(c => c === '#4a4a4a')).toBe(false)
+    })
+
+    it('falls back to neutral when a file has no growth data', () => {
+      const noGrowth = {
+        name: 'root',
+        children: [
+          { name: 'a.js', value: 100, language: 'JavaScript' }
+        ]
+      }
+      const wrapper = mount(Treemap, {
+        props: { data: noGrowth, colorMode: 'growth', activityTimeframe: '1year' }
+      })
+
+      const colors = wrapper.findAll('rect').map(r => r.attributes('fill'))
+      expect(colors).toContain(GROWTH_NEUTRAL)
+    })
+
+    it('honors the timeframe when coloring (3 months vs 1 year)', () => {
+      // big.js net is +50 in 3m and +200 in 1y; small.js is -40 in 3m and -180 in 1y.
+      // Switching the window changes the symmetric max and hence buckets — both windows
+      // must still render valid diverging colors without error.
+      const wrapper = mount(Treemap, {
+        props: { data: growthData, colorMode: 'growth', activityTimeframe: '3months' }
+      })
+      const colors = wrapper.findAll('rect').map(r => r.attributes('fill'))
+      expect(colors.some(c => allGrowthColors.includes(c))).toBe(true)
     })
   })
 

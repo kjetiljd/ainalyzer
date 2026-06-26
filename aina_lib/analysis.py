@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .discovery import discover_repos
 from .git_staleness import get_repo_staleness_info, format_staleness_warning
-from .git_stats import get_file_stats, get_coupling_data
+from .git_stats import get_file_stats, get_coupling_data, get_growth_data
 
 
 def run_cloc(repo_path, on_progress=None):
@@ -147,6 +147,36 @@ def build_directory_tree(files, base_path):
     return tree
 
 
+def apply_file_stats(file_node, stats):
+    """Copy whatever git-derived stat blocks are present onto a file node.
+
+    Generic merge (one place for commits/contributors/growth) so adding a new
+    per-file stat block doesn't mean another hardcoded branch at every call site.
+
+    Args:
+        file_node: The schema file node to enrich (mutated in place).
+        stats: Per-path stats dict (may carry ``commits_3m``/``commits_1y``/
+            ``last_commit_date``, ``contributors``, and/or ``growth``), or falsy.
+    """
+    if stats:
+        file_node['commits'] = {
+            'last_3_months': stats.get('commits_3m', 0),
+            'last_year': stats.get('commits_1y', 0),
+            'last_commit_date': stats.get('last_commit_date')
+        }
+        if 'contributors' in stats:
+            file_node['contributors'] = stats['contributors']
+        if 'growth' in stats:
+            file_node['growth'] = stats['growth']
+    else:
+        file_node['commits'] = {
+            'last_3_months': 0,
+            'last_year': 0,
+            'last_commit_date': None
+        }
+    return file_node
+
+
 def tree_to_schema(tree, name, path_prefix='', git_stats=None):
     """Convert internal tree structure to JSON schema format.
 
@@ -188,20 +218,7 @@ def tree_to_schema(tree, name, path_prefix='', git_stats=None):
             }
             if git_stats is not None:
                 stats = git_stats.get(file['path'])
-                if stats:
-                    file_node['commits'] = {
-                        'last_3_months': stats['commits_3m'],
-                        'last_year': stats['commits_1y'],
-                        'last_commit_date': stats['last_commit_date']
-                    }
-                    if 'contributors' in stats:
-                        file_node['contributors'] = stats['contributors']
-                else:
-                    file_node['commits'] = {
-                        'last_3_months': 0,
-                        'last_year': 0,
-                        'last_commit_date': None
-                    }
+                apply_file_stats(file_node, stats)
             children.append(file_node)
 
     node = {
@@ -241,7 +258,8 @@ def analyze_single_repo(repo_path, path_obj, on_progress=None):
         on_progress: Optional callback for progress messages
 
     Returns:
-        tuple: (repo_node, files_dict, coupling_data) or (None, None, None) on error
+        tuple: (repo_node, files_dict, coupling_data, growth_totals)
+            or (None, None, None, None) on error
     """
     repo_name = Path(repo_path).name
 
@@ -255,6 +273,22 @@ def analyze_single_repo(repo_path, path_obj, on_progress=None):
         repo_tree = build_directory_tree(files, repo_path)
         git_stats = get_file_stats(repo_path)
         coupling = get_coupling_data(repo_path)
+
+        # Single growth pass per repo (per-file net + deletion-inclusive repo totals),
+        # reconciled to the cloc file set. cloc keys are absolute, so convert them to the
+        # repo-relative paths git emits before reconciling. Merge per-file growth into
+        # git_stats so each path carries one stats dict (commits/contributors/growth).
+        base = Path(repo_path)
+        valid_paths = set()
+        for filepath in files.keys():
+            try:
+                valid_paths.add(str(Path(filepath).relative_to(base)))
+            except ValueError:
+                continue
+        growth = get_growth_data(repo_path, valid_paths=valid_paths)
+        for file_path, file_growth in growth['files'].items():
+            git_stats.setdefault(file_path, {})['growth'] = file_growth
+        growth_totals = growth['totals']
 
         is_root_repo = Path(repo_path).resolve() == path_obj.resolve()
         path_prefix = '' if is_root_repo else repo_name
@@ -277,20 +311,7 @@ def analyze_single_repo(repo_path, path_obj, on_progress=None):
                 'extension': file['extension']
             }
             stats = git_stats.get(file['path'])
-            if stats:
-                file_node['commits'] = {
-                    'last_3_months': stats['commits_3m'],
-                    'last_year': stats['commits_1y'],
-                    'last_commit_date': stats['last_commit_date']
-                }
-                if 'contributors' in stats:
-                    file_node['contributors'] = stats['contributors']
-            else:
-                file_node['commits'] = {
-                    'last_3_months': 0,
-                    'last_year': 0,
-                    'last_commit_date': None
-                }
+            apply_file_stats(file_node, stats)
             children.append(file_node)
 
         repo_node = {
@@ -305,10 +326,10 @@ def analyze_single_repo(repo_path, path_obj, on_progress=None):
             for pair in coupling['pairs']:
                 pair['files'] = [f"{path_prefix}/{f}" for f in pair['files']]
 
-        return repo_node if children else None, files, coupling
+        return repo_node if children else None, files, coupling, growth_totals
 
     except Exception:
-        return None, None, None
+        return None, None, None, None
 
 
 def analyze_repos(analysis_set_name, analysis_set_path, on_staleness_warning=None, on_progress=None):
@@ -369,12 +390,16 @@ def analyze_repos(analysis_set_name, analysis_set_path, on_staleness_warning=Non
     languages = {}
     repo_nodes = []
     all_coupling_pairs = []
+    growth_totals = {
+        'last_3_months': {'added': 0, 'deleted': 0, 'net': 0},
+        'last_year': {'added': 0, 'deleted': 0, 'net': 0},
+    }
 
     for i, repo_path in enumerate(repos, 1):
         repo_name = Path(repo_path).name
         log(f"[{i}/{len(repos)}] Analyzing {repo_name}...")
 
-        repo_node, files, coupling = analyze_single_repo(repo_path, path_obj, on_progress=log)
+        repo_node, files, coupling, repo_growth = analyze_single_repo(repo_path, path_obj, on_progress=log)
 
         if repo_node and files:
             repo_nodes.append(repo_node)
@@ -389,6 +414,13 @@ def analyze_repos(analysis_set_name, analysis_set_path, on_staleness_warning=Non
             # Collect coupling pairs from this repo
             if coupling and coupling.get('pairs'):
                 all_coupling_pairs.extend(coupling['pairs'])
+
+            # Accumulate deletion-inclusive growth totals across repos
+            if repo_growth:
+                for window in ('last_3_months', 'last_year'):
+                    growth_totals[window]['added'] += repo_growth[window]['added']
+                    growth_totals[window]['deleted'] += repo_growth[window]['deleted']
+                    growth_totals[window]['net'] += repo_growth[window]['net']
 
             log(f"  {len(files)} files, {sum(f.get('code', 0) for f in files.values()):,} lines")
         elif files is None:
@@ -409,7 +441,8 @@ def analyze_repos(analysis_set_name, analysis_set_path, on_staleness_warning=Non
             'total_files': total_files,
             'total_lines': total_lines,
             'total_repos': len(repo_nodes),
-            'languages': dict(sorted(languages.items(), key=lambda x: x[1], reverse=True))
+            'languages': dict(sorted(languages.items(), key=lambda x: x[1], reverse=True)),
+            'growth': growth_totals
         },
         'coupling': {
             'threshold': 3,

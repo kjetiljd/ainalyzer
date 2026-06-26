@@ -175,6 +175,162 @@ def get_file_stats_with_follow(repo_path, file_path, three_months_timestamp):
     }
 
 
+def _resolve_rename_path(path):
+    """Resolve git numstat rename path syntax to the surviving (new) path.
+
+    Numstat renders renames in two forms:
+      - ``old/path => new/path`` (whole path changed)
+      - ``src/{old => new}/file.js`` (brace substitution of a path segment)
+    Either form (incl. empty old/new segments) resolves to the new path.
+    """
+    if '=>' not in path:
+        return path
+
+    if '{' in path and '}' in path:
+        pre, rest = path.split('{', 1)
+        inside, post = rest.split('}', 1)
+        new_segment = inside.split('=>')[1].strip()
+        combined = pre + new_segment + post
+        # An empty old/new segment can leave a doubled slash; collapse it.
+        return combined.replace('//', '/')
+
+    return path.split('=>')[1].strip()
+
+
+def get_growth_data(repo_path, valid_paths=None):
+    """Per-file net growth and repo deletion-inclusive totals from one git pass.
+
+    Runs a single ``git log -M --numstat --no-merges`` pass and derives both:
+
+      - **Per-file signed net** ``(added - deleted)`` for the 3-month and 1-year
+        windows, with renames resolved to the surviving path and reconciled against
+        ``valid_paths`` (the cloc file set) when provided, so growth can only light up
+        cells that have a cloc area.
+      - **Repo-level totals** ``{added, deleted, net}`` per window, summed over *all*
+        commits (NOT filtered to surviving files), so whole-file deletions are included.
+        This is the deletion-inclusive truth the honest headline reports.
+
+    Args:
+        repo_path: Path to git repository
+        valid_paths: Optional iterable of paths to keep in the per-file result
+            (typically the cloc ``files`` keys). When ``None``, all paths are kept.
+
+    Returns:
+        dict: ``{'files': {rel_path: {...}}, 'totals': {window: {added, deleted, net}}}``
+        where each per-file entry is::
+
+            {
+                'last_3_months': net, 'last_year': net,
+                'added_3m': a, 'deleted_3m': d,
+                'added_1y': a, 'deleted_1y': d,
+            }
+    """
+    def empty_totals():
+        return {
+            'last_3_months': {'added': 0, 'deleted': 0, 'net': 0},
+            'last_year': {'added': 0, 'deleted': 0, 'net': 0},
+        }
+
+    result = subprocess.run(
+        ['git', 'log', '-M', '--numstat', '--no-merges', '--format=COMMIT|%aI', '--since=1 year ago'],
+        cwd=repo_path,
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode != 0:
+        return {'files': {}, 'totals': empty_totals()}
+
+    now = datetime.now(timezone.utc)
+    three_months_ago = now.timestamp() - (90 * 24 * 60 * 60)
+
+    valid_set = set(valid_paths) if valid_paths is not None else None
+
+    file_stats = defaultdict(lambda: {
+        'added_3m': 0, 'deleted_3m': 0, 'added_1y': 0, 'deleted_1y': 0
+    })
+    totals = {
+        'last_3_months': {'added': 0, 'deleted': 0},
+        'last_year': {'added': 0, 'deleted': 0},
+    }
+
+    current_timestamp = None
+
+    for line in result.stdout.split('\n'):
+        if not line.strip():
+            continue
+
+        if line.startswith('COMMIT|'):
+            parts = line.split('|', 1)
+            date_str = parts[1] if len(parts) > 1 else ''
+            try:
+                dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                current_timestamp = dt.timestamp()
+            except ValueError:
+                current_timestamp = 0
+            continue
+
+        parts = line.split('\t')
+        if len(parts) < 3:
+            continue
+
+        added_str, deleted_str, raw_path = parts[0], parts[1], parts[2]
+        if added_str == '-' or deleted_str == '-':
+            continue  # binary file: numstat reports '-' for both columns
+
+        try:
+            added = int(added_str)
+            deleted = int(deleted_str)
+        except ValueError:
+            continue
+
+        in_3m = current_timestamp is not None and current_timestamp >= three_months_ago
+
+        # Repo totals: deletion-inclusive, not filtered to surviving files.
+        totals['last_year']['added'] += added
+        totals['last_year']['deleted'] += deleted
+        if in_3m:
+            totals['last_3_months']['added'] += added
+            totals['last_3_months']['deleted'] += deleted
+
+        # Per-file growth, keyed by the surviving path.
+        path = _resolve_rename_path(raw_path)
+        stats = file_stats[path]
+        stats['added_1y'] += added
+        stats['deleted_1y'] += deleted
+        if in_3m:
+            stats['added_3m'] += added
+            stats['deleted_3m'] += deleted
+
+    files_out = {}
+    for path, stats in file_stats.items():
+        if valid_set is not None and path not in valid_set:
+            continue
+        files_out[path] = {
+            'last_3_months': stats['added_3m'] - stats['deleted_3m'],
+            'last_year': stats['added_1y'] - stats['deleted_1y'],
+            'added_3m': stats['added_3m'],
+            'deleted_3m': stats['deleted_3m'],
+            'added_1y': stats['added_1y'],
+            'deleted_1y': stats['deleted_1y'],
+        }
+
+    for window in totals:
+        totals[window]['net'] = totals[window]['added'] - totals[window]['deleted']
+
+    return {'files': files_out, 'totals': totals}
+
+
+def get_file_growth(repo_path, valid_paths=None):
+    """Per-file net growth (convenience wrapper around :func:`get_growth_data`)."""
+    return get_growth_data(repo_path, valid_paths)['files']
+
+
+def get_repo_growth_totals(repo_path):
+    """Repo deletion-inclusive totals (wrapper around :func:`get_growth_data`)."""
+    return get_growth_data(repo_path)['totals']
+
+
 def get_coupling_data(repo_path, threshold=3, max_pairs=500):
     """Detect files that frequently change together.
 

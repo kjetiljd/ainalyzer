@@ -5,6 +5,8 @@ import {
   findNodeByPath,
   countLeafValues,
   findMaxInTree,
+  extentInTree,
+  symmetricMaxInTree,
   aggregateTree
 } from '../composables/useTreeStats'
 
@@ -195,6 +197,60 @@ describe('useTreeStats', () => {
       const leaf = { name: 'file', value: 100, commits: { last_year: 5 } }
       const sum = aggregateTree(leaf, n => n.commits?.last_year || 0)
       expect(sum).toBe(5)
+    })
+  })
+
+  describe('extentInTree', () => {
+    const signedTree = {
+      name: 'root',
+      children: [
+        { name: 'a', growth: { last_year: -120 } },
+        { name: 'b', growth: { last_year: 40 } },
+        { name: 'sub', children: [
+          { name: 'c', growth: { last_year: 75 } },
+          { name: 'd', growth: { last_year: -10 } }
+        ] }
+      ]
+    }
+
+    it('returns both min and max in one pass', () => {
+      const ext = extentInTree(signedTree, n => n.growth?.last_year || 0)
+      expect(ext.min).toBe(-120)
+      expect(ext.max).toBe(75)
+    })
+
+    it('passes depth to the accessor', () => {
+      const ext = extentInTree(sampleTree, (n, depth) => depth)
+      expect(ext.max).toBe(2)
+      expect(ext.min).toBe(0)
+    })
+
+    it('handles null root', () => {
+      expect(extentInTree(null, n => n.value || 0)).toEqual({ min: 0, max: 0 })
+    })
+
+    it('handles a flat (leaf) node', () => {
+      const ext = extentInTree({ name: 'f', value: 42 }, n => n.value || 0)
+      expect(ext).toEqual({ min: 42, max: 42 })
+    })
+  })
+
+  describe('symmetricMaxInTree', () => {
+    it('returns max(|min|, |max|) for diverging normalization', () => {
+      const tree = {
+        name: 'root',
+        children: [
+          { name: 'a', growth: { last_year: -300 } },
+          { name: 'b', growth: { last_year: 120 } }
+        ]
+      }
+      const m = symmetricMaxInTree(tree, n => n.growth?.last_year || 0)
+      expect(m).toBe(300) // |−300| > |120|
+    })
+
+    it('is zero for an all-zero tree', () => {
+      const tree = { name: 'root', children: [{ name: 'a', growth: { last_year: 0 } }] }
+      expect(symmetricMaxInTree(tree, n => n.growth?.last_year || 0)).toBe(0)
     })
   })
 })

@@ -95,7 +95,11 @@ const repoColor = computed(() => {
 <template>
   <div class="treemap-explorer">
     <Breadcrumb :path="breadcrumbPath" @navigate="handleBreadcrumbNavigate" />
-    <StatsBar :currentNode="filteredCurrentNode" />
+    <StatsBar
+      :currentNode="filteredCurrentNode"
+      :colorMode="preferences.appearance?.colorMode || 'depth'"
+      :activityTimeframe="preferences.appearance?.activityTimeframe || '1year'"
+    />
     <div class="treemap-container">
       <Treemap
         :data="data"

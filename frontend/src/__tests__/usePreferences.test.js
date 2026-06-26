@@ -357,6 +357,33 @@ describe('usePreferences', () => {
     expect(preferences.value.appearance.colorMode).toBe('depth')
   })
 
+  it('round-trips colorMode=growth through localStorage and URL', async () => {
+    const { usePreferences } = await import('../composables/usePreferences')
+    const { preferences, setCurrentAnalysis, updateURL } = usePreferences()
+    setCurrentAnalysis('growth-analysis')
+    preferences.value.appearance.colorMode = 'growth'
+
+    // Persisted to localStorage for this analysis (watcher flushes asynchronously)
+    await new Promise(resolve => setTimeout(resolve, 10))
+    const stored = JSON.parse(localStorage.getItem('ainalyzer-growth-analysis'))
+    expect(stored.appearance.colorMode).toBe('growth')
+
+    // Reflected in the URL (no enum gate blocks the new mode)
+    updateURL()
+    const url = history.replaceState.mock.calls.at(-1)[2]
+    expect(url).toContain('colorMode=growth')
+  })
+
+  it('loads colorMode=growth from a URL param', async () => {
+    global.location.search = '?colorMode=growth'
+
+    const { usePreferences } = await import('../composables/usePreferences')
+    const { preferences, setCurrentAnalysis } = usePreferences()
+    setCurrentAnalysis('growth-analysis')
+
+    expect(preferences.value.appearance.colorMode).toBe('growth')
+  })
+
   // Custom exclusions tests
   describe('custom exclusions', () => {
     it('includes filters.customExclusions as empty array by default', async () => {

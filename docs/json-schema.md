@@ -41,6 +41,14 @@ The analysis output is a hierarchical tree structure representing:
     "last_3_months": 12,
     "last_commit_date": "2025-11-15T14:32:00Z",
     "last_commit_age_days": 6
+  },
+  "growth": {
+    "last_3_months": 180,
+    "last_year": 540,
+    "added_3m": 240,
+    "deleted_3m": 60,
+    "added_1y": 760,
+    "deleted_1y": 220
   }
 }
 ```
@@ -63,6 +71,10 @@ The analysis output is a hierarchical tree structure representing:
       "Python": 85000,
       "JavaScript": 30000,
       "TypeScript": 10430
+    },
+    "growth": {
+      "last_3_months": { "added": 5120, "deleted": 1980, "net": 3140 },
+      "last_year": { "added": 18430, "deleted": 6210, "net": 12220 }
     }
   },
   "tree": {
@@ -182,7 +194,7 @@ The analysis output is a hierarchical tree structure representing:
 |-------|------|-------------|
 | `analysis_set` | string | Name of the analysis set (from `aina add`) |
 | `generated_at` | ISO 8601 timestamp | When analysis was run |
-| `stats` | object | Aggregate statistics (total lines, files, repos, languages) |
+| `stats` | object | Aggregate statistics (total lines, files, repos, languages, growth) |
 | `tree` | object | Hierarchical tree structure (root node) |
 
 ### Node Object (Branch)
@@ -205,6 +217,7 @@ The analysis output is a hierarchical tree structure representing:
 | `language` | string | Yes | Programming language (from cloc or extension mapping) |
 | `extension` | string | Yes | File extension (e.g. ".py", ".js") |
 | `commits` | object | Yes | Git commit metadata |
+| `growth` | object | No | Net line growth per window (present when the file had in-window line changes) |
 
 ### Commits Object
 
@@ -214,6 +227,31 @@ The analysis output is a hierarchical tree structure representing:
 | `last_3_months` | integer | Yes | Commits in last 90 days |
 | `last_commit_date` | ISO 8601 timestamp | Yes | Date of most recent commit |
 | `last_commit_age_days` | integer | Yes | Days since last commit (derived from `last_commit_date`) |
+
+### Growth Object (per file)
+
+Net line change for the **surviving** file, signed (`added − deleted`). Sourced from a
+single `git log -M --numstat --no-merges` pass and reconciled to the cloc file set, so it
+only covers files cloc counted. Renames are resolved to the surviving path (`-M`); line
+changes made *before* a rename remain attributed to the old path (a single-pass limitation
+vs. `--follow`).
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `last_3_months` | integer | Yes | Net lines (added − deleted) in last 90 days; may be negative |
+| `last_year` | integer | Yes | Net lines (added − deleted) in last year; may be negative |
+| `added_3m` | integer | Yes | Lines added in last 90 days |
+| `deleted_3m` | integer | Yes | Lines deleted in last 90 days |
+| `added_1y` | integer | Yes | Lines added in last year |
+| `deleted_1y` | integer | Yes | Lines deleted in last year |
+
+### Stats Growth Object (analysis-level)
+
+`stats.growth` reports the **deletion-inclusive** true net change for the whole analysis
+set, summed over *all* commits including whole-file deletions (which leave no surviving cell
+in the tree). It is therefore the honest headline figure and will differ from summing the
+per-file `growth` over the tree. Keyed by window (`last_3_months`, `last_year`), each value
+is `{ "added": int, "deleted": int, "net": int }`.
 
 ---
 

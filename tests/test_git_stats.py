@@ -10,6 +10,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from aina_lib import get_file_stats, get_file_stats_with_follow, get_coupling_data, get_repo_staleness_info, format_staleness_warning
+from aina_lib import get_growth_data, get_file_growth, get_repo_growth_totals
 
 
 class GitRepoTestCase(unittest.TestCase):
@@ -357,6 +358,52 @@ class TestAnalyzeReposWithGitStats(GitRepoTestCase):
         self.assertIn('Alice', shared_node['contributors']['names'])
         self.assertIn('Bob', shared_node['contributors']['names'])
 
+    def test_analyze_includes_growth_field_on_files(self):
+        """analyze_repos output includes a growth field on file nodes."""
+        from aina_lib import analyze_repos
+
+        self.create_file('grow.py', 'a\nb\nc\n')
+        self.commit('add')
+        self.create_file('grow.py', 'a\nb\nc\nd\ne\n')
+        self.commit('grow')
+
+        result = analyze_repos('test', self.repo_path)
+
+        def find_node_by_name(node, name):
+            if node.get('name') == name:
+                return node
+            for child in node.get('children', []):
+                found = find_node_by_name(child, name)
+                if found:
+                    return found
+            return None
+
+        node = find_node_by_name(result['tree'], 'grow.py')
+        self.assertIsNotNone(node)
+        self.assertIn('growth', node)
+        self.assertIn('last_3_months', node['growth'])
+        self.assertIn('last_year', node['growth'])
+        self.assertEqual(node['growth']['last_year'], 5)
+
+    def test_stats_includes_deletion_inclusive_growth_totals(self):
+        """Analysis-level stats.growth carries deletion-inclusive repo totals."""
+        from aina_lib import analyze_repos
+
+        self.create_file('keep.py', 'a\nb\nc\n')  # +3 survives
+        self.create_file('temp.py', 'x\ny\n')      # +2 then deleted
+        self.commit('add both')
+        os.remove(Path(self.repo_path) / 'temp.py')
+        self.commit('delete temp')
+
+        result = analyze_repos('test', self.repo_path)
+
+        self.assertIn('growth', result['stats'])
+        totals = result['stats']['growth']['last_year']
+        # Deletion-inclusive: 5 added (3+2), 2 deleted (temp.py) => net 3
+        self.assertEqual(totals['added'], 5)
+        self.assertEqual(totals['deleted'], 2)
+        self.assertEqual(totals['net'], 3)
+
 
 class TestGetCouplingData(GitRepoTestCase):
     """Test get_coupling_data function for co-change detection."""
@@ -699,6 +746,161 @@ class TestFormatStalenessWarning(unittest.TestCase):
         self.assertIn('repo-a', result)
         self.assertIn('repo-b', result)
         self.assertIn('[  BEHIND  ]', result)
+
+
+class TestGetGrowthData(GitRepoTestCase):
+    """Test get_growth_data: per-file net growth + repo deletion-inclusive totals."""
+
+    def test_returns_empty_for_empty_repo(self):
+        """Empty repo yields no files and zeroed totals."""
+        result = get_growth_data(self.repo_path)
+        self.assertEqual(result['files'], {})
+        self.assertEqual(result['totals']['last_year']['net'], 0)
+        self.assertEqual(result['totals']['last_3_months']['net'], 0)
+
+    def test_net_growth_is_added_minus_deleted(self):
+        """Per-file net is signed (added - deleted) over the window."""
+        self.create_file('app.py', 'a\nb\nc\n')  # +3
+        self.commit('add')
+        self.create_file('app.py', 'a\nb\nc\nd\ne\n')  # +2
+        self.commit('grow')
+
+        files = get_file_growth(self.repo_path)
+        self.assertIn('app.py', files)
+        self.assertEqual(files['app.py']['last_year'], 5)
+        self.assertEqual(files['app.py']['added_1y'], 5)
+        self.assertEqual(files['app.py']['deleted_1y'], 0)
+
+    def test_net_growth_can_be_negative(self):
+        """Shrinking files report a negative net (no NaN, signed)."""
+        self.create_file('big.py', 'a\nb\nc\nd\ne\n')  # +5
+        self.commit('add')
+        self.create_file('big.py', 'a\nb\n')  # -3
+        self.commit('shrink')
+
+        files = get_file_growth(self.repo_path)
+        self.assertEqual(files['big.py']['last_year'], 2)  # 5 added, 3 deleted
+        self.assertEqual(files['big.py']['deleted_1y'], 3)
+
+    def test_reconciles_to_valid_paths(self):
+        """Paths absent from valid_paths (cloc set) are dropped from per-file."""
+        self.create_file('keep.py', 'x\ny\n')
+        self.create_file('vendored.py', 'a\nb\nc\n')
+        self.commit('add both')
+
+        files = get_file_growth(self.repo_path, valid_paths={'keep.py'})
+        self.assertIn('keep.py', files)
+        self.assertNotIn('vendored.py', files)
+
+    def test_post_rename_growth_attributes_to_surviving_path(self):
+        """With -M, post-rename growth attributes to the surviving (new) path."""
+        self.create_file('old_name.py', 'a\nb\nc\n')
+        self.commit('add')
+        old = Path(self.repo_path) / 'old_name.py'
+        new = Path(self.repo_path) / 'new_name.py'
+        subprocess.run(['git', 'mv', str(old), str(new)], cwd=self.repo_path, capture_output=True)
+        self.commit('rename')
+        self.create_file('new_name.py', 'a\nb\nc\nd\n')  # +1 after rename
+        self.commit('grow renamed')
+
+        files = get_file_growth(self.repo_path, valid_paths={'new_name.py'})
+        # The surviving path exists and carries post-rename growth; the old path is gone.
+        self.assertIn('new_name.py', files)
+        self.assertNotIn('old_name.py', files)
+        self.assertEqual(files['new_name.py']['added_1y'], 1)
+        self.assertEqual(files['new_name.py']['last_year'], 1)
+
+    def test_pre_rename_growth_stays_under_old_path(self):
+        """Known limitation: single-pass -M does NOT rewrite pre-rename history.
+
+        Unlike --follow (a per-file pass we deliberately avoid for the single-pass
+        growth design), plain ``git log -M --numstat`` only resolves the rename row
+        itself to the new path; line changes made before the rename remain attributed
+        to the old path. With cloc reconciliation, those pre-rename additions are
+        dropped (the old path is not a surviving file). This test documents that
+        behaviour so a future change to it is a conscious decision.
+        """
+        self.create_file('old_name.py', 'a\nb\nc\n')  # +3 under the OLD name
+        self.commit('add')
+        old = Path(self.repo_path) / 'old_name.py'
+        new = Path(self.repo_path) / 'new_name.py'
+        subprocess.run(['git', 'mv', str(old), str(new)], cwd=self.repo_path, capture_output=True)
+        self.commit('rename')
+
+        # Without reconciliation, the +3 is visible but keyed under the old path.
+        unfiltered = get_file_growth(self.repo_path)
+        self.assertEqual(unfiltered.get('old_name.py', {}).get('added_1y'), 3)
+        self.assertEqual(unfiltered.get('new_name.py', {}).get('added_1y'), 0)
+
+        # The deletion-inclusive repo totals still account for every added line.
+        totals = get_repo_growth_totals(self.repo_path)
+        self.assertEqual(totals['last_year']['added'], 3)
+
+    def test_binary_rows_skipped(self):
+        """Binary files (numstat '-') do not contribute to growth numbers."""
+        self.create_file('text.py', 'a\nb\n')
+        binpath = Path(self.repo_path) / 'image.bin'
+        binpath.write_bytes(bytes([0, 1, 2, 3, 0, 255, 7]))
+        self.commit('add text and binary')
+
+        files = get_file_growth(self.repo_path)
+        self.assertIn('text.py', files)
+        self.assertNotIn('image.bin', files)
+
+    def test_windows_separate_3m_and_1y(self):
+        """3-month window excludes commits older than 90 days; 1-year includes them."""
+        six_months_ago = (datetime.now() - timedelta(days=180)).strftime('%Y-%m-%dT12:00:00')
+        self.create_file('w.py', 'a\nb\nc\n')  # +3 old
+        self.commit_with_date('old', six_months_ago)
+        self.create_file('w.py', 'a\nb\nc\nd\n')  # +1 recent
+        self.commit('recent')
+
+        files = get_file_growth(self.repo_path)
+        self.assertEqual(files['w.py']['last_year'], 4)
+        self.assertEqual(files['w.py']['last_3_months'], 1)
+
+    def test_totals_include_whole_file_deletions(self):
+        """Repo totals count deletions of files that leave no surviving cell."""
+        self.create_file('temp.py', 'a\nb\nc\nd\n')  # +4
+        self.commit('add temp')
+        os.remove(Path(self.repo_path) / 'temp.py')  # -4 (whole-file delete)
+        self.commit('delete temp')
+
+        result = get_growth_data(self.repo_path, valid_paths=set())  # nothing survives
+        # No surviving cells...
+        self.assertEqual(result['files'], {})
+        # ...but the deletion is visible in the deletion-inclusive totals.
+        self.assertEqual(result['totals']['last_year']['added'], 4)
+        self.assertEqual(result['totals']['last_year']['deleted'], 4)
+        self.assertEqual(result['totals']['last_year']['net'], 0)
+
+    def test_repo_growth_totals_wrapper(self):
+        """get_repo_growth_totals exposes the deletion-inclusive totals."""
+        self.create_file('a.py', 'a\nb\nc\n')  # +3
+        self.commit('add')
+        totals = get_repo_growth_totals(self.repo_path)
+        self.assertEqual(totals['last_year']['added'], 3)
+        self.assertEqual(totals['last_year']['net'], 3)
+
+
+class TestResolveRenamePath(unittest.TestCase):
+    """Test numstat rename-path resolution to the surviving path."""
+
+    def test_plain_path_unchanged(self):
+        from aina_lib.git_stats import _resolve_rename_path
+        self.assertEqual(_resolve_rename_path('src/app.py'), 'src/app.py')
+
+    def test_simple_rename_form(self):
+        from aina_lib.git_stats import _resolve_rename_path
+        self.assertEqual(_resolve_rename_path('old/path.py => new/path.py'), 'new/path.py')
+
+    def test_brace_rename_form(self):
+        from aina_lib.git_stats import _resolve_rename_path
+        self.assertEqual(_resolve_rename_path('src/{old => new}/file.js'), 'src/new/file.js')
+
+    def test_brace_rename_empty_old_segment(self):
+        from aina_lib.git_stats import _resolve_rename_path
+        self.assertEqual(_resolve_rename_path('src/{ => sub}/file.js'), 'src/sub/file.js')
 
 
 if __name__ == '__main__':

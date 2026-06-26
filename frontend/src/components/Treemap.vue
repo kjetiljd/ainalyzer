@@ -5,7 +5,9 @@
 <script>
 import { hierarchy, treemap } from 'd3-hierarchy'
 import { assignColors, OVERFLOW_COLOR, COLOR_MODES } from '../utils/colorUtils'
-import { countLeafValues, findMaxInTree, aggregateTree } from '../composables/useTreeStats'
+import { countLeafValues, extentInTree, aggregateTree } from '../composables/useTreeStats'
+
+const DIRECTORY_COLOR = '#4a4a4a'
 
 export default {
   name: 'Treemap',
@@ -36,7 +38,7 @@ export default {
     },
     colorMode: {
       type: String,
-      default: 'depth'  // 'depth' | 'filetype' | 'activity' | 'contributors'
+      default: 'depth'  // 'depth' | 'filetype' | 'activity' | 'contributors' | 'growth'
     },
     activityTimeframe: {
       type: String,
@@ -73,6 +75,17 @@ export default {
     commitsField() {
       return this.activityTimeframe === '3months' ? 'last_3_months' : 'last_year'
     },
+    // Active color-mode descriptor (generic dispatch source for getNodeColor)
+    colorModeDescriptor() {
+      return COLOR_MODES[this.colorMode] || null
+    },
+    // Shared context passed to a descriptor's value accessors
+    colorContext() {
+      const depthOffset = this.navigationStack.length > 0 ? this.navigationStack.length - 1 : 0
+      const mode = this.colorModeDescriptor
+      const field = mode?.fieldFor ? mode.fieldFor(this.activityTimeframe) : null
+      return { depthOffset, field }
+    },
     computedColorMap() {
       if (this.colorMode !== 'filetype') return null
 
@@ -80,14 +93,17 @@ export default {
       const counts = countLeafValues(this.data, n => n.language)
       return assignColors(counts)
     },
-    maxCommits() {
-      if (this.colorMode !== 'activity') return 0
-      const field = this.commitsField
-      return findMaxInTree(this.data, n => n.commits?.[field] || 0)
-    },
-    maxDepth() {
-      if (this.colorMode !== 'depth') return 0
-      return findMaxInTree(this.data, (n, depth) => depth)
+    // Generic normalization max derived from the descriptor's normalize strategy.
+    // Replaces the per-mode maxCommits/maxDepth with one extent pass (G2).
+    colorMax() {
+      const mode = this.colorModeDescriptor
+      if (!mode || mode.type === 'categorical' || mode.normalize === 'none') return 0
+      const ctx = this.colorContext
+      const ext = extentInTree(this.data, (n, depth) => mode.treeValue(n, depth, ctx))
+      if (mode.normalize === 'symmetric') {
+        return Math.max(Math.abs(ext.min), Math.abs(ext.max))
+      }
+      return ext.max
     },
     // Build coupling lookup: filePath → [{path, count}, ...]
     couplingMap() {
@@ -177,32 +193,27 @@ export default {
     },
 
     getNodeColor(node) {
-      // Directories use neutral gray
-      if (node.data.children) {
-        return '#4a4a4a'
-      }
+      const mode = this.colorModeDescriptor
+      const isDirectory = !!node.data.children
 
-      const mode = COLOR_MODES[this.colorMode]
-
-      // Filetype mode uses colorMap lookup
-      if (this.colorMode === 'filetype') {
+      // Categorical modes (filetype) color leaves via a language colorMap.
+      if (mode?.type === 'categorical') {
+        if (isDirectory) return DIRECTORY_COLOR
         return this.computedColorMap?.[node.data.language] || OVERFLOW_COLOR
       }
 
-      // Contributors mode - takes single value (no max normalization needed)
-      if (this.colorMode === 'contributors') {
-        const count = node.data.contributors?.count ?? 0
-        return mode.colorFn(count)
+      // Directories are neutral gray unless the mode colors them by rollup (growth).
+      if (isDirectory) {
+        if (!mode?.colorDirectories || !mode.colorFn) return DIRECTORY_COLOR
+        const ctx = this.colorContext
+        const rollup = aggregateTree(node.data, n => mode.dirLeafValue(n, ctx))
+        return mode.colorFn(rollup, this.colorMax)
       }
 
-      // Use registry colorFn with mode-specific value/max
+      // Leaves: generic registry dispatch over the descriptor.
       if (mode?.colorFn) {
-        const depthOffset = this.navigationStack.length > 0 ? this.navigationStack.length - 1 : 0
-        const value = this.colorMode === 'activity'
-          ? (node.data.commits?.[this.commitsField] || 0)
-          : (node.depth + depthOffset)
-        const max = this.colorMode === 'activity' ? this.maxCommits : this.maxDepth
-        return mode.colorFn(value, max)
+        const value = mode.scalarValue(node, this.colorContext)
+        return mode.colorFn(value, this.colorMax)
       }
 
       return OVERFLOW_COLOR
@@ -1007,6 +1018,21 @@ export default {
           const contributorCount = node.data.contributors?.count
           if (contributorCount !== undefined) {
             parts.push(`${contributorCount} contributor${contributorCount !== 1 ? 's' : ''}`)
+          }
+          // In growth mode, surface the honest +added/-deleted/=net for the window
+          if (this.colorMode === 'growth') {
+            const suffix = this.activityTimeframe === '3months' ? '3m' : '1y'
+            let added, deleted
+            if (node.data.children) {
+              added = aggregateTree(node.data, n => n.growth?.[`added_${suffix}`] || 0)
+              deleted = aggregateTree(node.data, n => n.growth?.[`deleted_${suffix}`] || 0)
+            } else {
+              added = node.data.growth?.[`added_${suffix}`] || 0
+              deleted = node.data.growth?.[`deleted_${suffix}`] || 0
+            }
+            const net = added - deleted
+            const sign = net >= 0 ? '+' : ''
+            parts.push(`+${added.toLocaleString()} / -${deleted.toLocaleString()} = ${sign}${net.toLocaleString()} net`)
           }
           const stats = parts.length > 0 ? ` (${parts.join(', ')})` : ''
 

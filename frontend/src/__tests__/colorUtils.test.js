@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { PALETTE_60, OVERFLOW_COLOR, simpleHash, assignColors } from '../utils/colorUtils'
+import { getGrowthColor, GROWTH_NEUTRAL, GROWTH_PALETTE, COLOR_MODES } from '../utils/colorUtils'
 
 // Classic_20 reference - light variants only (odd indices)
 const CLASSIC_20_LIGHTS = [
@@ -170,6 +171,88 @@ describe('colorUtils', () => {
   describe('OVERFLOW_COLOR', () => {
     it('is gray (#6f6f6f)', () => {
       expect(OVERFLOW_COLOR.toLowerCase()).toBe('#6f6f6f')
+    })
+  })
+
+  describe('getGrowthColor', () => {
+    it('returns the neutral midpoint for zero/null net', () => {
+      expect(getGrowthColor(0, 1000)).toBe(GROWTH_NEUTRAL)
+      expect(getGrowthColor(null, 1000)).toBe(GROWTH_NEUTRAL)
+      expect(getGrowthColor(undefined, 1000)).toBe(GROWTH_NEUTRAL)
+    })
+
+    it('returns the neutral midpoint when maxAbs is zero or missing', () => {
+      expect(getGrowthColor(50, 0)).toBe(GROWTH_NEUTRAL)
+      expect(getGrowthColor(50, undefined)).toBe(GROWTH_NEUTRAL)
+    })
+
+    it('uses the blue ramp for shrink (negative net)', () => {
+      expect(GROWTH_PALETTE.shrink).toContain(getGrowthColor(-200, 1000))
+    })
+
+    it('uses the orange ramp for growth (positive net)', () => {
+      expect(GROWTH_PALETTE.grow).toContain(getGrowthColor(200, 1000))
+    })
+
+    it('is symmetric: equal magnitudes map to mirrored ramp positions', () => {
+      const growIndex = GROWTH_PALETTE.grow.indexOf(getGrowthColor(400, 1000))
+      const shrinkIndex = GROWTH_PALETTE.shrink.indexOf(getGrowthColor(-400, 1000))
+      expect(growIndex).toBe(shrinkIndex)
+      expect(growIndex).toBeGreaterThanOrEqual(0)
+    })
+
+    it('clamps outliers beyond maxAbs to the strongest bucket', () => {
+      const strongest = GROWTH_PALETTE.grow[GROWTH_PALETTE.grow.length - 1]
+      expect(getGrowthColor(5000, 1000)).toBe(strongest)
+    })
+
+    it('never returns NaN-tinged output on negative input', () => {
+      const color = getGrowthColor(-999, 1000)
+      expect(color).toMatch(/^#[0-9a-f]{6}$/i)
+    })
+  })
+
+  describe('COLOR_MODES descriptor contract', () => {
+    it('registers a growth mode with a diverging, directory-coloring descriptor', () => {
+      const growth = COLOR_MODES.growth
+      expect(growth.label).toBe('Net growth')
+      expect(growth.normalize).toBe('symmetric')
+      expect(growth.colorDirectories).toBe(true)
+      expect(growth.usesTimeframe).toBe(true)
+      expect(growth.colorFn).toBe(getGrowthColor)
+    })
+
+    it('exposes a uniform scalarValue/treeValue interface across scalar modes', () => {
+      for (const key of ['depth', 'activity', 'contributors', 'growth']) {
+        const mode = COLOR_MODES[key]
+        expect(mode.type).toBe('scalar')
+        expect(typeof mode.scalarValue).toBe('function')
+        expect(typeof mode.treeValue).toBe('function')
+      }
+    })
+
+    it('resolves the window field from the timeframe for windowed modes', () => {
+      expect(COLOR_MODES.growth.fieldFor('3months')).toBe('last_3_months')
+      expect(COLOR_MODES.growth.fieldFor('1year')).toBe('last_year')
+      expect(COLOR_MODES.activity.fieldFor('3months')).toBe('last_3_months')
+    })
+
+    it('growth headline extracts per-leaf added/deleted for the window (node-scoped rollup)', () => {
+      const leaf = { growth: { added_1y: 760, deleted_1y: 220, last_year: 540, added_3m: 30, deleted_3m: 12, last_3_months: 18 } }
+      expect(COLOR_MODES.growth.headline.leafAdded(leaf, '1year')).toBe(760)
+      expect(COLOR_MODES.growth.headline.leafDeleted(leaf, '1year')).toBe(220)
+      expect(COLOR_MODES.growth.headline.leafAdded(leaf, '3months')).toBe(30)
+      expect(COLOR_MODES.growth.headline.leafDeleted(leaf, '3months')).toBe(12)
+    })
+
+    it('growth headline extractors return 0 for leaves without growth data', () => {
+      expect(COLOR_MODES.growth.headline.leafAdded({}, '1year')).toBe(0)
+      expect(COLOR_MODES.growth.headline.leafDeleted({ growth: {} }, '3months')).toBe(0)
+    })
+
+    it('non-growth modes expose no headline (generic slot stays empty)', () => {
+      expect(COLOR_MODES.depth.headline).toBeUndefined()
+      expect(COLOR_MODES.activity.headline).toBeUndefined()
     })
   })
 })

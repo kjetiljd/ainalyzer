@@ -133,11 +133,12 @@ describe('SettingsPanel', () => {
     const wrapper = mount(SettingsPanel)
 
     const radios = wrapper.findAll('input[type="radio"][name="colorMode"]')
-    expect(radios.length).toBe(4)
+    expect(radios.length).toBe(5)
     expect(wrapper.text()).toContain('Code size')
     expect(wrapper.text()).toContain('File types')
     expect(wrapper.text()).toContain('Change activity')
     expect(wrapper.text()).toContain('Contributors')
+    expect(wrapper.text()).toContain('Net growth')
   })
 
   it('radio reflects current colorMode preference', async () => {
@@ -177,6 +178,41 @@ describe('SettingsPanel', () => {
     const calls = history.replaceState.mock.calls
     const lastUrl = calls[calls.length - 1][2]
     expect(lastUrl).toContain('colorMode=filetype')
+  })
+
+  it('offers a Net growth radio', async () => {
+    await initPreferencesWithAnalysis()
+    const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+    const wrapper = mount(SettingsPanel)
+
+    const growthRadio = wrapper.find('input[type="radio"][value="growth"]')
+    expect(growthRadio.exists()).toBe(true)
+  })
+
+  it('shows the timeframe selector for growth (windowed) mode', async () => {
+    storage['ainalyzer-test-analysis'] = JSON.stringify({
+      version: '1.0',
+      appearance: { colorMode: 'growth' }
+    })
+
+    await initPreferencesWithAnalysis()
+    const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+    const wrapper = mount(SettingsPanel)
+
+    expect(wrapper.find('.timeframe-selector').exists()).toBe(true)
+  })
+
+  it('hides the timeframe selector for non-windowed modes (depth)', async () => {
+    storage['ainalyzer-test-analysis'] = JSON.stringify({
+      version: '1.0',
+      appearance: { colorMode: 'depth' }
+    })
+
+    await initPreferencesWithAnalysis()
+    const { default: SettingsPanel } = await import('../components/SettingsPanel.vue')
+    const wrapper = mount(SettingsPanel)
+
+    expect(wrapper.find('.timeframe-selector').exists()).toBe(false)
   })
 
   // Custom Exclusions tests

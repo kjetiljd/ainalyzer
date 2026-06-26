@@ -15,21 +15,67 @@
     <span class="stat-item">
       <strong>{{ totalChanges.toLocaleString() }}</strong> file changes
     </span>
+    <!-- Generic mode headline (G3): active color mode supplies its own honest summary -->
+    <template v-if="modeHeadline">
+      <span class="stat-separator">•</span>
+      <span class="stat-item mode-headline" :title="modeHeadline.title">
+        {{ modeHeadline.label }}
+        <strong :class="modeHeadline.netClass">{{ modeHeadline.netText }}</strong>
+        net <span class="mode-headline-note">({{ modeHeadline.note }})</span>
+      </span>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { toRef } from 'vue'
-import { useTreeStats } from '../composables/useTreeStats'
+import { toRef, computed } from 'vue'
+import { useTreeStats, aggregateTree } from '../composables/useTreeStats'
+import { COLOR_MODES } from '../utils/colorUtils'
 
 const props = defineProps({
   currentNode: {
     type: Object,
     required: true
+  },
+  colorMode: {
+    type: String,
+    default: 'depth'
+  },
+  activityTimeframe: {
+    type: String,
+    default: '1year'
   }
 })
 
 const { totalLines, fileCount, directoryCount: dirCount, changes: totalChanges } = useTreeStats(toRef(props, 'currentNode'))
+
+// Honest, deletion-inclusive headline supplied by the active color mode descriptor.
+// Rolled up over the CURRENT node (not the whole analysis) so the net is scoped exactly
+// like the lines/files/changes beside it. Growth declares per-leaf add/delete extractors;
+// modes without a headline render nothing.
+const modeHeadline = computed(() => {
+  const mode = COLOR_MODES[props.colorMode]
+  const h = mode?.headline
+  const node = props.currentNode
+  if (!h || !node) return null
+
+  const tf = props.activityTimeframe
+  const added = aggregateTree(node, n => h.leafAdded(n, tf))
+  const deleted = aggregateTree(node, n => h.leafDeleted(n, tf))
+  // No growth activity under this node — keep the slot empty.
+  if (added === 0 && deleted === 0) return null
+
+  const net = added - deleted
+  const sign = net > 0 ? '+' : ''
+  const windowLabel = tf === '3months' ? 'last 3 months' : 'last year'
+  return {
+    label: `${mode.label}:`,
+    netText: `${sign}${net.toLocaleString()}`,
+    netClass: net > 0 ? 'net-grow' : (net < 0 ? 'net-shrink' : 'net-flat'),
+    note: 'net change incl. deletions, not size',
+    title: `+${added.toLocaleString()} added, −${deleted.toLocaleString()} deleted over the ${windowLabel}`
+  }
+})
 </script>
 
 <style scoped>
@@ -69,5 +115,22 @@ const { totalLines, fileCount, directoryCount: dirCount, changes: totalChanges }
 
 .stat-separator {
   color: #888;
+}
+
+.mode-headline-note {
+  color: #777;
+  font-style: italic;
+}
+
+.net-grow {
+  color: #fd8d3c;
+}
+
+.net-shrink {
+  color: #6baed6;
+}
+
+.net-flat {
+  color: #8a8a8a;
 }
 </style>

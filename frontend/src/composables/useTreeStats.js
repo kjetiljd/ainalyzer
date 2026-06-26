@@ -99,7 +99,36 @@ export function countLeafValues(node, getKey) {
 }
 
 /**
+ * Find the min and max value across a tree in a single pass.
+ *
+ * @param {Object} node - Tree node
+ * @param {Function} getValue - Extract value from node, receives (node, depth)
+ * @param {number} depth - Current depth
+ * @returns {{min: number, max: number}} Extent of values
+ */
+export function extentInTree(node, getValue, depth = 0) {
+  if (!node) return { min: 0, max: 0 }
+
+  const value = getValue(node, depth)
+  let min = value
+  let max = value
+
+  if (node.children) {
+    for (const child of node.children) {
+      const childExtent = extentInTree(child, getValue, depth + 1)
+      if (childExtent.min < min) min = childExtent.min
+      if (childExtent.max > max) max = childExtent.max
+    }
+  }
+
+  return { min, max }
+}
+
+/**
  * Find maximum value in tree.
+ *
+ * Thin wrapper over extentInTree (single-pass min/max), kept for callers that only
+ * need the (non-negative) maximum.
  *
  * @param {Object} node - Tree node
  * @param {Function} getValue - Extract value from node, receives (node, depth)
@@ -107,18 +136,22 @@ export function countLeafValues(node, getKey) {
  * @returns {number} Maximum value
  */
 export function findMaxInTree(node, getValue, depth = 0) {
-  if (!node) return 0
+  return extentInTree(node, getValue, depth).max
+}
 
-  let max = getValue(node, depth)
-
-  if (node.children) {
-    for (const child of node.children) {
-      const childMax = findMaxInTree(child, getValue, depth + 1)
-      if (childMax > max) max = childMax
-    }
-  }
-
-  return max
+/**
+ * Find the symmetric maximum magnitude across a tree: max(|min|, |max|).
+ *
+ * Used for diverging color normalization where values can be negative (e.g. net growth),
+ * so that the neutral midpoint stays centered on zero.
+ *
+ * @param {Object} node - Tree node
+ * @param {Function} getValue - Extract value from node, receives (node, depth)
+ * @returns {number} Symmetric maximum magnitude
+ */
+export function symmetricMaxInTree(node, getValue) {
+  const { min, max } = extentInTree(node, getValue)
+  return Math.max(Math.abs(min), Math.abs(max))
 }
 
 /**
