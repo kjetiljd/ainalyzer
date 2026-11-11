@@ -51,8 +51,7 @@ class TestDiscoverRepos(unittest.TestCase):
         self.assertIn(str(repo2), repos)
 
     def test_discover_nested_repos(self):
-        """Test that nested repos beyond depth limit are not found."""
-        # Create nested structure
+        """Test that repos two levels down are found."""
         parent = Path(self.temp_dir) / 'parent'
         child = parent / 'child'
         child.mkdir(parents=True)
@@ -61,10 +60,9 @@ class TestDiscoverRepos(unittest.TestCase):
 
         repos = discover_repos(self.temp_dir)
 
-        # With depth limit, only parent (depth 1) should be found, not child (depth 2)
-        self.assertEqual(len(repos), 1)
+        self.assertEqual(len(repos), 2)
         self.assertIn(str(parent), repos)
-        self.assertNotIn(str(child), repos)
+        self.assertIn(str(child), repos)
 
     def test_discover_no_repos(self):
         """Test discovering in directory with no repositories."""
@@ -81,12 +79,7 @@ class TestDiscoverRepos(unittest.TestCase):
             discover_repos('/nonexistent/path')
 
     def test_discover_respects_depth_limit(self):
-        """Test that discovery stops at depth 2 (root + 1 level)."""
-        # Create deeply nested structure
-        # Level 0: temp_dir/.git (should find)
-        # Level 1: temp_dir/repo1/.git (should find)
-        # Level 2: temp_dir/repo1/nested/.git (should NOT find)
-
+        """Test that discovery stops at depth 2 (root + 2 levels)."""
         root = Path(self.temp_dir)
         (root / '.git').mkdir()
 
@@ -98,13 +91,15 @@ class TestDiscoverRepos(unittest.TestCase):
         nested.mkdir()
         (nested / '.git').mkdir()
 
+        too_deep = nested / 'deeper'
+        too_deep.mkdir()
+        (too_deep / '.git').mkdir()
+
         repos = discover_repos(self.temp_dir)
 
-        # Should find root and repo1, but not nested
-        self.assertEqual(len(repos), 2)
-        self.assertIn(str(root), repos)
-        self.assertIn(str(repo1), repos)
-        self.assertNotIn(str(nested), repos)
+        self.assertEqual(len(repos), 3)
+        self.assertIn(str(nested), repos)
+        self.assertNotIn(str(too_deep), repos)
 
 
 if __name__ == '__main__':

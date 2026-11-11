@@ -6,8 +6,8 @@ from pathlib import Path
 def discover_repos(path):
     """Discover Git repositories in a directory.
 
-    Scans the given path and immediate subdirectories for .git directories.
-    Stops at depth 2 (root + 1 level) to avoid scanning inside repositories.
+    Scans the given path and subdirectories up to two levels down for .git
+    directories. Stops at depth 2 to avoid scanning inside repositories.
 
     Args:
         path: Path to directory to scan
@@ -24,7 +24,7 @@ def discover_repos(path):
         raise ValueError(f"Path does not exist: {path}")
 
     repos = []
-    max_depth = 1  # Root (0) + 1 level
+    max_depth = 2  # Root (0) + 2 levels
 
     for root, dirs, files in os.walk(path_obj):
         depth = len(Path(root).relative_to(path_obj).parts)
