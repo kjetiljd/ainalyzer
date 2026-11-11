@@ -1049,5 +1049,32 @@ class TestResolveRenamePath(unittest.TestCase):
         self.assertEqual(_resolve_rename_path('src/{ => sub}/file.js'), 'src/sub/file.js')
 
 
+class TestCheckStalenessRetry(unittest.TestCase):
+    def test_failed_fetches_retried_once_after_others(self):
+        """fetch_failed repos are retried once; a second failure is kept."""
+        from unittest import mock
+        from aina_lib.analysis import check_staleness
+
+        calls = []
+
+        def fake_info(path):
+            calls.append(path)
+            status = 'up_to_date'
+            if path == 'flaky' and calls.count(path) == 1:
+                status = 'fetch_failed'
+            if path == 'broken':
+                status = 'fetch_failed'
+            return {'repo': path, 'remote_status': status}
+
+        with mock.patch('aina_lib.analysis.get_repo_staleness_info', side_effect=fake_info):
+            infos = check_staleness(['flaky', 'ok', 'broken'])
+
+        self.assertEqual(calls.count('flaky'), 2)
+        self.assertEqual(calls.count('broken'), 2)
+        self.assertEqual(calls.count('ok'), 1)
+        self.assertEqual({i['repo']: i['remote_status'] for i in infos},
+                         {'flaky': 'up_to_date', 'ok': 'up_to_date', 'broken': 'fetch_failed'})
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -284,10 +284,21 @@ def check_staleness(repos):
         list: Staleness info dicts sorted by repo name
     """
     staleness_infos = []
+    retry_paths = []
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = {executor.submit(get_repo_staleness_info, repo_path): repo_path for repo_path in repos}
         for future in as_completed(futures):
-            staleness_infos.append(future.result())
+            info = future.result()
+            if info['remote_status'] == 'fetch_failed':
+                retry_paths.append(futures[future])
+            else:
+                staleness_infos.append(info)
+
+    # Retry failed fetches once, after all others are done
+    if retry_paths:
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            staleness_infos.extend(executor.map(get_repo_staleness_info, retry_paths))
+
     staleness_infos.sort(key=lambda x: x['repo'])
     return staleness_infos
 
