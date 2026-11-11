@@ -8,6 +8,7 @@ import webbrowser
 import json
 from pathlib import Path
 
+from .discovery import discover_repos
 from .file_utils import detect_file_encoding
 
 
@@ -160,9 +161,10 @@ def create_request_handler(frontend_dir, analysis_dir):
 
                 add_patterns_from(root_path / '.clocignore')
 
-                for entry in root_path.iterdir():
-                    if entry.is_dir() and not entry.name.startswith('.'):
-                        add_patterns_from(entry / '.clocignore', entry.name)
+                for repo in discover_repos(root_path):
+                    repo_path = Path(repo)
+                    if repo_path != root_path:
+                        add_patterns_from(repo_path / '.clocignore', repo_path.relative_to(root_path).as_posix())
 
                 content = '\n'.join(all_patterns)
                 self.send_response(200)

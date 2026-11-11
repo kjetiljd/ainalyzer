@@ -104,15 +104,21 @@ function ainaAnalysisPlugin() {
           // Read root .clocignore (applies to all)
           addPatternsFrom(join(rootPath, '.clocignore'))
 
-          // Read .clocignore from each immediate subdirectory (repos)
-          // These patterns are prefixed with repo name
-          const entries = fs.readdirSync(rootPath, { withFileTypes: true })
-          for (const entry of entries) {
-            if (entry.isDirectory() && !entry.name.startsWith('.')) {
-              const repoPath = join(rootPath, entry.name)
-              addPatternsFrom(join(repoPath, '.clocignore'), entry.name)
+          // Read .clocignore from repos up to two levels down (matches discover_repos)
+          // These patterns are prefixed with the repo's path relative to the root
+          const visit = (dir, rel, depth) => {
+            if (depth > 2) return
+            if (rel && fs.existsSync(join(dir, '.git'))) {
+              addPatternsFrom(join(dir, '.clocignore'), rel)
+            }
+            if (depth === 2) return
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              if (entry.isDirectory() && !entry.name.startsWith('.')) {
+                visit(join(dir, entry.name), rel ? `${rel}/${entry.name}` : entry.name, depth + 1)
+              }
             }
           }
+          visit(rootPath, '', 0)
 
           const content = allPatterns.join('\n')
           res.setHeader('Content-Type', 'application/json')

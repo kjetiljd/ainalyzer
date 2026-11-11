@@ -332,7 +332,8 @@ def analyze_single_repo(repo_path, path_obj, on_progress=None):
             git_stats.setdefault(file_path, {})['growth'] = file_growth
 
         is_root_repo = Path(repo_path).resolve() == path_obj.resolve()
-        path_prefix = '' if is_root_repo else repo_name
+        # Relative to the analysis root so nested repos resolve to real paths
+        path_prefix = '' if is_root_repo else Path(repo_path).resolve().relative_to(path_obj.resolve()).as_posix()
 
         children = []
 
@@ -358,7 +359,7 @@ def analyze_single_repo(repo_path, path_obj, on_progress=None):
         repo_node = {
             'name': repo_name,
             'type': 'repository',
-            'path': path_prefix if path_prefix else repo_name,
+            'path': path_prefix or repo_name,
             'children': children
         }
 
