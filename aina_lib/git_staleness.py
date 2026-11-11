@@ -1,4 +1,5 @@
 """Git repository staleness detection."""
+import os
 import subprocess
 from pathlib import Path
 from datetime import datetime, timezone
@@ -96,13 +97,19 @@ def get_repo_staleness_info(repo_path):
                 break
 
     # Try git fetch --dry-run to check for updates
-    result = subprocess.run(
-        ['git', 'fetch', '--dry-run'],
-        cwd=repo_path,
-        capture_output=True,
-        text=True,
-        timeout=30
-    )
+    try:
+        result = subprocess.run(
+            ['git', 'fetch', '--dry-run'],
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            env={**os.environ, 'GIT_TERMINAL_PROMPT': '0'}
+        )
+    except subprocess.TimeoutExpired:
+        info['remote_status'] = 'fetch_failed'
+        info['error'] = 'git fetch timed out after 30 seconds'
+        return info
 
     if result.returncode != 0:
         info['remote_status'] = 'fetch_failed'

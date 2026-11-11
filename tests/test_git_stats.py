@@ -627,6 +627,27 @@ class TestAnalyzeReposWithCoupling(GitRepoTestCase):
 class TestGetRepoStalenessInfo(GitRepoTestCase):
     """Test get_repo_staleness_info function."""
 
+    def test_fetch_timeout_marks_fetch_failed(self):
+        """A timed-out fetch is reported per repo instead of aborting."""
+        from unittest import mock
+        self.create_file('test.py', 'content')
+        self.commit('Initial')
+        subprocess.run(['git', 'remote', 'add', 'origin', 'https://example.invalid/x.git'],
+                       cwd=self.repo_path, capture_output=True, check=True)
+
+        real_run = subprocess.run
+
+        def fake_run(cmd, *args, **kwargs):
+            if cmd[:3] == ['git', 'fetch', '--dry-run']:
+                raise subprocess.TimeoutExpired(cmd, 30)
+            return real_run(cmd, *args, **kwargs)
+
+        with mock.patch('aina_lib.git_staleness.subprocess.run', side_effect=fake_run):
+            info = get_repo_staleness_info(self.repo_path)
+
+        self.assertEqual(info['remote_status'], 'fetch_failed')
+        self.assertIn('timed out', info['error'])
+
     def test_returns_repo_name(self):
         """Returns the repository name."""
         self.create_file('test.py', 'content')
