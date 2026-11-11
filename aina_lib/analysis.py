@@ -274,30 +274,44 @@ def tree_to_schema(tree, name, path_prefix='', git_stats=None):
     return node
 
 
-def check_staleness(repos):
+def check_staleness(repos, on_progress=None):
     """Check staleness for all repositories in parallel.
 
     Args:
         repos: List of repository paths
+        on_progress: Optional callback(message) reporting fetch progress
 
     Returns:
         list: Staleness info dicts sorted by repo name
     """
+    def report(msg):
+        if on_progress:
+            on_progress(msg)
+
     staleness_infos = []
     retry_paths = []
+    total = len(repos)
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = {executor.submit(get_repo_staleness_info, repo_path): repo_path for repo_path in repos}
-        for future in as_completed(futures):
+        for done, future in enumerate(as_completed(futures), 1):
             info = future.result()
-            if info['remote_status'] == 'fetch_failed':
+            failed = info['remote_status'] == 'fetch_failed'
+            report(f"  [{done}/{total}] {info['repo']}" + (" (fetch failed, will retry)" if failed else ""))
+            if failed:
                 retry_paths.append(futures[future])
             else:
                 staleness_infos.append(info)
 
     # Retry failed fetches once, after all others are done
     if retry_paths:
+        report(f"Retrying {len(retry_paths)} failed fetches...")
         with ThreadPoolExecutor(max_workers=10) as executor:
-            staleness_infos.extend(executor.map(get_repo_staleness_info, retry_paths))
+            futures = [executor.submit(get_repo_staleness_info, p) for p in retry_paths]
+            for done, future in enumerate(as_completed(futures), 1):
+                info = future.result()
+                status = 'failed again' if info['remote_status'] == 'fetch_failed' else 'ok'
+                report(f"  retry [{done}/{len(retry_paths)}] {info['repo']}: {status}")
+                staleness_infos.append(info)
 
     staleness_infos.sort(key=lambda x: x['repo'])
     return staleness_infos
@@ -429,7 +443,7 @@ def analyze_repos(analysis_set_name, analysis_set_path, on_staleness_warning=Non
 
     # Check repository staleness
     log("\nChecking repository status...")
-    staleness_infos = check_staleness(repos)
+    staleness_infos = check_staleness(repos, on_progress=log)
 
     warning = format_staleness_warning(staleness_infos)
     if warning:
